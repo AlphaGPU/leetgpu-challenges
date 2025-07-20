@@ -1,0 +1,57 @@
+<p>
+  Implement a program that performs a 1D convolution operation. Given an input array and a kernel (filter), compute the convolved
+  output. The convolution should be performed with a "valid" boundary condition, meaning the kernel is only applied
+  where it fully overlaps with the input.
+</p>
+
+<p>
+  The input consists of two arrays:
+<ul>
+  <li><code>input</code>: A 1D array of 32-bit floating-point numbers.</li>
+  <li><code>kernel</code>: A 1D array of 32-bit floating-point numbers representing the convolution kernel.</li>
+</ul>
+The output should be written to the <code>output</code> array, which will have a size of <code>input_size - kernel_size + 1</code>.
+</p>
+
+<p>
+  The convolution operation is defined mathematically as:
+</p>
+
+\[
+output[i] = \sum_{j=0}^{kernel\_size-1} input[i + j] \cdot kernel[j]
+\]
+
+<p>
+  where \(i\) ranges from 0 to \(input\_size - kernel\_size\).
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The
+    <code>solve</code> function signature must remain unchanged
+  </li>
+  <li>The final result must be stored in the array
+    <code>output</code>
+  </li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input: input = [1, 2, 3, 4, 5], kernel = [1, 0, -1]
+Output: [-2, -2, -2]
+</pre>
+
+<h2>Example 2:</h2>
+<pre>
+Input: input = [2, 4, 6, 8], kernel = [0.5, 0.2]
+Output: [1.8, 3.2, 4.6]
+</pre>
+
+<h2>Constraints</h2>
+
+<ul>
+  <li>1 &le; <code>input_size</code> &le; 1,000,000</li>
+  <li>1 &le; <code>kernel_size</code> &le; 2047</li>
+  <li><code>kernel_size</code> &le; <code>input_size</code></li>
+</ul> 

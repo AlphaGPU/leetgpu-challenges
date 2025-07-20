@@ -1,0 +1,30 @@
+<p>
+  Write a CUDA program that performs parallel reduction on an array of 32-bit floating point numbers to compute their sum.
+  The program should take an input array and produce a single output value containing the sum of all elements.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only CUDA native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>output</code> variable</li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input: [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+Output: 36.0
+</pre>
+
+<h2>Example 2:</h2>
+<pre>
+Input: [-2.5, 1.5, -1.0, 2.0]
+Output: 0.0
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 100,000,000</li>
+  <li>-1000.0 &le; <code>input[i]</code> &le; 1000.0</li>
+  <li>The final sum will always fit within a 32-bit float</li>
+</ul>

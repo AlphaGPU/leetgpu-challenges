@@ -1,0 +1,29 @@
+<p>
+  Implement Monte Carlo integration on a GPU. Given a set of function values \(y_i = f(x_i)\) sampled at random points \(x_i\) uniformly distributed in the interval \([a, b]\), estimate the definite integral:
+  \[ \int_a^b f(x) \, dx \approx (b - a) \cdot \frac{1}{n} \sum_{i=1}^{n} y_i \]
+  
+  The Monte Carlo method approximates the integral by computing the average of the function values and multiplying by the interval width.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>result</code> variable</li>
+  <li>Solutions are tested with absolute tolerance of 1e-2 and relative tolerance of 1e-2</li>
+</ul>
+
+<h2>Example:</h2>
+<pre>
+Input:  a = 0, b = 2, n_samples = 8
+        y_samples = [0.0625, 0.25, 0.5625, 1.0, 1.5625, 2.25, 3.0625, 4.0]
+Output: result = 3.1875
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 ≤ <code>n_samples</code> ≤ 100,000,000</li>
+  <li>-1000.0 ≤ <code>a</code> &lt; <code>b</code> ≤ 1000.0</li>
+  <li>-10000.0 ≤ function values ≤ 10000.0</li>
+  <li>The tolerance is set to 1e-2 to account for the inherent randomness in Monte Carlo methods and floating-point precision variations.</li>
+</ul> 

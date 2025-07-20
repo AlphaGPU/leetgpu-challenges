@@ -1,0 +1,47 @@
+<p>
+  Write a program to invert the colors of an image. The image is
+  represented as a 1D array of RGBA (Red, Green, Blue, Alpha) values, where each
+  component is an 8-bit unsigned integer (<code>unsigned char</code>).
+</p>
+
+<p>
+  Color inversion is performed by subtracting each color component (R, G, B)
+  from 255. The Alpha component should remain unchanged.
+</p>
+
+<p>
+  The input array
+  <code>image</code> will contain <code>width * height * 4</code> elements. The
+  first 4 elements represent the RGBA values of the top-left pixel, the next 4
+  elements represent the pixel to its right, and so on.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>
+    The final result must be stored in the array
+    <code>image</code>
+  </li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input: image = [255, 0, 128, 255, 0, 255, 0, 255], width=1, height=2
+Output: [0, 255, 127, 255, 255, 0, 255, 255]
+</pre>
+
+<h2>Example 2:</h2>
+<pre>
+Input: image = [10, 20, 30, 255, 100, 150, 200, 255], width=2, height=1
+Output: [245, 235, 225, 255, 155, 105, 55, 255]
+</pre>
+
+<h2>Constraints</h2>
+
+<ul>
+  <li>1 &le; <code>width</code> &le; 4096</li>
+  <li>1 &le; <code>height</code> &le; 4096</li>
+  <li><code>width * height</code> &le; 8,388,608.</li>
+</ul> 

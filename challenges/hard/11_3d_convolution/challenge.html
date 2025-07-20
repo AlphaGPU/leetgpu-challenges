@@ -1,0 +1,172 @@
+<p>
+  Implement a program that performs a 3D convolution operation. Given a 3D input volume and a 3D kernel (filter), compute the convolved
+  output. The convolution should use a "valid" boundary condition (no padding).
+</p>
+
+<p>
+  For a 3D convolution, the output at position \((i,j,k)\) is given by:
+</p>
+
+<p>
+  \[
+  output(i,j,k) = \sum_{d=0}^{K_d-1} \sum_{r=0}^{K_r-1} \sum_{c=0}^{K_c-1} input(i+d,j+r,k+c) \cdot kernel(d,r,c)
+  \]
+</p>
+
+<p>
+  The input consists of:
+<ul>
+  <li>
+    <code>input</code>: A 3D volume of 32-bit floats, as a 1D array (row-major, then depth).
+  </li>
+  <li>
+    <code>kernel</code>: A 3D kernel of 32-bit floats, as a 1D array (row-major, then depth).
+  </li>
+  <li>
+    <code>input_depth</code>,
+    <code>input_rows</code>,
+    <code>input_cols</code>: Dimensions of the input.
+  </li>
+  <li>
+    <code>kernel_depth</code>,
+    <code>kernel_rows</code>,
+    <code>kernel_cols</code>: Dimensions of the kernel.
+  </li>
+</ul>
+
+Output:
+<ul>
+  <li>
+    <code>output</code>: A 1D array (row-major, then depth) storing the result.
+  </li>
+</ul>
+
+Output dimensions:
+<ul>
+  <li>
+    <code>output_depth = input_depth - kernel_depth + 1</code>
+  </li>
+  <li>
+    <code>output_rows = input_rows - kernel_rows + 1</code>
+  </li>
+  <li>
+    <code>output_cols = input_cols - kernel_cols + 1</code>
+  </li>
+</ul>
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>output</code></li>
+</ul>
+
+<h2>Examples</h2>
+
+<h3>Example 1:</h3>
+<p>
+Input volume \(V \in \mathbb{R}^{3 \times 3 \times 3}\):
+\[
+\begin{aligned}
+V_{d=0} &= \begin{bmatrix} 
+1 & 2 & 3 \\
+4 & 5 & 6 \\
+7 & 8 & 9
+\end{bmatrix} \\
+V_{d=1} &= \begin{bmatrix}
+10 & 11 & 12 \\
+13 & 14 & 15 \\
+16 & 17 & 18
+\end{bmatrix} \\
+V_{d=2} &= \begin{bmatrix}
+19 & 20 & 21 \\
+22 & 23 & 24 \\
+25 & 26 & 27
+\end{bmatrix}
+\end{aligned}
+\]
+
+Kernel \(K \in \mathbb{R}^{2 \times 3 \times 3}\):
+\[
+\begin{aligned}
+K_{d=0} &= \begin{bmatrix}
+1 & 0 & 0 \\
+1 & 1 & 1 \\
+0 & 0 & 0
+\end{bmatrix} \\
+K_{d=1} &= \begin{bmatrix}
+1 & 1 & 0 \\
+1 & 1 & 0 \\
+0 & 0 & 1
+\end{bmatrix}
+\end{aligned}
+\]
+
+Output \(O \in \mathbb{R}^{2 \times 1 \times 1}\):
+\[
+[44, 62]
+\]
+</p>
+
+<h3>Example 2:</h3>
+<p>
+Input volume \(V \in \mathbb{R}^{2 \times 2 \times 2}\):
+\[
+\begin{aligned}
+V_{d=0} &= \begin{bmatrix}
+1 & 2 \\
+3 & 4
+\end{bmatrix} \\
+V_{d=1} &= \begin{bmatrix}
+5 & 6 \\
+7 & 8
+\end{bmatrix}
+\end{aligned}
+\]
+
+Kernel \(K \in \mathbb{R}^{2 \times 2 \times 2}\):
+\[
+\begin{aligned}
+K_{d=0} &= \begin{bmatrix}
+1 & 1 \\
+1 & 1
+\end{bmatrix} \\
+K_{d=1} &= \begin{bmatrix}
+1 & 1 \\
+1 & 1
+\end{bmatrix}
+\end{aligned}
+\]
+
+Output \(O \in \mathbb{R}^{1 \times 1 \times 1}\):
+\[
+[28]
+\]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 ≤
+    <code>input_depth</code>,
+    <code>input_rows</code>,
+    <code>input_cols</code> ≤ 256
+  </li>
+  <li>1 ≤
+    <code>kernel_depth</code>,
+    <code>kernel_rows</code>,
+    <code>kernel_cols</code> ≤ 5
+  </li>
+  <li>
+    <code>kernel_depth</code> ≤
+    <code>input_depth</code>
+  </li>
+  <li>
+    <code>kernel_rows</code> ≤
+    <code>input_rows</code>
+  </li>
+  <li>
+    <code>kernel_cols</code> ≤
+    <code>input_cols</code>
+  </li>
+</ul>

@@ -1,0 +1,71 @@
+<p>
+  Implement a program for multi-head self-attention. Given three input matrices \(Q\) (queries), \(K\) (keys), and \(V\) (values) of size \(N \times d_{\text{model}}\), compute:
+  \[ \text{MultiHead}(Q,K,V) = \text{Concat}(\text{head}_1,\ldots,\text{head}_h) \]
+  where each head computes:
+  \[ \text{head}_i = \text{softmax}\left(\frac{Q_iK_i^T}{\sqrt{d_k}}\right)V_i \]
+  with \(d_k = d_{\text{model}}/h\) and \(Q_i, K_i, V_i\) being the i-th head's partition of the input matrices.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>output</code> array</li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+Input:
+\[
+\begin{align*}
+N &= 2, \quad d_{\text{model}} = 4, \quad h = 2 \\[1em]
+Q &= \begin{bmatrix}
+1.0 & 0.0 & 2.0 & 3.0 \\
+4.0 & 5.0 & 6.0 & 7.0
+\end{bmatrix} \\[1em]
+K &= \begin{bmatrix}
+1.0 & 2.0 & 3.0 & 4.0 \\
+5.0 & 6.0 & 7.0 & 8.0
+\end{bmatrix} \\[1em]
+V &= \begin{bmatrix}
+0.5 & 1.0 & 1.5 & 2.0 \\
+2.5 & 3.0 & 3.5 & 4.0
+\end{bmatrix}
+\end{align*}
+\]
+
+Output:
+\[
+\begin{bmatrix}
+2.39 & 2.89 & 3.50 & 4.00 \\
+2.50 & 3.00 & 3.50 & 4.00
+\end{bmatrix}
+\]
+</p>
+
+<h2>Example 2:</h2>
+<p>
+Input:
+\[
+\begin{align*}
+N &= 1, \quad d_{\text{model}} = 2, \quad h = 1 \\[1em]
+Q &= \begin{bmatrix} 1.0 & 1.0 \end{bmatrix} \\[1em]
+K &= \begin{bmatrix} 1.0 & 1.0 \end{bmatrix} \\[1em]
+V &= \begin{bmatrix} 2.0 & 3.0 \end{bmatrix}
+\end{align*}
+\]
+
+Output:
+\[
+\begin{bmatrix} 2.0 & 3.0 \end{bmatrix}
+\]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li><code>1 ≤ N ≤ 10000</code></li>
+  <li><code>2 ≤ d_model ≤ 1024</code></li>
+  <li><code>1 ≤ h ≤ d_model</code></li>
+  <li><code>d_model % h == 0</code></li>
+  <li><code>-10.0 ≤ values ≤ 10.0</code></li>
+</ul>

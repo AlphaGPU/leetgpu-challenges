@@ -1,0 +1,45 @@
+<p>
+    Implement a GPU program that raises a square matrix \(A\) of size \(N \times N\) to an integer power \(P\).<br/>
+    The <code>solve</code> function receives a flattened input matrix <code>input</code> (row-major order), an empty output matrix <code>output</code> of the same size, the dimension <code>N</code>, and the exponent <code>P</code>.<br/>
+    You must compute \(\text{output} = A^{P}\) where matrix multiplication is standard dense multiplication over 32-bit floating point numbers.
+  </p>
+  
+  <h2>Implementation Requirements</h2>
+  <ul>
+    <li>External libraries are <strong>not</strong> permitted.</li>
+    <li>The <code>solve</code> function signature must remain unchanged.</li>
+    <li>The final result must be written to the <code>output</code> array in row-major order.</li>
+  </ul>
+  
+  <h2>Example 1:</h2>
+  <pre>
+  Input:
+    input  = [[1.0, 2.0],
+              [3.0, 4.0]]
+    N      = 2
+    P      = 3
+  Output:
+    output = [[37.0, 54.0],
+              [81.0, 118.0]]
+  </pre>
+  
+  <h2>Example 2:</h2>
+  <pre>
+  Input:
+    input  = [[1.0, 0.0, 2.0],
+              [0.0, 1.0, 0.0],
+              [3.0, 0.0, 0.0]]
+    N      = 3
+    P      = 2
+  Output:
+    output = [[7.0, 0.0, 2.0],
+              [0.0, 1.0, 0.0],
+              [3.0, 0.0, 6.0]]
+  </pre>
+  
+  <h2>Constraints</h2>
+  <ul>
+    <li>\(1 \le N \le 1024\)</li>
+    <li>\(1 \le P \le 20\)</li>
+    <li>Elements of <code>input</code> satisfy \(-10.0 \le A_{ij} \le 10.0\)</li>
+  </ul> 

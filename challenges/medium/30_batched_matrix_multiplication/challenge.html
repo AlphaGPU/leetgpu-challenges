@@ -1,0 +1,39 @@
+<p>
+  Implement a batched matrix multiplication in FP32. Given a batch of matrices <code>A</code> of shape <code>[B, M, K]</code> and a batch of matrices <code>B</code> of shape <code>[B, K, N]</code>, compute the output batch <code>C</code> of shape <code>[B, M, N]</code> such that for each batch index <code>b</code>:
+  \[
+    C_b = A_b \times B_b
+  \]
+  All matrices are stored in row-major order and use 32-bit floating point numbers (FP32).
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>C</code> array</li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:
+B = 2, M = 2, K = 3, N = 2
+A = [
+  [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+  [[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]]
+]
+B = [
+  [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+  [[6.0, 5.0], [4.0, 3.0], [2.0, 1.0]]
+]
+Output:
+C = [
+  [[22.0, 28.0], [49.0, 64.0]],
+  [[92.0, 68.0], [128.0, 95.0]]
+]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 128</li>
+  <li>1 &le; <code>M</code>, <code>N</code>, <code>K</code> &le; 1024</li>
+</ul> 

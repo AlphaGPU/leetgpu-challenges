@@ -1,0 +1,122 @@
+<p>
+  Write a program that performs a 2D convolution operation on the GPU. Given an input matrix and a kernel (filter), compute the convolved
+  output. The convolution should be performed with a "valid" boundary condition, meaning the kernel is only applied
+  where it fully overlaps with the input.
+</p>
+
+<p>
+  The input consists of:
+<ul>
+  <li><code>input</code>: A 2D matrix of 32-bit floating-point numbers, represented as a 1D array in row-major order.
+  </li>
+  <li><code>kernel</code>: A 2D kernel (filter) of 32-bit floating-point numbers, also represented as a 1D array in
+    row-major order.</li>
+</ul>
+</p>
+
+<p>
+  The output should be written to the <code>output</code> matrix (also a 1D array in row-major order). The output matrix will have dimensions:
+  <ul>
+    <li><code>output_rows = input_rows - kernel_rows + 1</code></li>
+    <li><code>output_cols = input_cols - kernel_cols + 1</code></li>
+</ul>
+</p>
+
+<p>
+  The convolution operation is defined as:
+</p>
+<p>
+  \(output[i][j] = \sum_{m=0}^{kernel\_rows-1} \sum_{n=0}^{kernel\_cols-1} input[i+m][j+n] * kernel[m][n]\)
+</p>
+
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The
+    <code>solve</code> function signature must remain unchanged
+  </li>
+  <li>The final result must be stored in the array
+    <code>output</code>
+  </li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+<strong>Input:</strong><br>
+<code>input</code> (3×3):
+\[
+\begin{bmatrix}
+1 & 2 & 3 \\
+4 & 5 & 6 \\
+7 & 8 & 9
+\end{bmatrix}
+\]
+<code>kernel</code> (2×2):
+\[
+\begin{bmatrix}
+0 & 1 \\
+1 & 0
+\end{bmatrix}
+\]
+<code>input_rows = 3</code><br>
+<code>input_cols = 3</code><br>
+<code>kernel_rows = 2</code><br>
+<code>kernel_cols = 2</code>
+</p>
+
+<p>
+<strong>Output:</strong><br>
+<code>output</code> (2×2):
+\[
+\begin{bmatrix}
+6 & 8 \\
+12 & 14
+\end{bmatrix}
+\]
+</p>
+
+<h2>Example 2:</h2>
+<p>
+<strong>Input:</strong><br>
+<code>input</code> (4×4):
+\[
+\begin{bmatrix}
+1 & 1 & 1 & 1 \\
+1 & 2 & 3 & 1 \\
+1 & 4 & 5 & 1 \\
+1 & 1 & 1 & 1
+\end{bmatrix}
+\]
+<code>kernel</code> (1×3):
+\[
+\begin{bmatrix}
+1 & 0 & 1
+\end{bmatrix}
+\]
+<code>input_rows = 4</code><br>
+<code>input_cols = 4</code><br>
+<code>kernel_rows = 1</code><br>
+<code>kernel_cols = 3</code>
+</p>
+
+<p>
+<strong>Output:</strong><br>
+<code>output</code> (4×2):
+\[
+\begin{bmatrix}
+2 & 2 \\
+4 & 3 \\
+6 & 5 \\
+2 & 2
+\end{bmatrix}
+\]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 ≤ <code>input_rows</code>, <code>input_cols</code> ≤ 3072</li>
+  <li>1 ≤ <code>kernel_rows</code>, <code>kernel_cols</code> ≤ 31</li>
+  <li><code>kernel_rows</code> ≤ <code>input_rows</code></li>
+  <li><code>kernel_cols</code> ≤ <code>input_cols</code></li>
+</ul>

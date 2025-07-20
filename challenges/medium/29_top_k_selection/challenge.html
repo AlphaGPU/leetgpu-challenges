@@ -1,0 +1,39 @@
+<p>
+    Implement a GPU program that, given a 1D array <code>input</code> of 32-bit floating point numbers of length <code>N</code>, selects the <code>k</code> largest elements and writes them in descending order to the <code>output</code> array of length <code>k</code>.
+  </p>
+  
+  <h2>Implementation Requirements</h2>
+  <ul>
+    <li>External libraries are not permitted</li>
+    <li>The <code>solve</code> function signature must remain unchanged</li>
+    <li>The final result must be stored in the <code>output</code> array</li>
+  </ul>
+  
+  <h2>Example 1:</h2>
+  <pre>
+  Input:
+  input = [1.0, 5.0, 3.0, 2.0, 4.0]
+  N = 5
+  k = 3
+  
+  Output:
+  output = [5.0, 4.0, 3.0]
+  </pre>
+  
+  <h2>Example 2:</h2>
+  <pre>
+  Input:
+  input = [7.2, -1.0, 3.3, 8.8, 2.2]
+  N = 5
+  k = 2
+  
+  Output:
+  output = [8.8, 7.2]
+  </pre>
+  
+  <h2>Constraints</h2>
+  <ul>
+    <li>1 ≤ N ≤ 100,000,000</li>
+    <li>1 ≤ k ≤ N</li>
+    <li>All values in <code>input</code> are 32-bit floats</li>
+  </ul>

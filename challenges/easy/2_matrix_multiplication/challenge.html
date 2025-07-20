@@ -1,0 +1,72 @@
+<p>
+  Write a program that multiplies two matrices of 32-bit floating point numbers on a GPU.
+  Given matrix \(A\) of dimensions \(M \times N\) and matrix \(B\) of dimensions \(N \times K\), compute
+  the product matrix \(C = A \times B\), which will have dimensions \(M \times K\).
+  All matrices are stored in row-major format.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in matrix <code>C</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+Input:<br>
+Matrix \(A\) (\(2 \times 2\)):
+\[
+\begin{bmatrix}
+1.0 & 2.0 \\
+3.0 & 4.0
+\end{bmatrix}
+\]
+Matrix \(B\) (\(2 \times 2\)):
+\[
+\begin{bmatrix}
+5.0 & 6.0 \\
+7.0 & 8.0
+\end{bmatrix}
+\]
+Output:<br>
+Matrix \(C\) (\(2 \times 2\)):
+\[
+\begin{bmatrix}
+19.0 & 22.0 \\
+43.0 & 50.0
+\end{bmatrix}
+\]
+</p>
+
+<h2>Example 2:</h2>
+<p>
+Input:<br>
+Matrix \(A\) (\(1 \times 3\)):
+\[
+\begin{bmatrix}
+1.0 & 2.0 & 3.0
+\end{bmatrix}
+\]
+Matrix \(B\) (\(3 \times 1\)):
+\[
+\begin{bmatrix}
+4.0 \\
+5.0 \\
+6.0
+\end{bmatrix}
+\]
+Output:<br>
+Matrix \(C\) (\(1 \times 1\)):
+\[
+\begin{bmatrix}
+32.0
+\end{bmatrix}
+\]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code>, <code>N</code>, <code>K</code> &le; 8192</li>
+  <li>Performance is measured with <code>M</code> = 8192, <code>N</code> = 6144, <code>K</code> = 4096</li>
+</ul> 

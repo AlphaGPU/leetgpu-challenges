@@ -1,0 +1,28 @@
+<p>
+  Implement the k-means clustering algorithm for 2D points. Given arrays of x and y coordinates for data points, initial centroids, and other parameters, assign each point to the nearest centroid and update the centroids iteratively. The final centroids and labels should be stored in the output arrays.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>labels</code>, <code>final_centroid_x</code>, and <code>final_centroid_y</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:
+sample_size = 4, k = 2, max_iterations = 10
+data_x = [1.0, 2.0, 8.0, 9.0]
+data_y = [1.0, 2.0, 8.0, 9.0]
+initial_centroid_x = [1.0, 8.0]
+initial_centroid_y = [1.0, 8.0]
+Output: (see reference implementation for expected output)
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 ≤ sample_size ≤ 1000000</li>
+  <li>1 ≤ k ≤ 1000</li>
+  <li>All arrays are float32 except labels, which is int32</li>
+</ul> 

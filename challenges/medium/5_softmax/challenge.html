@@ -1,0 +1,40 @@
+<p>
+    Write a program that computes the softmax function for an array of 32-bit floating-point numbers on a GPU.  The softmax function is defined as follows:
+</p>
+
+<p>
+    For an input array \(x\) of length \(n\), the softmax of \(x\), denoted \(\sigma(x)\), is an array of length \(n\) where the \(i\)-th element is:
+</p>
+
+<p>
+    \(\sigma(x)_i = \frac{e^{x_i}}{\sum_{j=1}^{n} e^{x_j}}\)
+</p>
+
+<p>
+  Your solution should handle potential overflow issues by using the "max trick".  Subtract the maximum value of the input array from each element before exponentiation.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the array <code>output</code></li>
+</ul>
+
+<h2>Example 1:</h2 >
+<pre>
+Input: [1.0, 2.0, 3.0], N = 3
+Output: [0.090, 0.244, 0.665] (approximately)
+</pre>
+
+<h2>Example 2:</h2 >
+<pre>
+Input: [-10.0, -5.0, 0.0, 5.0, 10.0], N = 5
+Output: [2.04e-09, 4.52e-07, 9.99e-01, 2.26e-02, 9.77e-01] (approximately)
+</pre>
+
+<h2>Constraints</h2>
+
+<ul>
+  <li>1 &le; <code>N</code> &le; 500,000</li>
+</ul> 

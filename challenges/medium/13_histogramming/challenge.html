@@ -1,0 +1,40 @@
+<p>
+  Write a GPU program that computes the histogram of an array of 32-bit integers.
+  The histogram should count the number of occurrences of each integer value in the range <code>[0, num_bins)</code>.
+  You are given an input array <code>input</code> of length <code>N</code> and the number of bins <code>num_bins</code>.
+</p>
+
+<p>
+  The result should be an array of integers of length
+<code>num_bins</code>, where each element represents
+the count of occurrences of its corresponding index in the input array.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The
+    <code>solve</code> function signature must remain unchanged
+  </li>
+  <li>The final result must be stored in the
+    <code>histogram</code> array.
+  </li>
+</ul>
+
+<h2>Examples</h2>
+
+<pre>
+Input: input = [0, 1, 2, 1, 0],  N = 5, num_bins = 3
+Output: [2, 2, 1]
+  
+Input: input = [3, 3, 3, 3], N = 4, num_bins = 5
+Output: [0, 0, 0, 4, 0]
+</pre>
+
+<h2>Constraints</h2>
+
+<ul>
+  <li>1 &le; <code>N</code> &le; 100,000,000</li>
+  <li>0 &le; <code>input[i]</code> &lt; <code>num_bins</code></li>
+  <li>1 &le; <code>num_bins</code> &le; 1024</li>
+</ul>

@@ -1,0 +1,58 @@
+<p>
+  Solve the Ordinary Least Squares (OLS) regression problem on a GPU. Given a feature matrix \(X\) of size \(n\_samples \times n\_features\) and a target vector \(y\) of size \(n\_samples\), compute the coefficient vector \(\beta\) that minimizes the sum of squared residuals:
+  \[ \min_{\beta} ||X\beta - y||^2 \]
+  
+  The closed-form solution to OLS is:
+  \[ \beta = (X^TX)^{-1}X^Ty \]
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted.</li>
+  <li>The <code>solve</code> function signature must remain unchanged.</li>
+  <li>The final coefficients must be stored in the <code>beta</code> vector.</li>
+  <li>Assume that the feature matrix \(X\) is full rank (i.e., \(X^TX\) is invertible).</li>
+</ul>
+
+<h2>Example:</h2>
+<p>
+Input:<br>
+\(X\) (samples × features): 
+\[
+\begin{bmatrix}
+-0.23 & -0.23 & 1.52 \\
+0.77 & -0.47 & 1.58 \\
+-0.14 & 0.65 & 0.5 \\
+-1.91 & -1.72 & 0.24 \\
+-0.46 & -0.47 & 0.54
+\end{bmatrix}
+\]
+\(y\): 
+\[
+\begin{bmatrix}
+83.01 \\
+93.4 \\
+47.33 \\
+-62.22 \\
+13.06
+\end{bmatrix}
+\]
+Output:<br>
+\(\beta\): 
+\[
+\begin{bmatrix}
+13.97 \\
+29.12 \\
+61.05
+\end{bmatrix}
+\]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 ≤ <code>n_samples</code> ≤ 100,000</li>
+  <li>1 ≤ <code>n_features</code> ≤ 1,000</li>
+  <li><code>n_samples</code> ≥ <code>n_features</code></li>
+  <li>-1000.0 ≤ values in <code>X</code> and <code>y</code> ≤ 1000.0</li>
+  <li>Solutions are tested with absolute tolerance of 1e-2 and relative tolerance of 1e-2</li>
+</ul> 

@@ -1,0 +1,63 @@
+<p>
+  Solve the logistic regression problem on a GPU. Given a feature matrix \(X\) of size \(n\_samples \times n\_features\) and a binary target vector \(y\) of size \(n\_samples\) (containing only 0s and 1s), compute the coefficient vector \(\beta\) that maximizes the log-likelihood:
+  \[ \max_{\beta} \sum_{i=1}^{n} \left[ y_i \log(p_i) + (1-y_i) \log(1-p_i) \right] \]
+  
+  where \(p_i = \sigma(X_i^T \beta)\) and \(\sigma(z) = \frac{1}{1 + e^{-z}}\) is the sigmoid function.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final coefficients must be stored in the <code>beta</code> vector</li>
+  <li>The target vector <code>y</code> contains only binary values (0 and 1)</li>
+</ul>
+
+<h2>Example:</h2>
+<p>
+Input:<br>
+\(X\) (samples × features): 
+\[
+\begin{bmatrix}
+2.0 & 1.0 \\
+1.0 & 2.0 \\
+3.0 & 3.0 \\
+1.5 & 2.5 \\
+-1.0 & -2.0 \\
+-2.0 & -1.0 \\
+-1.5 & -2.5 \\
+-3.0 & -3.0
+\end{bmatrix}
+\]
+\(y\): 
+\[
+\begin{bmatrix}
+1 \\
+1 \\
+1 \\
+0 \\
+0 \\
+0 \\
+1 \\
+0
+\end{bmatrix}
+\]
+Output:<br>
+\(\beta\): 
+\[
+\begin{bmatrix}
+2.26 \\
+-1.29
+\end{bmatrix}
+\]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 ≤ <code>n_samples</code> ≤ 100,000</li>
+  <li>1 ≤ <code>n_features</code> ≤ 1,000</li>
+  <li><code>n_samples</code> ≥ <code>n_features</code></li>
+  <li>-10.0 ≤ values in <code>X</code> ≤ 10.0</li>
+  <li><code>y</code> contains only binary values: 0 or 1</li>
+  <li>Solutions are tested with absolute tolerance of 1e-2 and relative tolerance of 1e-2</li>
+</ul>

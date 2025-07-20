@@ -1,0 +1,96 @@
+<p> Implement a CUDA program that computes the softmax attention operation for a given set of matrices. Given the query
+  matrix <code>Q</code> of size <code>M×d</code>, key matrix <code>K</code> of size <code>N×d</code>, and value matrix
+  <code>V</code> of size <code>N×d</code>, your program should compute the output matrix using the formula:
+  $$\text{Attention}(Q, K, V) = \text{softmax}\Bigl( \frac{QK^T}{\sqrt{d}} \Bigr)V,$$ where the softmax function is
+  applied row-wise. </p>
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only CUDA native features (external libraries are not permitted)</li>
+  <li>The
+    <code>solve</code> function signature must remain unchanged
+  </li>
+  <li>The final result must be stored in the output matrix
+    <code>output</code>
+  </li>
+</ul>
+<h2>Example 1:</h2>
+<p>
+<strong>Input:</strong><br>
+<code>Q</code> (2×4):
+\[
+\begin{bmatrix}
+1.0 & 0.0 & 0.0 & 0.0 \\
+0.0 & 1.0 & 0.0 & 0.0
+\end{bmatrix}
+\]
+<code>K</code> (3×4):
+\[
+\begin{bmatrix}
+1.0 & 0.0 & 0.0 & 0.0 \\
+0.0 & 1.0 & 0.0 & 0.0 \\
+0.0 & 0.0 & 1.0 & 0.0
+\end{bmatrix}
+\]
+<code>V</code> (3×4):
+\[
+\begin{bmatrix}
+1.0 & 2.0 & 3.0 & 4.0 \\
+5.0 & 6.0 & 7.0 & 8.0 \\
+9.0 & 10.0 & 11.0 & 12.0
+\end{bmatrix}
+\]
+</p>
+
+<p>
+<strong>Output:</strong><br>
+<code>output</code> (2×4):
+\[
+\begin{bmatrix}
+4.29 & 5.29 & 6.29 & 7.29 \\
+5.00 & 6.00 & 7.00 & 8.00
+\end{bmatrix}
+\]
+</p>
+
+<h2>Example 2:</h2>
+<p>
+<strong>Input:</strong><br>
+<code>Q</code> (1×2):
+\[
+\begin{bmatrix}
+1.0 & 2.0
+\end{bmatrix}
+\]
+<code>K</code> (2×2):
+\[
+\begin{bmatrix}
+1.0 & 0.0 \\
+0.0 & 1.0
+\end{bmatrix}
+\]
+<code>V</code> (2×2):
+\[
+\begin{bmatrix}
+3.0 & 4.0 \\
+5.0 & 6.0
+\end{bmatrix}
+\]
+</p>
+
+<p>
+<strong>Output:</strong><br>
+<code>output</code> (1×2):
+\[
+\begin{bmatrix}
+4.34 & 5.34
+\end{bmatrix}
+\]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>Matrix <code>Q</code> is of size <code>M×d</code> and matrices <code>K</code> and <code>V</code> are of size
+    <code>N×d</code></li>
+  <li>1 &le; <code>M</code>, <code>N</code> &le; 100,000</li>
+  <li>1 &le; <code>d</code> &le; 1024</li>
+</ul>

@@ -1,0 +1,65 @@
+<p>
+  Implement a program for a multi-agent flocking simulation (boids). The input consists of:
+</p>
+  <li>An array <code>agents</code> containing <code>N</code> agents, where <code>N</code> is the total number of agents</li>
+  <li>Each agent occupies 4 consecutive 32-bit floating point numbers in the array: \([x, y, v_x, v_y]\), where:
+      <ul>
+          <li>\((x, y)\) represents the agent's position in 2D space</li>
+          <li>\((v_x, v_y)\) represents the agent's velocity vector</li>
+      </ul>
+  </li>
+  <li>The total array size is <code>4 * N</code> floats, with agent \(i\)'s data stored at indices <code>[4i, 4i+1, 4i+2, 4i+3]</code></li>
+</ul>
+
+<h2>Simulation Rules</h2>
+<ol>
+  <li>For each agent \(i\), identify all neighbors \(j\) within radius \(r = 5.0\) using:
+      \[
+      \sqrt{(x_i - x_j)^2 + (y_i - y_j)^2} \leq r
+      \]
+  </li>
+  <li>Compute average velocity of neighboring agents:
+      \[
+      \vec{v}_{avg} = \frac{1}{|N_i|} \sum_{j \in N_i} \vec{v}_j
+      \]
+      where \(N_i\) is the set of neighbors for agent \(i\)
+  </li>
+  <li>Update velocity:
+      \[
+      \vec{v}_{new} = \vec{v} + \alpha(\vec{v}_{avg} - \vec{v}), \text{ where } \alpha = 0.05
+      \]
+  </li>
+  <li>Update position:
+      \[
+      \vec{p}_{new} = \vec{p} + \vec{v}_{new}
+      \]
+  </li>
+</ol>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>agents_next</code> array</li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input: N = 2
+agents = [
+  0.0, 0.0, 1.0, 0.0,    // Agent 0: [x, y, vx, vy]
+  3.0, 4.0, 0.0, -1.0    // Agent 1: [x, y, vx, vy]
+]
+
+Output:
+agents_next = [
+  1.0, 0.0, 1.0, 0.0,    // Agent 0: [x, y, vx, vy]
+  3.0, 3.0, 0.0, -1.0    // Agent 1: [x, y, vx, vy]
+]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+<li>1 &le; <code>N</code> &le; 100,000</li>
+<li>Each agent's position and velocity components are 32-bit floats</li>
+</ul>

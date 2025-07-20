@@ -1,0 +1,34 @@
+<p>
+  Implement a program that copies an \(N \times N\) matrix of 32-bit floating point numbers from input array \(A\) to output array \(B\) on the GPU. The program should perform a direct element-wise copy so that \(B_{i,j} = A_{i,j}\) for all valid indices.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in matrix <code>B</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:  A = [[1.0, 2.0],
+             [3.0, 4.0]]
+Output: B = [[1.0, 2.0],
+             [3.0, 4.0]]
+</pre>
+
+<h2>Example 2:</h2>
+<pre>
+Input:  A = [[5.5, 6.6, 7.7],
+             [8.8, 9.9, 10.1],
+             [11.2, 12.3, 13.4]]
+Output: B = [[5.5, 6.6, 7.7],
+             [8.8, 9.9, 10.1],
+             [11.2, 12.3, 13.4]]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 4096</li>
+  <li>All elements are 32-bit floating point numbers</li>
+</ul> 

@@ -1,0 +1,37 @@
+<p>
+  Implement a CUDA program to calculate the Mean Squared Error (MSE) between
+  predicted values and target values. Given two arrays of equal length,
+  <code>predictions</code> and <code>targets</code>, compute: \[ \text{MSE} =
+  \frac{1}{N} \sum_{i=1}^{N} (predictions_i - targets_i)^2 \] where N is the
+  number of elements in each array.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted.</li>
+  <li>The <code>solve</code> function signature must remain unchanged.</li>
+  <li>The final result must be stored in the <code>mse</code> variable.</li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+  Input:  predictions = [1.0, 2.0, 3.0, 4.0]
+          targets = [1.5, 2.5, 3.5, 4.5]
+  Output: mse = 0.25
+</pre>
+
+<h2>Example 2:</h2>
+<pre>
+  Input:  predictions = [10.0, 20.0, 30.0]
+          targets = [12.0, 18.0, 33.0]
+  Output: mse = 5.67
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 100,000,000</li>
+  <li>
+    -1000.0 &le; <code>predictions[i]</code>, <code>targets[i]</code> &le;
+    1000.0
+  </li>
+</ul> 

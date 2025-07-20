@@ -1,0 +1,26 @@
+<p>
+    Implement a program that performs <code>R</code> rounds of parallel hashing on an array of 32-bit integers using the provided hash function.
+    The hash should be applied <code>R</code> times iteratively (the output of one round becomes the input to the next).
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+    <li>External libraries are not permitted</li>
+    <li>The <code>solve</code> function signature must remain unchanged</li>
+    <li>The final result must be stored in array <code>output</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>Input:  numbers = [123, 456, 789], R = 2
+Output: hashes = [1636807824, 1273011621, 2193987222]</pre>
+
+<h2>Example 2:</h2>
+<pre>Input:  numbers = [0, 1, 2147483647], R = 3
+Output: hashes = [96754810, 3571711400, 2006156166]</pre>
+
+<h2>Constraints</h2>
+<ul>
+    <li>1 ≤ <code>N</code> ≤ 10,000,000</li>
+    <li>1 ≤ <code>R</code> ≤ 100</li>
+    <li>0 ≤ <code>input[i]</code> ≤ 2147483647</li>
+</ul> 
