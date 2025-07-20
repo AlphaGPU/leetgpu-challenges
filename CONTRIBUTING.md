@@ -58,3 +58,35 @@ challenges/<difficulty>/<number>_<name>/
 - Check existing challenges for examples
 
 Thank you for helping improve LeetGPU! 
+
+## Contributor Terms
+
+By submitting code, documentation, or any other content to this repository
+(“Contribution”), you confirm that:
+
+1. **Ownership**  
+   You are the sole author of the Contribution, or have obtained all
+   necessary rights and permissions to grant the licenses below.
+
+2. **Dual License to the Project**  
+   You grant AlphaGPU and its downstream users **two** non‑exclusive,
+   worldwide, royalty‑free licenses to your Contribution:
+
+   **a.** Under the repository’s public license,  
+   Creative Commons Attribution‑NonCommercial‑NoDerivatives 4.0  
+   (“CC BY‑NC‑ND”), for all public distribution.
+
+   **b.** Under a commercial‑friendly license to AlphaGPU itself:  
+   – **Grant:** AlphaGPU may reproduce, distribute, adapt, sublicense,  
+     and create derivative works of your Contribution for any purpose,  
+     including commercial use.  
+   – **No further conditions:** AlphaGPU need not attribute further or  
+     seek additional permission beyond this agreement.
+
+3. **No Additional Restrictions**  
+   You may **not** impose any further terms on your Contribution that
+   conflict with the licenses granted above.
+
+4. **Pull Request = Acceptance**  
+   Submitting a Pull Request constitutes acceptance of these terms.
+

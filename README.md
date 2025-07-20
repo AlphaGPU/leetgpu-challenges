@@ -17,3 +17,9 @@ Each challenge contains:
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on contributing new challenges or improvements.
+
+## License
+
+This problem set is licensed under [CC BY‑NC‑ND 4.0 license](LICENSE.md).
+
+© 2025 AlphaGPU, LLC. Commercial use, redistribution, or derivative use is prohibited.
