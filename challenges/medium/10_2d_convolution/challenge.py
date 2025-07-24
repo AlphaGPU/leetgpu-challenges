@@ -18,11 +18,10 @@ class Challenge(ChallengeBase):
         # Reshape flattened arrays to 2D matrices
         input_2d = input.view(input_rows, input_cols)
         kernel_2d = kernel.view(kernel_rows, kernel_cols)
-        # Flip the kernel for convolution (PyTorch correlation is convolution with flipped kernel)
-        kernel_flipped = torch.flip(kernel_2d, dims=[0, 1])
-        kernel_prepared = kernel_flipped.unsqueeze(0).unsqueeze(0)
+        # Prepare tensors for conv2d (add batch and channel dimensions)
+        kernel_prepared = kernel_2d.unsqueeze(0).unsqueeze(0)
         input_prepared = input_2d.unsqueeze(0).unsqueeze(0)
-        # Perform the convolution operation using PyTorch's F.conv2d
+        # Perform cross-correlation using PyTorch's F.conv2d (which does cross-correlation by default)
         result = torch.nn.functional.conv2d(input_prepared, kernel_prepared, padding=0)
         # Copy result to output tensor (removing the extra dimensions)
         output.copy_(result.view(-1))
