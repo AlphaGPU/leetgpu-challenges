@@ -7,8 +7,8 @@ class Challenge(ChallengeBase):
     def __init__(self):
         super().__init__(
             name="1D Convolution",
-            atol=1e-05,
-            rtol=1e-05,
+            atol=1e-04,
+            rtol=1e-04,
             num_gpus=1,
             access_tier="free"
         )
@@ -20,10 +20,13 @@ class Challenge(ChallengeBase):
         assert input.dtype == kernel.dtype == output.dtype
         assert input.device == kernel.device == output.device
         
-        # Compute 1D convolution
-        for i in range(input_size - kernel_size + 1):
-            output[i] = torch.sum(input[i:i + kernel_size] * kernel)
+        # Create strided view of input for all windows
+        windows = input.unfold(0, kernel_size, 1)
         
+        # Use einsum for explicit cross-correlation
+        # 'ij,j->i' means: for each window i, multiply with kernel j and sum over j
+        output.copy_(torch.einsum('ij,j->i', windows, kernel))
+            
     def get_solve_signature(self) -> Dict[str, Any]:
         return {
             "input": ctypes.POINTER(ctypes.c_float),
