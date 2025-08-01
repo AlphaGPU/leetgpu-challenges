@@ -25,12 +25,19 @@ class Challenge(ChallengeBase):
         )
         assert input.dtype == kernel.dtype == output.dtype
         assert input.device == kernel.device == output.device
-        for d in range(output.shape[0]):
-            for r in range(output.shape[1]):
-                for c in range(output.shape[2]):
-                    output[d, r, c] = torch.sum(
-                        input[d:d+kernel_depth, r:r+kernel_rows, c:c+kernel_cols] * kernel
-                    )
+        
+        input_expanded = input.unsqueeze(0).unsqueeze(0)
+        kernel_expanded = kernel.unsqueeze(0).unsqueeze(0)
+        
+        result = torch.nn.functional.conv3d(
+            input_expanded, 
+            kernel_expanded, 
+            bias=None, 
+            stride=1, 
+            padding=0
+        )
+        
+        output.copy_(result.squeeze(0).squeeze(0))
 
     def get_solve_signature(self) -> Dict[str, Any]:
         return {
