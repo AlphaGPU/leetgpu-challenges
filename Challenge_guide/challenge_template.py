@@ -7,10 +7,10 @@ class Challenge(ChallengeBase):
     def __init__(self):
         super().__init__(
             name="[CHALLENGE_NAME]",  # e.g., "ReLU", "Softmax", "Multi-Head Attention"
-            atol=1e-05,  # Absolute tolerance for testing
-            rtol=1e-05,  # Relative tolerance for testing
-            num_gpus=1,  # Number of GPUs required
-            access_tier="free"  # Access tier: "free" 
+            atol=1e-05,  # Absolute tolerance for testing. 1e-05 is a good default.
+            rtol=1e-05,  # Relative tolerance for testing. 1e-05 is a good default.
+            num_gpus=1,  # Number of GPUs required. 
+            access_tier="free"  # Access tier
         )
         
     def reference_impl(self, *args, **kwargs):
