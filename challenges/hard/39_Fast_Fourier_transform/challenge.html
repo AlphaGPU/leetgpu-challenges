@@ -84,18 +84,4 @@ yielding a flat spectrum.
       <code>&lt;= 1 e-4</code> against the reference implementation.</li>
 </ul>
 
-<h2>Performance Target</h2>
-<p>
-Your kernel will be benchmarked on a random complex signal with
-<code>N&nbsp;=&nbsp;262 144</code> samples.  Aim for &gt; 20× speed-up
-over the naïve O(<code>N²</code>) reference on the judge hardware.
-Efficient shared-memory tiling, warp-shuffle butterflies and
-coalesced memory access are key to achieving a competitive runtime.
-</p>
-
-<hr />
-
-<p style="font-size:smaller;">
-© 2025 AlphaGPU, LLC – For educational use only.  Redistribution or commercial
-use is prohibited.
 </p>
