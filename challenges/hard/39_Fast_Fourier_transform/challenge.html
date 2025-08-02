@@ -1,0 +1,101 @@
+<!-- challenges/hard/23_fft/challenge.html -->
+
+<h1>Fast Fourier Transform (1-D, Complex)</h1>
+
+<p>
+The <em>discrete Fourier transform</em> (DFT) converts a length-<code>N</code>
+complex-valued time-domain signal into its frequency-domain representation:
+</p>
+
+<pre>   X<sub>k</sub> = &Sigma;<sub>n=0</sub><sup>N-1</sup> x<sub>n</sub> · e<sup>-j 2πkn / N</sup> , k = 0 … N-1</pre>
+
+<p>
+A naïve DFT costs <span style="white-space:nowrap;">O(N²)</span> operations.
+The <strong>Fast Fourier Transform (FFT)</strong> reduces this to
+<span style="white-space:nowrap;">O(N log N)</span> by exploiting symmetries
+in the twiddle factors.  In this challenge you will implement an
+in-place single-precision FFT kernel that runs entirely on the GPU.
+</p>
+
+<h2>Data Layout</h2>
+<ul>
+  <li>The input <code>signal</code> and output <code>spectrum</code> are both
+      flattened arrays of length <code>2&nbsp;×&nbsp;N</code>.</li>
+  <li>Values are stored as <strong>interleaved real/imag parts</strong>:
+      <code>[real<sub>0</sub>, imag<sub>0</sub>, real<sub>1</sub>, imag<sub>1</sub>, …]</code>.</li>
+  <li>All values are 32-bit floats (C <code>float</code>, PyTorch
+      <code>torch.float32</code>).</li>
+</ul>
+
+<h2>Your Task</h2>
+<p>
+Write a GPU kernel <code>solve(signal, spectrum, N)</code> that:
+</p>
+<ol>
+  <li>Reads the length-<code>2N</code> array <code>signal</code>.</li>
+  <li>Computes the forward FFT of the <code>N</code> complex samples.</li>
+  <li>Writes the transformed data to the length-<code>2N</code> array
+      <code>spectrum</code> using the <em>same interleaved layout</em>.</li>
+</ol>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>You may assume <code>N &gt;= 1</code>.
+      The reference accepts any <code>N</code>; contestants may restrict their
+      fast path to power-of-two sizes but <em>must</em> handle non powers of two
+      correctly (e.g.&nbsp;via Bluestein or fallback DFT).</li>
+  <li>No external FFT libraries (cuFFT, rocFFT, etc.) are allowed.</li>
+  <li>The kernel must be entirely GPU-resident—no host-side FFT calls.</li>
+  <li>Both <code>signal</code> and <code>spectrum</code> reside on the same
+      GPU; copy the result into <code>spectrum</code> (out-of-place).</li>
+  <li>Leave the function signature produced by the template unchanged.</li>
+</ul>
+
+<h2>Example</h2>
+<pre>
+Input
+-----
+N = 4
+signal = [
+  1.0, 0.0,   # δ[0] = 1 + 0j
+  0.0, 0.0,
+  0.0, 0.0,
+  0.0, 0.0
+]
+
+Output (magnitude-only, ideal result)
+-------------------------------------
+spectrum = [
+  1.0, 0.0,
+  1.0, 0.0,
+  1.0, 0.0,
+  1.0, 0.0
+]
+</pre>
+<p>
+An impulse in the time domain has equal energy across all frequency bins,
+yielding a flat spectrum.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li><code>1&nbsp;&le;&nbsp;N&nbsp;&le;&nbsp;262 144</code> in public tests.</li>
+  <li>Absolute error <code>&lt;= 1 e-4</code> and relative error
+      <code>&lt;= 1 e-4</code> against the reference implementation.</li>
+</ul>
+
+<h2>Performance Target</h2>
+<p>
+Your kernel will be benchmarked on a random complex signal with
+<code>N&nbsp;=&nbsp;262 144</code> samples.  Aim for &gt; 20× speed-up
+over the naïve O(<code>N²</code>) reference on the judge hardware.
+Efficient shared-memory tiling, warp-shuffle butterflies and
+coalesced memory access are key to achieving a competitive runtime.
+</p>
+
+<hr />
+
+<p style="font-size:smaller;">
+© 2025 AlphaGPU, LLC – For educational use only.  Redistribution or commercial
+use is prohibited.
+</p>
