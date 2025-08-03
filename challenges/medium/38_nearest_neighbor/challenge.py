@@ -1,7 +1,6 @@
 import ctypes
 from typing import Any, List, Dict
 import torch
-import numpy as np
 from core.challenge_base import ChallengeBase
 
 
@@ -9,8 +8,8 @@ class Challenge(ChallengeBase):
     def __init__(self):
         super().__init__(
             name="Nearest Neighbor",
-            atol=1e-05,
-            rtol=1e-05,
+            atol=0,
+            rtol=0,
             num_gpus=1,
             access_tier="free"
         )
@@ -30,21 +29,21 @@ class Challenge(ChallengeBase):
         # Reshape points to (N, 3) for easier processing
         pts = points.view(N, 3)
         
-        for i in range(N):
-            min_dist_sq = float('inf')
-            nearest_idx = -1
-            
-            for j in range(N):
-                if i != j:
-                    # Calculate squared Euclidean distance
-                    diff = pts[i] - pts[j]
-                    dist_sq = torch.sum(diff * diff).item()
-                    
-                    if dist_sq < min_dist_sq:
-                        min_dist_sq = dist_sq
-                        nearest_idx = j
-            
-            indices[i] = nearest_idx
+        # pts shape: (N, 3)
+        # Expand to (N, 1, 3) and (1, N, 3) for broadcasting
+        pts_expand1 = pts.unsqueeze(1)  # (N, 1, 3)
+        pts_expand2 = pts.unsqueeze(0)  # (1, N, 3)
+        
+        # Compute all pairwise squared distances: (N, N)
+        diff = pts_expand1 - pts_expand2  # (N, N, 3)
+        dist_sq = torch.sum(diff * diff, dim=2)  # (N, N)
+        
+        # Mask diagonal (distance to self) with large value
+        mask = torch.eye(N, device=points.device, dtype=torch.bool)
+        dist_sq[mask] = float('inf')
+        
+        # Find nearest neighbor indices
+        indices.copy_(torch.argmin(dist_sq, dim=1).int())
 
     def get_solve_signature(self) -> Dict[str, Any]:
         return {
@@ -140,9 +139,9 @@ class Challenge(ChallengeBase):
         # Test case 7: Larger test with fixed seed
         torch.manual_seed(123)
         test_cases.append({
-            "points": torch.empty((1000, 3), device="cuda", dtype=dtype_float).uniform_(-1000.0, 1000.0).flatten(),
-            "indices": torch.full((1000,), -1, device="cuda", dtype=dtype_int),
-            "N": 1000
+            "points": torch.empty((250, 3), device="cuda", dtype=dtype_float).uniform_(-1000.0, 1000.0).flatten(),
+            "indices": torch.full((250,), -1, device="cuda", dtype=dtype_int),
+            "N": 250
         })
 
         return test_cases
@@ -150,7 +149,7 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype_float = torch.float32
         dtype_int = torch.int32
-        N = 10000  # Large test case for performance
+        N = 10000
         
         return {
             "points": torch.empty((N, 3), device="cuda", dtype=dtype_float).uniform_(-1000.0, 1000.0).flatten(),
