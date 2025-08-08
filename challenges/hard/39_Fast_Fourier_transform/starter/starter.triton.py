@@ -1,8 +1,7 @@
-# PyTorch is not allowed inside Triton solutions for benchmarking fairness.
+# The use of PyTorch in Triton programs is not allowed for the purposes of fair benchmarking.
 import triton
 import triton.language as tl
 
-# signal_ptr and spectrum_ptr are raw device pointers (int)
+# signal and spectrum are device pointers
 def solve(signal_ptr: int, spectrum_ptr: int, N: int):
-    # TODO: write one (or several) Triton kernels that perform the FFT
     pass

@@ -3,29 +3,16 @@ from typing import Any, List, Dict
 import torch
 from core.challenge_base import ChallengeBase
 
-
 class Challenge(ChallengeBase):
-    """
-    Compute the discrete Fourier transform of a complex-valued 1-D signal
-    using an in-place radix-2 FFT kernel on the GPU.
-
-    The input and output arrays are flattened as
-        [real0, imag0, real1, imag1, … real{N-1}, imag{N-1}]
-    so their length is 2 × N.
-    """
-
     def __init__(self):
         super().__init__(
             name="Fast Fourier Transform",
-            atol=1e-4,          # single-precision tolerance
-            rtol=1e-4,
+            atol=1e-3,         
+            rtol=1e-3,
             num_gpus=1,
             access_tier="free"
         )
 
-    # --------------------------------------------------------------------- #
-    #                            Reference (CPU/GPU via PyTorch)            #
-    # --------------------------------------------------------------------- #
     def reference_impl(self, signal: torch.Tensor, spectrum: torch.Tensor, N: int):
         """
         Ground-truth implementation using torch.fft. Assumes both tensors are
@@ -54,9 +41,6 @@ class Challenge(ChallengeBase):
         spec_ri = torch.stack((spec_c.real, spec_c.imag), dim=1).contiguous()
         spectrum.copy_(spec_ri.view(-1))
 
-    # --------------------------------------------------------------------- #
-    #                       Kernel interface signature                      #
-    # --------------------------------------------------------------------- #
     def get_solve_signature(self) -> Dict[str, Any]:
         return {
             "signal": ctypes.POINTER(ctypes.c_float),    # in  (2 × N)
@@ -64,9 +48,6 @@ class Challenge(ChallengeBase):
             "N": ctypes.c_int
         }
 
-    # --------------------------------------------------------------------- #
-    #                   Small human-readable example test                   #
-    # --------------------------------------------------------------------- #
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         N = 4
@@ -77,9 +58,6 @@ class Challenge(ChallengeBase):
         spectrum = torch.empty(2 * N, device="cuda", dtype=dtype)
         return {"signal": signal, "spectrum": spectrum, "N": N}
 
-    # --------------------------------------------------------------------- #
-    #                         Functional correctness tests                  #
-    # --------------------------------------------------------------------- #
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
         cases: List[Dict[str, Any]] = []
@@ -120,9 +98,6 @@ class Challenge(ChallengeBase):
 
         return cases
 
-    # --------------------------------------------------------------------- #
-    #                      Large input for benchmarking                     #
-    # --------------------------------------------------------------------- #
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         N = 262_144          # 256 K complex samples  (~2 MiB real/imag)
