@@ -1,6 +1,7 @@
+import torch
 import triton
 import triton.language as tl
 
-# input_ptr, output_ptr are raw device pointers
-def solve(input_ptr: int, output_ptr: int, N: int, k: int):
+# input, output are tensors on the GPU
+def solve(input: torch.Tensor, output: torch.Tensor, N: int, k: int):
     pass

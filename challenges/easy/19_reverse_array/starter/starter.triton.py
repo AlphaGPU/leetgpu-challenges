@@ -1,22 +1,23 @@
+import torch
 import triton
 import triton.language as tl
 
 @triton.jit
 def reverse_kernel(
-    input_ptr,
+    input,
     N,
     BLOCK_SIZE: tl.constexpr
 ):
-    input_ptr = input_ptr.to(tl.pointer_type(tl.float32))
+    pass
 
-# input_ptr is a raw device pointer
-def solve(input_ptr: int, N: int):
+# input is a tensor on the GPU
+def solve(input: torch.Tensor, N: int):
     BLOCK_SIZE = 1024
     n_blocks = triton.cdiv(N // 2, BLOCK_SIZE)
     grid = (n_blocks,)
     
     reverse_kernel[grid](
-        input_ptr,
+        input,
         N,
         BLOCK_SIZE
     ) 

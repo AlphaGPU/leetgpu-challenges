@@ -1,3 +1,4 @@
+import torch
 import triton
 import triton.language as tl
 
@@ -16,22 +17,21 @@ def fnv1a_hash(x):
 
 @triton.jit
 def fnv1a_hash_kernel(
-    input_ptr,
-    output_ptr,
+    input,
+    output,
     n_elements,
     n_rounds,
     BLOCK_SIZE: tl.constexpr
 ):
-    input_ptr = input_ptr.to(tl.pointer_type(tl.int32))
-    output_ptr = output_ptr.to(tl.pointer_type(tl.uint32))
+    pass
 
-# input_ptr, output_ptr are raw device pointers
-def solve(input_ptr: int, output_ptr: int, N: int, R: int):
+# input, output are tensors on the GPU
+def solve(input: torch.Tensor, output: torch.Tensor, N: int, R: int):
     BLOCK_SIZE = 1024
     grid = (triton.cdiv(N, BLOCK_SIZE),)
     fnv1a_hash_kernel[grid](
-        input_ptr,
-        output_ptr,
+        input,
+        output,
         N,
         R,
         BLOCK_SIZE

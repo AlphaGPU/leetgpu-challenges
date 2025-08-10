@@ -1,5 +1,7 @@
+import torch
 import triton
 import triton.language as tl
 
-def solve(input_ptr: int, output_ptr: int, N: int):
+# input, output are tensors on the GPU
+def solve(input: torch.Tensor, output: torch.Tensor, N: int):
     pass
