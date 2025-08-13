@@ -1,0 +1,50 @@
+<p>
+  Implement batch normalization forward pass for 2D input tensors. Given an input tensor of shape [N, C] where N is the batch size and C is the number of features, compute the normalized output using learnable scale (<code>gamma</code>) and shift (<code>beta</code>) parameters.
+</p>
+
+<p>
+  For each feature channel j, batch normalization computes:
+  \[
+  \begin{align}
+  \mu_j &= \frac{1}{N} \sum_{i=1}^{N} x_{i,j} \\
+  \sigma_j^2 &= \frac{1}{N} \sum_{i=1}^{N} (x_{i,j} - \mu_j)^2 \\
+  \hat{x}_{i,j} &= \frac{x_{i,j} - \mu_j}{\sqrt{\sigma_j^2 + \epsilon}} \\
+  y_{i,j} &= \gamma_j \hat{x}_{i,j} + \beta_j
+  \end{align}
+  \]
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>output</code> tensor</li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:  input = [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]  (N=3, C=2)
+        gamma = [1.0, 1.0]
+        beta = [0.0, 0.0]
+        eps = 1e-5
+Output: output = [[-1.224, -1.224], [0.0, 0.0], [1.224, 1.224]]
+</pre>
+
+<h2>Example 2:</h2>
+<pre>
+Input:  input = [[0.0, 1.0], [2.0, 3.0]]  (N=2, C=2)
+        gamma = [2.0, 0.5]
+        beta = [1.0, -1.0]
+        eps = 1e-5
+Output: output = [-1.0, -1.5], [3.0, -0.5]]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 ≤ <code>N</code> ≤ 10,000</li>
+  <li>1 ≤ <code>C</code> ≤ 1,024</li>
+  <li><code>eps</code> = 1e-5</li>
+  <li>-100.0 ≤ input values ≤ 100.0</li>
+  <li>0.1 ≤ gamma values ≤ 10.0</li>
+  <li>-10.0 ≤ beta values ≤ 10.0</li>
+</ul>
