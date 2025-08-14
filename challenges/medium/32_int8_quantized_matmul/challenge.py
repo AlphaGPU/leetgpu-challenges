@@ -40,13 +40,8 @@ class Challenge(ChallengeBase):
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
-        import json
-        import os
         dtype = torch.int8
         device = "cuda"
-        path = os.path.join(os.path.dirname(__file__), "example_test.json")
-        with open(path, "r") as f:
-            data = json.load(f)[0]["parameters"]
         A = torch.tensor([[1, 2], [3, 4]], dtype=dtype, device=device).flatten()
         B = torch.tensor([[5, 6], [7, 8]], dtype=dtype, device=device).flatten()
         C = torch.tensor([[0, 0], [0, 0]], dtype=dtype, device=device).flatten()
@@ -126,7 +121,6 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.int8
         device = "cuda"
-        # Parameters from speed_test.json
         shape_A = (8192, 2048)
         shape_B = (2048, 4096)
         shape_C = (8192, 4096)
