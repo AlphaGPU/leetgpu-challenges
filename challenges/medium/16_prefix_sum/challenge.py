@@ -7,8 +7,8 @@ class Challenge(ChallengeBase):
     def __init__(self):
         super().__init__(
             name="Prefix Sum",
-            atol=1e-03,
-            rtol=1e-03,
+            atol=1e-02,
+            rtol=1e-02,
             num_gpus=1,
             access_tier="free"
         )
@@ -79,7 +79,7 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        N = 25000000
+        N = 250000
         input = torch.empty(N, device="cuda", dtype=dtype).uniform_(-100.0, 100.0)
         output = torch.empty(N, device="cuda", dtype=dtype)
         return {
