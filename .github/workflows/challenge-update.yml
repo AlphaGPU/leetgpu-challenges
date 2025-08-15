@@ -1,0 +1,90 @@
+name: Trigger DB Update
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'challenges/**'
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Force update all challenges'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  trigger-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Detect changed challenges
+        id: detect
+        run: |
+          FORCE_UPDATE="${{ github.event.inputs.force_update || 'false' }}"
+
+          # Manual full update
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "$FORCE_UPDATE" = "true" ]; then
+            echo "changed_challenges=all" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Compare changes between previous and current commit
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+          CHANGED_FILES=$(git diff --name-only "$BEFORE" "$AFTER" | grep '^challenges/' || true)
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "changed_challenges=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Extract top-level challenge directories (easy/001_name)
+          CHALLENGES=$(echo "$CHANGED_FILES" \
+            | grep -E '^challenges/[^/]+/[^/]+' \
+            | cut -d'/' -f2-3 \
+            | sort -u \
+            | tr '\n' ' ')
+
+          echo "Detected changed challenges: $CHALLENGES"
+          echo "changed_challenges=$CHALLENGES" >> $GITHUB_OUTPUT
+
+      - name: Trigger database update in leetgpu-pset
+        if: steps.detect.outputs.changed_challenges != ''
+        run: |
+          CHANGED="${{ steps.detect.outputs.changed_challenges }}"
+
+          # Convert list to JSON array or "all"
+          if [ "$CHANGED" = "all" ]; then
+            CHANGED_JSON='"all"'
+          else
+            CHANGED_JSON=$(echo "$CHANGED" | tr ' ' '\n' | jq -R . | jq -s .)
+          fi
+
+          # Build payload
+          PAYLOAD=$(cat <<EOF
+          {
+            "event_type": "challenge-update",
+            "client_payload": {
+              "changed_challenges": $CHANGED_JSON,
+              "source_repo": "${{ github.repository }}",
+              "source_sha": "${{ github.sha }}",
+              "source_ref": "${{ github.ref }}"
+            }
+          }
+          EOF
+          )
+
+          echo "Triggering repository_dispatch to ${{ secrets.LEETGPU_PSET_REPO }}..."
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.LEETGPU_PSET_TOKEN }}" \
+            https://api.github.com/repos/${{ secrets.LEETGPU_PSET_REPO }}/dispatches \
+            -d "$PAYLOAD"
