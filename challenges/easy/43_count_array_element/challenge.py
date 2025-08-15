@@ -92,7 +92,7 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.int32
         input = torch.randint(1, 100001, (100000000,), device="cuda", dtype=dtype)
-        output = torch.empty(1, device="cuda", dtype=dtype),
+        output = torch.empty(1, device="cuda", dtype=dtype)
         return {
             "input": input,
             "output": output,
