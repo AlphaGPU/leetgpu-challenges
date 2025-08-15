@@ -19,8 +19,6 @@ class Challenge(ChallengeBase):
         assert output.shape == (1,)
         assert input.dtype == torch.int32
         assert output.dtype == torch.int32
-        assert N.dtype == torch.int32
-        assert K.dtype == torch.int32
 
         # count the number of element with value k in an input array
         equality_tensor = (input == K)
