@@ -37,7 +37,7 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.int32
         input = torch.tensor([1, 2, 3, 4, 1], device="cuda", dtype=dtype)
-        output = torch.empty(1, device="cuda", dtype=dtype),
+        output = torch.empty(1, device="cuda", dtype=dtype)
         return {
             "input": input,
             "output": output,
