@@ -16,10 +16,11 @@ class Challenge(ChallengeBase):
     def reference_impl(self, A: torch.Tensor, B: torch.Tensor, C: torch.Tensor, M: int, N: int, K: int, scale_A: float, scale_B: float, scale_C: float, zero_point_A: int, zero_point_B: int, zero_point_C: int):
         A = A.view(M, K).to(torch.int32)
         B = B.view(K, N).to(torch.int32)
-        A_f = (A - zero_point_A).to(torch.float32) * scale_A
-        B_f = (B - zero_point_B).to(torch.float32) * scale_B
-        C_f = torch.matmul(A_f, B_f)
-        C_q = torch.round(C_f / scale_C).to(torch.int32) + zero_point_C
+        A_f = (A - zero_point_A).to(torch.float32)
+        B_f = (B - zero_point_B).to(torch.float32)
+        C_f = torch.matmul(A_f, B_f).round().int() # closest thing to integer accumulation we have
+        C_f = C_f * scale_A * scale_B / scale_C
+        C_q = torch.round(C_f).to(torch.int32) + zero_point_C
         C_q = torch.clamp(C_q, -128, 127).to(torch.int8)
         C.view(M, N).copy_(C_q)
 

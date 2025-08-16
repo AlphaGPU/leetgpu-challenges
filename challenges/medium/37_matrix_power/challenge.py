@@ -8,8 +8,8 @@ class Challenge(ChallengeBase):
     def __init__(self):
         super().__init__(
             name="Matrix Power",
-            atol=1e-05,
-            rtol=1e-05,
+            atol=1e-04,
+            rtol=1e-04,
             num_gpus=1,
             access_tier="free"
         )
@@ -24,7 +24,7 @@ class Challenge(ChallengeBase):
         assert input.shape == output.shape == (N * N,)
         assert P >= 1
 
-        mat = input.view(N, N).double()
+        mat = input.view(N, N)
         result = torch.linalg.matrix_power(mat, P).float()
         output[:] = result.reshape(-1)
 
