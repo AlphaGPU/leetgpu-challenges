@@ -1,0 +1,92 @@
+name: Deploy Challenges to Production
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'challenges/**'
+  workflow_dispatch: {}
+
+concurrency:
+  group: pset-update-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update-pset:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout leetgpu-challenges
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Clone AlphaGPU/leetgpu-pset
+        shell: bash
+        env:
+          PSET_TOKEN: ${{ secrets.PSET_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${PSET_TOKEN:-}" ]]; then
+            echo "Missing secret PSET_TOKEN with write access to AlphaGPU/leetgpu-pset" >&2
+            exit 1
+          fi
+          git clone "https://x-access-token:${PSET_TOKEN}@github.com/AlphaGPU/leetgpu-pset.git"
+          cd leetgpu-pset
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Write .env for pset
+        working-directory: leetgpu-pset
+        env:
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > .env << EOF
+          SUPABASE_PROJECT_ID=${SUPABASE_PROJECT_ID}
+          SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD}
+          EOF
+
+      - name: Run pset update to bump submodule
+        working-directory: leetgpu-pset
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x ./scripts/update
+          ./scripts/update
+
+      - name: Commit and push submodule update
+        working-directory: leetgpu-pset
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "ci: update leetgpu-challenges submodule to ${GITHUB_SHA:0:7}"
+            git push origin HEAD:main
+          else
+            echo "No submodule changes to commit"
+          fi
+
+      - name: Install Python deps for pset
+        working-directory: leetgpu-pset
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run update_challenges for all challenges
+        working-directory: leetgpu-pset
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/update_challenge.py
