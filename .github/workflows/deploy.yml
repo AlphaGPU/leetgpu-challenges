@@ -37,7 +37,7 @@ jobs:
             echo "Missing secret PSET_TOKEN with write access to AlphaGPU/leetgpu-pset" >&2
             exit 1
           fi
-          git clone "https://x-access-token:${PSET_TOKEN}@github.com/AlphaGPU/leetgpu-pset.git"
+          git clone --recursive "https://x-access-token:${PSET_TOKEN}@github.com/AlphaGPU/leetgpu-pset.git"
           cd leetgpu-pset
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
