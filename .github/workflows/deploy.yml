@@ -63,19 +63,6 @@ jobs:
           chmod +x ./scripts/update
           ./scripts/update
 
-      - name: Commit and push submodule update
-        working-directory: leetgpu-pset
-        shell: bash
-        run: |
-          set -euo pipefail
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "ci: update leetgpu-challenges submodule to ${GITHUB_SHA:0:7}"
-            git push origin HEAD:main
-          else
-            echo "No submodule changes to commit"
-          fi
-
       - name: Install Python deps for pset
         working-directory: leetgpu-pset
         shell: bash
