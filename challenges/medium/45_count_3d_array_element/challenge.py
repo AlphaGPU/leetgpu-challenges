@@ -106,13 +106,13 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.int32
-        input = torch.randint(1, 3, (1000, 1000, 1000), device="cuda", dtype=dtype)
+        input = torch.randint(1, 3, (500, 500, 500), device="cuda", dtype=dtype)
         output = torch.empty(1, device="cuda", dtype=dtype)
         return {
             "input": input,
             "output": output,
-            "N": 1000,
-            "M": 1000,
-            "K": 1000,
+            "N": 500,
+            "M": 500,
+            "K": 500,
             "P": 2
         }
