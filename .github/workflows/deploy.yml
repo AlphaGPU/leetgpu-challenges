@@ -73,26 +73,6 @@ jobs:
           set -euo pipefail
           python scripts/update_challenge.py
 
-      - name: Clear Redis cache on production server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.PORT }}
-          script: |
-            set -e
-            
-            echo "Clearing Redis cache for challenges..."
-            
-            # Clear the all_challenges cache key
-            docker exec fastapi-container redis-cli DEL all_challenges || {
-              echo "Failed to clear cache. Container might not exist or Redis might not be running."
-              exit 1
-            }
-            
-            echo "Successfully cleared all_challenges cache!"
-
   notify:
     name: Notify Deployment Status
     runs-on: ubuntu-latest

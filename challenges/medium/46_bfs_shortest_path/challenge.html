@@ -1,0 +1,54 @@
+<p>
+  Implement a program that finds the shortest path in an unweighted 2D grid using Breadth-First Search (BFS). Given a grid with obstacles and start/end positions, return the minimum number of steps needed to reach the destination.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>Return the shortest path length, or -1 if no path exists</li>
+  <li>Grid cells with value 0 are free, cells with value 1 are obstacles</li>
+  <li>Movement is allowed in 4 directions: up, down, left, right</li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input: 
+  grid (4x4) = [
+    [0, 0, 0, 0],
+    [1, 1, 0, 1], 
+    [0, 0, 0, 0],
+    [0, 1, 1, 0]
+  ]
+  start_row = 0, start_col = 0
+  end_row = 3, end_col = 3
+
+Output: 6
+
+Explanation: One possible shortest path:
+(0,0) → (0,1) → (0,2) → (1,2) → (2,2) → (2,3) → (3,3)
+</pre>
+
+<h2>Example 2:</h2>
+<pre>
+Input:
+  grid (3x3) = [
+    [0, 1, 0],
+    [1, 1, 1],
+    [0, 0, 0]
+  ]
+  start_row = 0, start_col = 0
+  end_row = 0, end_col = 2
+
+Output: -1
+
+Explanation: No path exists due to obstacles completely blocking the way.
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 ≤ <code>rows</code>, <code>cols</code> ≤ 1000</li>
+  <li>Grid values are either 0 (free) or 1 (obstacle)</li>
+  <li>Start and end positions are guaranteed to be within bounds and on free cells (value 0)</li>
+  <li>Start and end positions may be the same (return 0 in this case)</li>
+</ul>
