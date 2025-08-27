@@ -1,0 +1,37 @@
+<p>
+    Implement a program that computes the sum of a 2D subarray of 32-bit integers.
+    You are given an input 2D array <code>input</code> of length <code>N x M</code>, and two row indices <code>S_ROW</code> and <code>E_ROW</code> and two column indices <code>S_COL</code> and <code>E_COL</code>.
+    <code>S_ROW</code>, <code>E_ROW</code>, <code>S_COL</code> and <code>E_COL</code> are inclusive, 0-based start and end indices — compute the sum of <code>input[S_ROW..E_ROW][S_COL..E_COL]</code>.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+    <li>Use only native features (external libraries are not permitted)</li>
+    <li>The <code>solve</code> function signature must remain unchanged</li>
+    <li>The final result must be stored in the <code>output</code> variable</li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:  input = [[1, 2, 3],
+                 [4, 5, 1]]
+
+        S_ROW = 0, E_ROW = 1, S_COL = 1, E_COL = 2
+Output: output = 11
+</pre>
+
+<h2>Example 2:</h2>
+<pre>
+Input:  input = [[5, 10],
+                 [5, 2]]
+        S_ROW = 0, E_ROW = 0, S_COL = 1, E_COL = 1
+Output: output = 10
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+    <li>1 &le; <code>N, M</code> &le; 10,000</li>
+    <li>1 &le; <code>input[i]</code> &le; 10</li>
+    <li>0 &le; <code>S_ROW</code> &le; <code>E_ROW</code> &le; <code>N - 1</code></li>
+    <li>0 &le; <code>S_COL</code> &le; <code>E_COL</code> &le; <code>M - 1</code></li>
+</ul>
