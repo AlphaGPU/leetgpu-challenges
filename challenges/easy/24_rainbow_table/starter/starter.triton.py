@@ -7,7 +7,7 @@ def fnv1a_hash(x):
     FNV_PRIME = 16777619
     OFFSET_BASIS = 2166136261
     
-    hash_val = OFFSET_BASIS
+    hash_val = tl.full(x.shape, OFFSET_BASIS, tl.uint32)
     
     for byte_pos in range(4):
         byte = (x >> (byte_pos * 8)) & 0xFF
