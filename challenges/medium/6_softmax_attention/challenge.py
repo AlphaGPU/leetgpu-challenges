@@ -17,8 +17,7 @@ class Challenge(ChallengeBase):
         scale = d ** 0.5
         attn = torch.matmul(Q, K.t()) / scale
         attn = torch.softmax(attn, dim=1)
-        result = torch.matmul(attn, V)
-        output.copy_(result.view(-1))   # flatten to 1D
+        torch.matmul(attn, V, out=output)
 
     def get_solve_signature(self) -> Dict[str, Any]:
         return {
@@ -36,7 +35,7 @@ class Challenge(ChallengeBase):
         Q = torch.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device="cuda", dtype=dtype)
         K = torch.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0]], device="cuda", dtype=dtype)
         V = torch.tensor([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0], [9.0, 10.0, 11.0, 12.0]], device="cuda", dtype=dtype)
-        output = torch.empty(2 * 4, device="cuda", dtype=dtype)
+        output = torch.empty(2, 4, device="cuda", dtype=dtype)
         return {"Q": Q, "K": K, "V": V, "output": output, "M": 2, "N": 3, "d": 4}
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
@@ -48,7 +47,7 @@ class Challenge(ChallengeBase):
             "Q": torch.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device="cuda", dtype=dtype),
             "K": torch.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0]], device="cuda", dtype=dtype),
             "V": torch.tensor([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0], [9.0, 10.0, 11.0, 12.0]], device="cuda", dtype=dtype),
-            "output": torch.empty(2 * 4, device="cuda", dtype=dtype),
+            "output": torch.empty(2, 4, device="cuda", dtype=dtype),
             "M": 2, "N": 3, "d": 4
         })
 
@@ -57,7 +56,7 @@ class Challenge(ChallengeBase):
             "Q": torch.zeros((3, 5), device="cuda", dtype=dtype),
             "K": torch.zeros((3, 5), device="cuda", dtype=dtype),
             "V": torch.zeros((3, 5), device="cuda", dtype=dtype),
-            "output": torch.empty(3 * 5, device="cuda", dtype=dtype),
+            "output": torch.empty(3, 5, device="cuda", dtype=dtype),
             "M": 3, "N": 3, "d": 5
         })
 
@@ -66,7 +65,7 @@ class Challenge(ChallengeBase):
             "Q": torch.tensor([[-1.0, 2.0, -3.0], [4.0, -5.0, 6.0], [-7.0, 8.0, -9.0], [10.0, -11.0, 12.0]], device="cuda", dtype=dtype),
             "K": torch.tensor([[2.0, -1.0, 3.0], [-4.0, 5.0, -6.0], [7.0, -8.0, 9.0], [-10.0, 11.0, -12.0]], device="cuda", dtype=dtype),
             "V": torch.tensor([[1.0, 0.5, -0.5], [-1.0, 2.0, 3.0], [4.0, -2.0, 1.0], [0.0, 1.0, -1.0]], device="cuda", dtype=dtype),
-            "output": torch.empty(4 * 3, device="cuda", dtype=dtype),
+            "output": torch.empty(4, 3, device="cuda", dtype=dtype),
             "M": 4, "N": 4, "d": 3
         })
 
@@ -75,7 +74,7 @@ class Challenge(ChallengeBase):
             "Q": torch.empty((64, 32), device="cuda", dtype=dtype).uniform_(-0.1, 0.1),
             "K": torch.empty((128, 32), device="cuda", dtype=dtype).uniform_(-0.1, 0.1),
             "V": torch.empty((128, 32), device="cuda", dtype=dtype).uniform_(-0.1, 0.1),
-            "output": torch.empty(64 * 32, device="cuda", dtype=dtype),
+            "output": torch.empty(64, 32, device="cuda", dtype=dtype),
             "M": 64, "N": 128, "d": 32
         })
 
@@ -87,5 +86,5 @@ class Challenge(ChallengeBase):
         Q = torch.empty((512, 128), device="cuda", dtype=dtype).uniform_(-0.1, 0.1)
         K = torch.empty((256, 128), device="cuda", dtype=dtype).uniform_(-0.1, 0.1)
         V = torch.empty((256,128), device="cuda", dtype=dtype).uniform_(-0.1, 0.1)
-        output = torch.empty(M * d, device="cuda", dtype=dtype)
+        output = torch.empty(M, d, device="cuda", dtype=dtype)
         return {"Q": Q, "K": K, "V": V, "output": output, "M": M, "N": N, "d": d}
