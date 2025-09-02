@@ -13,27 +13,27 @@ class Challenge(ChallengeBase):
             access_tier="free"
         )
 
-    def reference_impl(self, input: torch.Tensor, output: torch.Tensor, N: int, SN: int):
+    def reference_impl(self, input: torch.Tensor, output: torch.Tensor, N: int, window_size: int):
         # Validate input types and shapes
         assert input.shape == (N,)
         assert output.shape == (1,)
         assert input.dtype == torch.int32
         assert output.dtype == torch.int32
 
-        # Computes the maximum sum of any contiguous subarray of length exactly SN
+        # Computes the maximum sum of any contiguous subarray of length exactly window_size
         # using a sliding window approach.
 
-        # Compute the sum of the first SN elements (the initial window)
-        current_sum = input[:SN].sum()
+        # Compute the sum of the first window_size elements (the initial window)
+        current_sum = input[:window_size].sum()
 
         # Initialize max_sum with the sum of the first window
         max_sum = current_sum
 
-        # Slide the window across the array from index SN to N - 1
-        for i in range(SN, N):
+        # Slide the window across the array from index window_size to N - 1
+        for i in range(window_size, N):
             # Update the current sum by subtracting the element leaving the window
             # and adding the new element entering the window
-            current_sum += input[i] - input[i - SN]
+            current_sum += input[i] - input[i - window_size]
     
             # Update max_sum if the current sum is greater
             max_sum = max(max_sum, current_sum)
@@ -46,7 +46,7 @@ class Challenge(ChallengeBase):
             "input": ctypes.POINTER(ctypes.c_int),
             "output": ctypes.POINTER(ctypes.c_int),
             "N": ctypes.c_int,
-            "SN": ctypes.c_int
+            "window_size": ctypes.c_int
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
@@ -57,7 +57,7 @@ class Challenge(ChallengeBase):
             "input": input,
             "output": output,
             "N": 5,
-            "SN": 2
+            "window_size": 2
         }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
@@ -69,7 +69,7 @@ class Challenge(ChallengeBase):
             "input": torch.tensor([-1, -4, -2, 1], device="cuda", dtype=dtype),
             "output": torch.empty(1, device="cuda", dtype=dtype),
             "N": 4,
-            "SN": 3
+            "window_size": 3
         })
 
         # all_same_value
@@ -77,7 +77,7 @@ class Challenge(ChallengeBase):
             "input": torch.tensor([2]*16, device="cuda", dtype=dtype),
             "output": torch.empty(1, device="cuda", dtype=dtype),
             "N": 16,
-            "SN": 15
+            "window_size": 15
         })
 
         # all_minus_value
@@ -85,7 +85,7 @@ class Challenge(ChallengeBase):
             "input": torch.tensor([-10]*1000, device="cuda", dtype=dtype),
             "output": torch.empty(1, device="cuda", dtype=dtype),
             "N": 1000,
-            "SN": 500
+            "window_size": 500
         })
 
         # increasing_sequence
@@ -93,7 +93,7 @@ class Challenge(ChallengeBase):
             "input": torch.randint(-10, 11, (123,), device="cuda", dtype=dtype),
             "output": torch.empty(1, device="cuda", dtype=dtype),
             "N": 123,
-            "SN": 7
+            "window_size": 7
         })
 
         # medium_size
@@ -101,7 +101,7 @@ class Challenge(ChallengeBase):
             "input": torch.randint(-10, 11, (1000,), device="cuda", dtype=dtype),
             "output": torch.empty(1, device="cuda", dtype=dtype),
             "N": 1000,
-            "SN": 476
+            "window_size": 476
         })
 
         # large_size
@@ -109,7 +109,7 @@ class Challenge(ChallengeBase):
             "input": torch.randint(-10, 11, (10000,), device="cuda", dtype=dtype),
             "output": torch.empty(1, device="cuda", dtype=dtype),
             "N": 10000,
-            "SN": 7011
+            "window_size": 7011
         })
 
         return tests
@@ -122,5 +122,5 @@ class Challenge(ChallengeBase):
             "input": input,
             "output": output,
             "N": 50000,
-            "SN": 25000
+            "window_size": 25000
         }

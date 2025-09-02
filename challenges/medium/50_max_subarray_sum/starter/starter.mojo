@@ -5,5 +5,5 @@ from math import ceildiv
 
 # input, output are device pointers (i.e. pointers to memory on the GPU)
 @export                         
-def solve(input: UnsafePointer[Int32], output: UnsafePointer[Int32], N: Int32, SN: Int32):
+def solve(input: UnsafePointer[Int32], output: UnsafePointer[Int32], N: Int32, window_size: Int32):
     pass
