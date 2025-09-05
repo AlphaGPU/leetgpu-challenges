@@ -36,7 +36,7 @@ class Challenge(ChallengeBase):
             current_sum += input[i] - input[i - window_size]
     
             # Update max_sum if the current sum is greater
-            max_sum = max(max_sum, current_sum)
+            max_sum = torch.max(max_sum, current_sum)
 
         # Store the final result in the output tensor
         output[0] = max_sum
