@@ -1,0 +1,50 @@
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<p>
+  Implement the Swish-Gated Linear Unit (SWiGLU) activation function forward pass for 1D input vectors. 
+  Given an input tensor of shape [N] where N is the number of elements, compute the output using the elementwise formula.
+  The input and output tensor must be of type <code>float32</code>.
+</p>
+
+<p>
+  SWiGLU is defined as:
+  <ol>
+    <li>Split input \(x\) into two halves: \(x_1\) and \(x_2\)</li>
+    <li>Compute SiLU on the first half:
+      \[
+        \text{SiLU}(x_1) = x_1 \cdot \sigma(x_1), \quad 
+        \sigma(x) = \frac{1}{1 + e^{-x}}
+      \]
+    </li>
+    <li>Compute the SWiGLU output:
+      \[
+        \text{SWiGLU}(x_1, x_2) = \text{SiLU}(x_1) \cdot x_2
+      \]
+    </li>
+  </ol>
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only CUDA native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>output</code> tensor</li>
+</ul>
+
+<h2>Example1:</h2>
+<pre>
+Input:  [1.0, 2.0, 3.0, 4.0]  (N=4)
+Output: [2.1931758, 7.0463767]
+</pre>
+
+<h2>Example2:</h2>
+<pre>
+Input:  [0.5, 1.0]  (N=4)
+Output: [0.31122968]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 ≤ <code>N</code> ≤ 10,000</li>
+  <li>N is an even number</li>
+  <li>-100.0 ≤ input values ≤ 100.0</li>
+</ul>
