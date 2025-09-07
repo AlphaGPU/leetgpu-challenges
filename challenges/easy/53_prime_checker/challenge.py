@@ -131,12 +131,19 @@ class Challenge(ChallengeBase):
             "output": torch.empty(1, device="cuda", dtype=dtype)
         })
 
+        # random number
+        for i in range(20):
+            tests.append({
+                "n": torch.randint(1, 98, (1,), dtype=torch.int32).item(),
+                "output": torch.empty(1, device="cuda", dtype=dtype)
+            })
+
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.int32
         output = torch.empty(1, device="cuda", dtype=dtype)
         return {
-            "n": 99999989,
+            "n": torch.randint(99999989, 99999992, (1,), dtype=torch.int32).item(),
             "output": output
         }
