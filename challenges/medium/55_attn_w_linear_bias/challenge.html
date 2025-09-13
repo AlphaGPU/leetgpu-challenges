@@ -1,0 +1,115 @@
+<p>
+  Implement Attention with Linear Biases (ALiBi), following the method described in
+  <a href="https://arxiv.org/pdf/2108.12409" target="_blank">
+  "Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation"
+  </a>, for a given set of matrices.  
+  Given the query matrix <code>Q</code> of size <code>M×d</code>, key matrix <code>K</code> of size <code>N×d</code>, and value matrix
+  <code>V</code> of size <code>N×d</code>, your program should compute the output matrix using the formula:
+</p>
+  
+<p>
+  $$
+  \text{Attention}_{ALiBi}(Q, K, V) = \text{softmax}\Bigl( \frac{QK^T}{\sqrt{d}} + \alpha \cdot \Delta \Bigr)V
+  $$
+</p>
+
+<p>
+  where &alpha; is a slope controlling the linear bias and <code>&Delta; = i - j</code> represents the relative position between query <code>i</code> and key <code>j</code>. 
+  The softmax function is applied row-wise. <code>Q</code>, <code>K</code>, <code>V</code>, <code>output</code>, and <code>&alpha;</code> are all of data type <code>float32</code>; 
+  <code>M</code>, <code>N</code>, <code>d</code> are of data type <code>int32</code>.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The
+    <code>solve</code> function signature must remain unchanged
+  </li>
+  <li>The final result must be stored in the output matrix
+    <code>output</code>
+  </li>
+</ul>
+<h2>Example 1:</h2>
+<p>
+<strong>Input:</strong><br>
+<code>Q</code> (2×4):
+\[
+\begin{bmatrix}
+1.0 & 0.0 & 0.0 & 0.0 \\
+0.0 & 1.0 & 0.0 & 0.0
+\end{bmatrix}
+\]
+<code>K</code> (3×4):
+\[
+\begin{bmatrix}
+1.0 & 0.0 & 0.0 & 0.0 \\
+0.0 & 1.0 & 0.0 & 0.0 \\
+0.0 & 0.0 & 1.0 & 0.0
+\end{bmatrix}
+\]
+<code>V</code> (3×4):
+\[
+\begin{bmatrix}
+1.0 & 2.0 & 3.0 & 4.0 \\
+5.0 & 6.0 & 7.0 & 8.0 \\
+9.0 & 10.0 & 11.0 & 12.0
+\end{bmatrix}
+\]
+\(\alpha = 0.5\)
+</p>
+
+<p>
+<strong>Output:</strong><br>
+<code>output</code> (2×4):
+\[
+\begin{bmatrix}
+3.05 & 4.05 & 6.05 & 7.05 \\
+3.93 & 4.93 & 5.93 & 6.93
+\end{bmatrix}
+\]
+</p>
+
+<h2>Example 2:</h2>
+<p>
+<strong>Input:</strong><br>
+<code>Q</code> (1×2):
+\[
+\begin{bmatrix}
+1.0 & 2.0
+\end{bmatrix}
+\]
+<code>K</code> (2×2):
+\[
+\begin{bmatrix}
+1.0 & 0.0 \\
+0.0 & 1.0
+\end{bmatrix}
+\]
+<code>V</code> (2×2):
+\[
+\begin{bmatrix}
+3.0 & 4.0 \\
+5.0 & 6.0
+\end{bmatrix}
+\]
+<code>α</code> = 0.8
+</p>
+
+<p>
+<strong>Output:</strong><br>
+<code>output</code> (1×2):
+\[
+\begin{bmatrix}
+3.95 & 4.95
+\end{bmatrix}
+\]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>Matrix <code>Q</code> is of size <code>M×d</code> and matrices <code>K</code> and <code>V</code> are of size
+    <code>N×d</code></li>
+  <li>1 &le; <code>M</code>, <code>N</code> &le; 2048</li>
+  <li>1 &le; <code>d</code> &le; 1024</li>
+  <li>-1.0 &le; <code>&alpha;</code> &le; 1.0</li>
+</ul>
