@@ -13,8 +13,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check-duplicated-index:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check for duplicate indexes
+        run: |
+          python - << 'EOF'
+          import os
+          import collections
+
+          challenges_dir = "challenges"
+
+          questions = collections.defaultdict(list)
+          for folder in os.listdir(challenges_dir):
+              folder_path = os.path.join(challenges_dir, folder)
+              for question in os.listdir(folder_path):
+                  idx = question.split("_")[0]
+                  questions[idx].append(question)
+                  if len(questions[idx]) > 1:
+                      print(f"PR duplicated found: \n {questions[idx]}.")
+                      exit(1)
+          print("✅ All indexes are unique.")
+          EOF
   update-pset:
     runs-on: ubuntu-latest
+    needs: check-duplicated-index
 
     steps:
       - name: Set up Python
