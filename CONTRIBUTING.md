@@ -30,7 +30,7 @@ challenges/<difficulty>/<number>_<name>/
 ```
 
 > [!NOTE]
-Use generate_starter_code.py in scripts folder to help generate the starter code
+Use generate_starter_code.py in scripts folder to help generate the starter code for medium and hard problems
 
 ```bash
 python scripts/generate_starter_code.py path/to/challenge_dir # can be either absolute or relative path
