@@ -173,6 +173,11 @@ def main():
         sys.exit(1)
 
     challenge_dir = sys.argv[1]
+
+    if "easy" in (part.lower() for part in os.path.normpath(challenge_dir).split(os.sep)):
+        print("Starter code generation script should not be used for 'easy' challenges.")
+        sys.exit(1)
+
     starter_dir = os.path.join(challenge_dir, "starter")
 
     try:
