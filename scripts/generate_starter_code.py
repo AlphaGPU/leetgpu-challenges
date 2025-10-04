@@ -45,10 +45,10 @@ CTYPE_TO_CUTE = {
     ctypes.c_int: "cute.Int32",
     ctypes.c_float: "cute.Float32",
     ctypes.c_double: "cute.Float64",
-    ctypes.c_uint32: "cute.UInt32",
+    ctypes.c_uint32: "cute.Uint32",
     ctypes.c_int64: "cute.Int64",
     ctypes.c_uint16: "cute.Float16",
-    ctypes.c_ulong: "cute.UInt64",
+    ctypes.c_ulong: "cute.Uint64",
 }
 
 def ctype_to_cuda(ctype, name) -> str:

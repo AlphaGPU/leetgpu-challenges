@@ -3,5 +3,5 @@ import cutlass.cute as cute
 
 # A, B, C are tensors on the GPU
 @cute.jit
-def solve(A: cute.Tensor, B: cute.Tensor, C: cute.Tensor, N: cute.UInt64):
+def solve(A: cute.Tensor, B: cute.Tensor, C: cute.Tensor, N: Uint32):
     pass
