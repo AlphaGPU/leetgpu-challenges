@@ -1,0 +1,233 @@
+---
+alwaysApply: false
+---
+To create a new challenge, you must first create a folder with <challenge_id>_name_of_challenge in the correct folder based on difficulty. 
+
+You must create the following files for each challenge:
+
+- challenge.html
+This is the specification for the challenge. 
+Here are a few examples:
+
+<p>
+  Implement program that performs element-wise addition of two vectors containing 32-bit floating point numbers on a GPU.
+  The program should take two input vectors of equal length and produce a single output vector containing their sum.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+    <li>The <code>solve</code> function signature must remain unchanged</li>
+    <li>The final result must be stored in vector <code>C</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:  A = [1.0, 2.0, 3.0, 4.0]
+        B = [5.0, 6.0, 7.0, 8.0]
+Output: C = [6.0, 8.0, 10.0, 12.0]</pre>
+
+<h2>Example 2:</h2>
+<pre>
+Input:  A = [1.5, 1.5, 1.5]
+        B = [2.3, 2.3, 2.3]
+Output: C = [3.8, 3.8, 3.8]</pre>
+
+<h2>Constraints</h2>
+
+<ul>
+  <li>Input vectors <code>A</code> and <code>B</code> have identical lengths</li>
+  <li>1 &le; <code>N</code> &le; 100,000,000</li>
+</ul>
+
+
+Here is another example:
+
+
+<p>
+  Implement a CUDA program for multi-head self-attention. Given three input matrices \(Q\) (queries), \(K\) (keys), and \(V\) (values) of size \(N \times d_{\text{model}}\), compute:
+  \[ \text{MultiHead}(Q,K,V) = \text{Concat}(\text{head}_1,\ldots,\text{head}_h) \]
+  where each head computes:
+  \[ \text{head}_i = \text{softmax}\left(\frac{Q_iK_i^T}{\sqrt{d_k}}\right)V_i \]
+  with \(d_k = d_{\text{model}}/h\) and \(Q_i, K_i, V_i\) being the i-th head's partition of the input matrices.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only CUDA native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>output</code> array</li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+Input:
+\[
+\begin{align*}
+N &= 2, \quad d_{\text{model}} = 4, \quad h = 2 \\[1em]
+Q &= \begin{bmatrix}
+1.0 & 0.0 & 2.0 & 3.0 \\
+4.0 & 5.0 & 6.0 & 7.0
+\end{bmatrix} \\[1em]
+K &= \begin{bmatrix}
+1.0 & 2.0 & 3.0 & 4.0 \\
+5.0 & 6.0 & 7.0 & 8.0
+\end{bmatrix} \\[1em]
+V &= \begin{bmatrix}
+0.5 & 1.0 & 1.5 & 2.0 \\
+2.5 & 3.0 & 3.5 & 4.0
+\end{bmatrix}
+\end{align*}
+\]
+
+Output:
+\[
+\begin{bmatrix}
+2.39 & 2.89 & 3.50 & 4.00 \\
+2.50 & 3.00 & 3.50 & 4.00
+\end{bmatrix}
+\]
+</p>
+
+<h2>Example 2:</h2>
+<p>
+Input:
+\[
+\begin{align*}
+N &= 1, \quad d_{\text{model}} = 2, \quad h = 1 \\[1em]
+Q &= \begin{bmatrix} 1.0 & 1.0 \end{bmatrix} \\[1em]
+K &= \begin{bmatrix} 1.0 & 1.0 \end{bmatrix} \\[1em]
+V &= \begin{bmatrix} 2.0 & 3.0 \end{bmatrix}
+\end{align*}
+\]
+
+Output:
+\[
+\begin{bmatrix} 2.0 & 3.0 \end{bmatrix}
+\]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li><code>1 ≤ N ≤ 10000</code></li>
+  <li><code>2 ≤ d_model ≤ 1024</code></li>
+  <li><code>1 ≤ h ≤ d_model</code></li>
+  <li><code>d_model % h == 0</code></li>
+  <li><code>-10.0 ≤ values ≤ 10.0</code></li>
+</ul>
+
+
+The first <p> tag will describe the problem in a high level. It will use latex if the problem should benefit from it. it also should explain the parameters of the solve function signature. Always use <code> when talking about variable names. 
+Then the next <p> will be implementation requirements. Keep this brief but always specify that external libs aren't permitted, the solve function signature should remain unchanged and the output will be stored in a specific variable. Add more if the problem requires it. Then have examples. 1-2 examples are good. Always make sure the examples are correct in terms of the input and the output.
+
+
+Write the challenge.py file. 
+
+- The reference_impl should be the correct implementation of the problem. 
+- The get_solve_signature should be the correct signature of the solve function. 
+- The generate_example_test should be the correct example test. It should be the first exmaple int he challenge.html file. 
+- The generate_functional_test should be the correct functional test. 
+- The generate_performance_test should be the correct performance test. 
+
+
+- The challenge.py file should be in the correct folder.
+
+Example challenge.py file:
+```
+import ctypes
+from typing import Any, List, Dict
+import torch
+from core.challenge_base import ChallengeBase
+
+class Challenge(ChallengeBase):
+    def __init__(self):
+        super().__init__(
+            name="Vector Addition",
+            atol=1e-05,
+            rtol=1e-05,
+            num_gpus=1,
+            access_tier="free"
+        )
+        
+    def reference_impl(self, A: torch.Tensor, B: torch.Tensor, C: torch.Tensor, N: int):
+        assert A.shape == B.shape == C.shape
+        assert A.dtype == B.dtype == C.dtype
+        assert A.device == B.device == C.device
+        
+        torch.add(A, B, out=C)
+        
+    def get_solve_signature(self) -> Dict[str, Any]:
+        return {
+            "A": ctypes.POINTER(ctypes.c_float),
+            "B": ctypes.POINTER(ctypes.c_float),
+            "C": ctypes.POINTER(ctypes.c_float),
+            "N": ctypes.c_size_t
+        }
+        
+    def generate_example_test(self) -> Dict[str, Any]:
+        dtype = torch.float32
+        N = 4
+        A = torch.tensor([1.0, 2.0, 3.0, 4.0], device="cuda", dtype=dtype)
+        B = torch.tensor([5.0, 6.0, 7.0, 8.0], device="cuda", dtype=dtype)
+        C = torch.empty(N, device="cuda", dtype=dtype)
+        return {
+            "A": A,
+            "B": B,
+            "C": C,
+            "N": N
+        }
+    
+    def generate_functional_test(self) -> List[Dict[str, Any]]:
+        dtype = torch.float32
+        test_specs = [
+            ("basic_small", [1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]),
+            ("all_zeros", [0.0] * 16, [0.0] * 16),
+            ("non_power_of_two", [1.0] * 30, [2.0] * 30),
+            ("negative_numbers", [-1.0, -2.0, -3.0, -4.0], [-5.0, -6.0, -7.0, -8.0]),
+            ("mixed_positive_negative", [1.0, -2.0, 3.0, -4.0], [-1.0, 2.0, -3.0, 4.0]),
+            ("very_small_numbers", [0.000001, 0.0000001, 0.00000001, 0.000000001], [0.000001, 0.0000001, 0.00000001, 0.000000001]),
+            ("large_numbers", [1000000.0, 10000000.0, -1000000.0, -10000000.0], [1000000.0, -10000000.0, -1000000.0, 10000000.0]),
+        ]
+        
+        test_cases = []
+        for _, a_vals, b_vals in test_specs:
+            n = len(a_vals)
+            test_cases.append({
+                "A": torch.tensor(a_vals, device="cuda", dtype=dtype),
+                "B": torch.tensor(b_vals, device="cuda", dtype=dtype),
+                "C": torch.zeros(n, device="cuda", dtype=dtype),
+                "N": n
+            })
+        
+        # Random test cases
+        for _, size, a_range, b_range in [
+            ("powers_of_two_size", 32, (0.0, 32.0), (0.0, 64.0)),
+            ("medium_sized_vector", 1000, (0.0, 7.0), (0.0, 5.0)),
+            ("large_vector", 10000, (0.0, 1.0), (0.0, 1.0)),
+        ]:
+            test_cases.append({
+                "A": torch.empty(size, device="cuda", dtype=dtype).uniform_(*a_range),
+                "B": torch.empty(size, device="cuda", dtype=dtype).uniform_(*b_range),
+                "C": torch.zeros(size, device="cuda", dtype=dtype),
+                "N": size
+            })
+        
+        return test_cases
+    
+    def generate_performance_test(self) -> Dict[str, Any]:
+        dtype = torch.float32
+        N = 25000000
+        return {
+            "A": torch.empty(N, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0),
+            "B": torch.empty(N, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0),
+            "C": torch.zeros(N, device="cuda", dtype=dtype),
+            "N": N
+        }
+    
+```
+
+NOTE: if you are creating a challenge that already has files in the folder, then you should use those files as a reference. The problem.html should be renamed to challenge.html. ---
+description:
+globs:
+alwaysApply: false
+---
