@@ -9,6 +9,7 @@ cmake-build-*/
 *.swp
 *.swo
 .DS_Store
+.cursor/
 
 # Prerequisites
 *.d
