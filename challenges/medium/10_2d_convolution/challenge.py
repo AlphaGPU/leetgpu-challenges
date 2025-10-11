@@ -26,15 +26,15 @@ class Challenge(ChallengeBase):
         # Copy result to output tensor (removing the extra dimensions and flattening)
         output.copy_(result.view(-1))
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_float),
-            "kernel": ctypes.POINTER(ctypes.c_float),
-            "output": ctypes.POINTER(ctypes.c_float),
-            "input_rows": ctypes.c_int,
-            "input_cols": ctypes.c_int,
-            "kernel_rows": ctypes.c_int,
-            "kernel_cols": ctypes.c_int
+            "input": (ctypes.POINTER(ctypes.c_float), "in"),
+            "kernel": (ctypes.POINTER(ctypes.c_float), "in"),
+            "output": (ctypes.POINTER(ctypes.c_float), "out"),
+            "input_rows": (ctypes.c_int, "in"),
+            "input_cols": (ctypes.c_int, "in"),
+            "kernel_rows": (ctypes.c_int, "in"),
+            "kernel_cols": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

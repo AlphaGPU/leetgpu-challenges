@@ -23,11 +23,11 @@ class Challenge(ChallengeBase):
         x1, x2 = input.chunk(2)
         output.copy_((x1 * torch.sigmoid(x1)) * x2)
         
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_float),
-            "output": ctypes.POINTER(ctypes.c_float),
-            "N": ctypes.c_int,
+            "input": (ctypes.POINTER(ctypes.c_float), "in"),
+            "output": (ctypes.POINTER(ctypes.c_float), "out"),
+            "N": (ctypes.c_int, "in"),
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

@@ -27,13 +27,13 @@ class Challenge(ChallengeBase):
         # 'ij,j->i' means: for each window i, multiply with kernel j and sum over j
         output.copy_(torch.einsum('ij,j->i', windows, kernel))
             
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_float),
-            "kernel": ctypes.POINTER(ctypes.c_float),
-            "output": ctypes.POINTER(ctypes.c_float),
-            "input_size": ctypes.c_int,
-            "kernel_size": ctypes.c_int
+            "input": (ctypes.POINTER(ctypes.c_float), "in"),
+            "kernel": (ctypes.POINTER(ctypes.c_float), "in"),
+            "output": (ctypes.POINTER(ctypes.c_float), "out"),
+            "input_size": (ctypes.c_int, "in"),
+            "kernel_size": (ctypes.c_int, "in")
         }
         
     def generate_example_test(self) -> Dict[str, Any]:

@@ -24,20 +24,20 @@ class Challenge(ChallengeBase):
         C_q = torch.clamp(C_q, -128, 127).to(torch.int8)
         C.view(M, N).copy_(C_q)
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "A": ctypes.POINTER(ctypes.c_int8),
-            "B": ctypes.POINTER(ctypes.c_int8),
-            "C": ctypes.POINTER(ctypes.c_int8),
-            "M": ctypes.c_int,
-            "N": ctypes.c_int,
-            "K": ctypes.c_int,
-            "scale_A": ctypes.c_float,
-            "scale_B": ctypes.c_float,
-            "scale_C": ctypes.c_float,
-            "zero_point_A": ctypes.c_int,
-            "zero_point_B": ctypes.c_int,
-            "zero_point_C": ctypes.c_int
+            "A": (ctypes.POINTER(ctypes.c_int8), "in"),
+            "B": (ctypes.POINTER(ctypes.c_int8), "in"),
+            "C": (ctypes.POINTER(ctypes.c_int8), "out"),
+            "M": (ctypes.c_int, "in"),
+            "N": (ctypes.c_int, "in"),
+            "K": (ctypes.c_int, "in"),
+            "scale_A": (ctypes.c_float, "in"),
+            "scale_B": (ctypes.c_float, "in"),
+            "scale_C": (ctypes.c_float, "in"),
+            "zero_point_A": (ctypes.c_int, "in"),
+            "zero_point_B": (ctypes.c_int, "in"),
+            "zero_point_C": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

@@ -41,12 +41,12 @@ class Challenge(ChallengeBase):
         # Store the final result in the output tensor
         output[0] = max_sum
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_int),
-            "output": ctypes.POINTER(ctypes.c_int),
-            "N": ctypes.c_int,
-            "window_size": ctypes.c_int
+            "input": (ctypes.POINTER(ctypes.c_int), "in"),
+            "output": (ctypes.POINTER(ctypes.c_int), "out"),
+            "N": (ctypes.c_int, "in"),
+            "window_size": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

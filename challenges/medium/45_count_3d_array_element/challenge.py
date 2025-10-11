@@ -24,14 +24,14 @@ class Challenge(ChallengeBase):
         equality_tensor = (input == P)
         output[0] = torch.sum(equality_tensor)
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_int),
-            "output": ctypes.POINTER(ctypes.c_int),
-            "N": ctypes.c_int,
-            "M": ctypes.c_int,
-            "K": ctypes.c_int, 
-            "P": ctypes.c_int
+            "input": (ctypes.POINTER(ctypes.c_int), "in"),
+            "output": (ctypes.POINTER(ctypes.c_int), "out"),
+            "N": (ctypes.c_int, "in"),
+            "M": (ctypes.c_int, "in"),
+            "K": (ctypes.c_int, "in"), 
+            "P": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

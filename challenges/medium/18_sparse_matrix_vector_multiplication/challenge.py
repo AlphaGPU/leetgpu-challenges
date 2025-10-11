@@ -26,14 +26,14 @@ class Challenge(ChallengeBase):
         result = torch.matmul(A_matrix, x)
         y.copy_(result)
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "A": ctypes.POINTER(ctypes.c_float),
-            "x": ctypes.POINTER(ctypes.c_float),
-            "y": ctypes.POINTER(ctypes.c_float),
-            "M": ctypes.c_int,
-            "N": ctypes.c_int,
-            "nnz": ctypes.c_int
+            "A": (ctypes.POINTER(ctypes.c_float), "in"),
+            "x": (ctypes.POINTER(ctypes.c_float), "in"),
+            "y": (ctypes.POINTER(ctypes.c_float), "out"),
+            "M": (ctypes.c_int, "in"),
+            "N": (ctypes.c_int, "in"),
+            "nnz": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

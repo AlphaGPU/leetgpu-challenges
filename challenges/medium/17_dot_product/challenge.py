@@ -19,12 +19,12 @@ class Challenge(ChallengeBase):
         assert result.shape == (1,)
         result[0] = torch.dot(A, B)
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "A": ctypes.POINTER(ctypes.c_float),
-            "B": ctypes.POINTER(ctypes.c_float),
-            "result": ctypes.POINTER(ctypes.c_float),
-            "N": ctypes.c_int
+            "A": (ctypes.POINTER(ctypes.c_float), "in"),
+            "B": (ctypes.POINTER(ctypes.c_float), "in"),
+            "result": (ctypes.POINTER(ctypes.c_float), "out"),
+            "N": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

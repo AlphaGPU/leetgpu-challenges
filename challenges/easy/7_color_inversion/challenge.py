@@ -23,11 +23,11 @@ class Challenge(ChallengeBase):
         # Invert RGB channels (first 3 channels), keep alpha unchanged
         image_reshaped[:, :, :3] = 255 - image_reshaped[:, :, :3]
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "image": ctypes.POINTER(ctypes.c_ubyte),
-            "width": ctypes.c_int,
-            "height": ctypes.c_int
+            "image": (ctypes.POINTER(ctypes.c_ubyte), "inout"),
+            "width": (ctypes.c_int, "in"),
+            "height": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

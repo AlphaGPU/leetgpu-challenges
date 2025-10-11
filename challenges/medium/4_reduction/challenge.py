@@ -20,11 +20,11 @@ class Challenge(ChallengeBase):
         assert input.device == output.device
         output[0] = torch.sum(input)
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_float),
-            "output": ctypes.POINTER(ctypes.c_float),
-            "N": ctypes.c_int
+            "input": (ctypes.POINTER(ctypes.c_float), "in"),
+            "output": (ctypes.POINTER(ctypes.c_float), "out"),
+            "N": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

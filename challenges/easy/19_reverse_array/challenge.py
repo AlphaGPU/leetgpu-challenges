@@ -20,10 +20,10 @@ class Challenge(ChallengeBase):
         # Reverse the array in-place
         input[:] = torch.flip(input, [0])
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_float),
-            "N": ctypes.c_int
+            "input": (ctypes.POINTER(ctypes.c_float), "inout"),
+            "N": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

@@ -22,11 +22,11 @@ class Challenge(ChallengeBase):
         sum_exp = torch.sum(exp_x)
         output.copy_(exp_x / sum_exp)
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_float),
-            "output": ctypes.POINTER(ctypes.c_float),
-            "N": ctypes.c_int
+            "input": (ctypes.POINTER(ctypes.c_float), "in"),
+            "output": (ctypes.POINTER(ctypes.c_float), "out"),
+            "N": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

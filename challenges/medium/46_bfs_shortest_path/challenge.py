@@ -76,16 +76,16 @@ class Challenge(ChallengeBase):
         # No path found
         result[0] = -1
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "grid": ctypes.POINTER(ctypes.c_int),
-            "result": ctypes.POINTER(ctypes.c_int),
-            "rows": ctypes.c_int,
-            "cols": ctypes.c_int,
-            "start_row": ctypes.c_int,
-            "start_col": ctypes.c_int,
-            "end_row": ctypes.c_int,
-            "end_col": ctypes.c_int
+            "grid": (ctypes.POINTER(ctypes.c_int), "in"),
+            "result": (ctypes.POINTER(ctypes.c_int), "out"),
+            "rows": (ctypes.c_int, "in"),
+            "cols": (ctypes.c_int, "in"),
+            "start_row": (ctypes.c_int, "in"),
+            "start_col": (ctypes.c_int, "in"),
+            "end_row": (ctypes.c_int, "in"),
+            "end_col": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

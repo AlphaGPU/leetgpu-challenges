@@ -23,14 +23,14 @@ class Challenge(ChallengeBase):
         attn = torch.softmax(attn, dim=1)
         torch.matmul(attn, V, out=output)
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "Q": ctypes.POINTER(ctypes.c_float),
-            "K": ctypes.POINTER(ctypes.c_float),
-            "V": ctypes.POINTER(ctypes.c_float),
-            "output": ctypes.POINTER(ctypes.c_float),
-            "M": ctypes.c_int,
-            "d": ctypes.c_int
+            "Q": (ctypes.POINTER(ctypes.c_float), "in"),
+            "K": (ctypes.POINTER(ctypes.c_float), "in"),
+            "V": (ctypes.POINTER(ctypes.c_float), "in"),
+            "output": (ctypes.POINTER(ctypes.c_float), "out"),
+            "M": (ctypes.c_int, "in"),
+            "d": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

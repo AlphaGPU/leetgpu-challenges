@@ -39,12 +39,12 @@ class Challenge(ChallengeBase):
         # Reinterpret the lower 32 bits as uint32
         output.copy_(current.to(torch.int32).view(torch.uint32))
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_int32),
-            "output": ctypes.POINTER(ctypes.c_uint32),
-            "N": ctypes.c_int,
-            "R": ctypes.c_int
+            "input": (ctypes.POINTER(ctypes.c_int32), "in"),
+            "output": (ctypes.POINTER(ctypes.c_uint32), "out"),
+            "N": (ctypes.c_int, "in"),
+            "R": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

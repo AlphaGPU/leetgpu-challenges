@@ -26,13 +26,13 @@ class Challenge(ChallengeBase):
         
         result[0] = integral
         
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "y_samples": ctypes.POINTER(ctypes.c_float),
-            "result": ctypes.POINTER(ctypes.c_float),
-            "a": ctypes.c_float,
-            "b": ctypes.c_float,
-            "n_samples": ctypes.c_int
+            "y_samples": (ctypes.POINTER(ctypes.c_float), "in"),
+            "result": (ctypes.POINTER(ctypes.c_float), "out"),
+            "a": (ctypes.c_float, "in"),
+            "b": (ctypes.c_float, "in"),
+            "n_samples": (ctypes.c_int, "in")
         }
         
     def generate_example_test(self) -> Dict[str, Any]:

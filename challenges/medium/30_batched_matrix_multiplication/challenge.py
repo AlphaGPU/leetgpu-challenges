@@ -19,15 +19,15 @@ class Challenge(ChallengeBase):
         B = B.view(BATCH, K, N)
         C.copy_(torch.bmm(A, B))
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "A": ctypes.POINTER(ctypes.c_float),
-            "B": ctypes.POINTER(ctypes.c_float),
-            "C": ctypes.POINTER(ctypes.c_float),
-            "BATCH": ctypes.c_int,
-            "M": ctypes.c_int,
-            "N": ctypes.c_int,
-            "K": ctypes.c_int
+            "A": (ctypes.POINTER(ctypes.c_float), "in"),
+            "B": (ctypes.POINTER(ctypes.c_float), "in"),
+            "C": (ctypes.POINTER(ctypes.c_float), "out"),
+            "BATCH": (ctypes.c_int, "in"),
+            "M": (ctypes.c_int, "in"),
+            "N": (ctypes.c_int, "in"),
+            "K": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

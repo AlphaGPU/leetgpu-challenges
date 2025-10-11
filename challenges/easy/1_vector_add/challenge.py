@@ -20,12 +20,12 @@ class Challenge(ChallengeBase):
         
         torch.add(A, B, out=C)
         
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "A": ctypes.POINTER(ctypes.c_float),
-            "B": ctypes.POINTER(ctypes.c_float),
-            "C": ctypes.POINTER(ctypes.c_float),
-            "N": ctypes.c_size_t
+            "A": (ctypes.POINTER(ctypes.c_float), "in"),
+            "B": (ctypes.POINTER(ctypes.c_float), "in"),
+            "C": (ctypes.POINTER(ctypes.c_float), "out"),
+            "N": (ctypes.c_size_t, "in")
         }
         
     def generate_example_test(self) -> Dict[str, Any]:
