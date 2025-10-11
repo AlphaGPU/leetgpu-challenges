@@ -23,16 +23,16 @@ class Challenge(ChallengeBase):
         # add all elements of subarray (input[S_ROW..E_ROW][S_COL..E_COL])
         output[0] = torch.sum(input[S_ROW:E_ROW+1, S_COL:E_COL+1]);
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_int),
-            "output": ctypes.POINTER(ctypes.c_int),
-            "N": ctypes.c_int,
-            "M": ctypes.c_int,
-            "S_ROW": ctypes.c_int,
-            "E_ROW": ctypes.c_int,
-            "S_COL": ctypes.c_int,
-            "E_COL": ctypes.c_int
+            "input": (ctypes.POINTER(ctypes.c_int), "in"),
+            "output": (ctypes.POINTER(ctypes.c_int), "out"),
+            "N": (ctypes.c_int, "in"),
+            "M": (ctypes.c_int, "in"),
+            "S_ROW": (ctypes.c_int, "in"),
+            "E_ROW": (ctypes.c_int, "in"),
+            "S_COL": (ctypes.c_int, "in"),
+            "E_COL": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

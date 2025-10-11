@@ -27,12 +27,12 @@ class Challenge(ChallengeBase):
         counts = torch.bincount(valid_input, minlength=num_bins)
         histogram.copy_(counts)
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_int),
-            "histogram": ctypes.POINTER(ctypes.c_int),
-            "N": ctypes.c_int,
-            "num_bins": ctypes.c_int
+            "input": (ctypes.POINTER(ctypes.c_int), "in"),
+            "histogram": (ctypes.POINTER(ctypes.c_int), "out"),
+            "N": (ctypes.c_int, "in"),
+            "num_bins": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

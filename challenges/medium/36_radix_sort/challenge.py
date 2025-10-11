@@ -26,11 +26,11 @@ class Challenge(ChallengeBase):
         # Convert back to uint32
         output.copy_(sorted_tensor.to(torch.uint32))
         
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_uint32),
-            "output": ctypes.POINTER(ctypes.c_uint32),
-            "N": ctypes.c_int
+            "input": (ctypes.POINTER(ctypes.c_uint32), "in"),
+            "output": (ctypes.POINTER(ctypes.c_uint32), "out"),
+            "N": (ctypes.c_int, "in")
         }
         
     def generate_example_test(self) -> Dict[str, Any]:

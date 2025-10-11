@@ -19,12 +19,12 @@ class Challenge(ChallengeBase):
         mean_squared_error = torch.mean(squared_diffs)
         mse[0] = mean_squared_error
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "predictions": ctypes.POINTER(ctypes.c_float),
-            "targets": ctypes.POINTER(ctypes.c_float),
-            "mse": ctypes.POINTER(ctypes.c_float),
-            "N": ctypes.c_int
+            "predictions": (ctypes.POINTER(ctypes.c_float), "in"),
+            "targets": (ctypes.POINTER(ctypes.c_float), "in"),
+            "mse": (ctypes.POINTER(ctypes.c_float), "out"),
+            "N": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

@@ -28,14 +28,14 @@ class Challenge(ChallengeBase):
         # Scale and shift
         output.copy_(gamma * normalized + beta)
         
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_float),
-            "gamma": ctypes.c_float,    
-            "beta": ctypes.c_float,
-            "output": ctypes.POINTER(ctypes.c_float),
-            "N": ctypes.c_int,
-            "eps": ctypes.c_float
+            "input": (ctypes.POINTER(ctypes.c_float), "in"),
+            "gamma": (ctypes.c_float, "in"),    
+            "beta": (ctypes.c_float, "in"),
+            "output": (ctypes.POINTER(ctypes.c_float), "out"),
+            "N": (ctypes.c_int, "in"),
+            "eps": (ctypes.c_float, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

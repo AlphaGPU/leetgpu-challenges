@@ -17,10 +17,10 @@ class Challenge(ChallengeBase):
         assert data.shape == (N,)
         data.copy_(data.sort()[0])
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "data": ctypes.POINTER(ctypes.c_float),
-            "N": ctypes.c_int
+            "data": (ctypes.POINTER(ctypes.c_float), "inout"),
+            "N": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

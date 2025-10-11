@@ -25,15 +25,15 @@ class Challenge(ChallengeBase):
                 region = padded[i:i+kernel_rows, j:j+kernel_cols]
                 output_2d[i, j] = torch.sum(region * kernel_2d)
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_float),
-            "kernel": ctypes.POINTER(ctypes.c_float),
-            "output": ctypes.POINTER(ctypes.c_float),
-            "input_rows": ctypes.c_int,
-            "input_cols": ctypes.c_int,
-            "kernel_rows": ctypes.c_int,
-            "kernel_cols": ctypes.c_int
+            "input": (ctypes.POINTER(ctypes.c_float), "in"),
+            "kernel": (ctypes.POINTER(ctypes.c_float), "in"),
+            "output": (ctypes.POINTER(ctypes.c_float), "out"),
+            "input_rows": (ctypes.c_int, "in"),
+            "input_cols": (ctypes.c_int, "in"),
+            "kernel_rows": (ctypes.c_int, "in"),
+            "kernel_cols": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

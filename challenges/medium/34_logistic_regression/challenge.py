@@ -60,13 +60,13 @@ class Challenge(ChallengeBase):
 
             beta.copy_(beta_new)
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "X": ctypes.POINTER(ctypes.c_float),
-            "y": ctypes.POINTER(ctypes.c_float),
-            "beta": ctypes.POINTER(ctypes.c_float),
-            "n_samples": ctypes.c_int,
-            "n_features": ctypes.c_int
+            "X": (ctypes.POINTER(ctypes.c_float), "in"),
+            "y": (ctypes.POINTER(ctypes.c_float), "in"),
+            "beta": (ctypes.POINTER(ctypes.c_float), "out"),
+            "n_samples": (ctypes.c_int, "in"),
+            "n_features": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

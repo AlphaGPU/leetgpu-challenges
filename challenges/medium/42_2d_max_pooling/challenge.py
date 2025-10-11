@@ -28,17 +28,17 @@ class Challenge(ChallengeBase):
     
         output.copy_(result.flatten())
         
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_float),
-            "output": ctypes.POINTER(ctypes.c_float),
-            "N": ctypes.c_int,
-            "C": ctypes.c_int,
-            "H": ctypes.c_int,
-            "W": ctypes.c_int,
-            "kernel_size": ctypes.c_int,
-            "stride": ctypes.c_int,
-            "padding": ctypes.c_int
+            "input": (ctypes.POINTER(ctypes.c_float), "in"),
+            "output": (ctypes.POINTER(ctypes.c_float), "out"),
+            "N": (ctypes.c_int, "in"),
+            "C": (ctypes.c_int, "in"),
+            "H": (ctypes.c_int, "in"),
+            "W": (ctypes.c_int, "in"),
+            "kernel_size": (ctypes.c_int, "in"),
+            "stride": (ctypes.c_int, "in"),
+            "padding": (ctypes.c_int, "in")
         }
         
     def generate_example_test(self) -> Dict[str, Any]:

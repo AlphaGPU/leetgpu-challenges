@@ -34,18 +34,18 @@ class Challenge(ChallengeBase):
                     final_centroid_x[i] = data_x[mask].mean()
                     final_centroid_y[i] = data_y[mask].mean()
         
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "data_x": ctypes.POINTER(ctypes.c_float),
-            "data_y": ctypes.POINTER(ctypes.c_float),
-            "labels": ctypes.POINTER(ctypes.c_int),
-            "initial_centroid_x": ctypes.POINTER(ctypes.c_float),
-            "initial_centroid_y": ctypes.POINTER(ctypes.c_float),
-            "final_centroid_x": ctypes.POINTER(ctypes.c_float),
-            "final_centroid_y": ctypes.POINTER(ctypes.c_float),
-            "sample_size": ctypes.c_int,
-            "k": ctypes.c_int,
-            "max_iterations": ctypes.c_int
+            "data_x": (ctypes.POINTER(ctypes.c_float), "in"),
+            "data_y": (ctypes.POINTER(ctypes.c_float), "in"),
+            "labels": (ctypes.POINTER(ctypes.c_int), "out"),
+            "initial_centroid_x": (ctypes.POINTER(ctypes.c_float), "in"),
+            "initial_centroid_y": (ctypes.POINTER(ctypes.c_float), "in"),
+            "final_centroid_x": (ctypes.POINTER(ctypes.c_float), "out"),
+            "final_centroid_y": (ctypes.POINTER(ctypes.c_float), "out"),
+            "sample_size": (ctypes.c_int, "in"),
+            "k": (ctypes.c_int, "in"),
+            "max_iterations": (ctypes.c_int, "in")
         }
     
     def generate_example_test(self) -> Dict[str, Any]:

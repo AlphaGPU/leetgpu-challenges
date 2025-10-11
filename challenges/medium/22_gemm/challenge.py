@@ -24,16 +24,16 @@ class Challenge(ChallengeBase):
         final_result = alpha * matmul_result + beta * C_f32
         C.copy_(final_result.to(torch.float16))
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "A": ctypes.POINTER(ctypes.c_uint16),
-            "B": ctypes.POINTER(ctypes.c_uint16),
-            "C": ctypes.POINTER(ctypes.c_uint16),
-            "M": ctypes.c_int,
-            "N": ctypes.c_int,
-            "K": ctypes.c_int,
-            "alpha": ctypes.c_float,
-            "beta": ctypes.c_float
+            "A": (ctypes.POINTER(ctypes.c_uint16), "in"),
+            "B": (ctypes.POINTER(ctypes.c_uint16), "in"),
+            "C": (ctypes.POINTER(ctypes.c_uint16), "inout"),
+            "M": (ctypes.c_int, "in"),
+            "N": (ctypes.c_int, "in"),
+            "K": (ctypes.c_int, "in"),
+            "alpha": (ctypes.c_float, "in"),
+            "beta": (ctypes.c_float, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

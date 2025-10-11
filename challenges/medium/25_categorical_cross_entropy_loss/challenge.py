@@ -32,13 +32,13 @@ class Challenge(ChallengeBase):
             total_loss += loss_i.item()
         loss[0] = total_loss / N
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "logits": ctypes.POINTER(ctypes.c_float),
-            "true_labels": ctypes.POINTER(ctypes.c_int),
-            "loss": ctypes.POINTER(ctypes.c_float),
-            "N": ctypes.c_int,
-            "C": ctypes.c_int
+            "logits": (ctypes.POINTER(ctypes.c_float), "in"),
+            "true_labels": (ctypes.POINTER(ctypes.c_int), "in"),
+            "loss": (ctypes.POINTER(ctypes.c_float), "out"),
+            "N": (ctypes.c_int, "in"),
+            "C": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

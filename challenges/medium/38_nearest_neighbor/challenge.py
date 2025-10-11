@@ -45,11 +45,11 @@ class Challenge(ChallengeBase):
         # Find nearest neighbor indices
         indices.copy_(torch.argmin(dist_sq, dim=1).int())
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "points": ctypes.POINTER(ctypes.c_float),
-            "indices": ctypes.POINTER(ctypes.c_int),
-            "N": ctypes.c_int
+            "points": (ctypes.POINTER(ctypes.c_float), "in"),
+            "indices": (ctypes.POINTER(ctypes.c_int), "out"),
+            "N": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

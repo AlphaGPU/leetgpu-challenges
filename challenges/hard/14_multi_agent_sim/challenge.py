@@ -40,11 +40,11 @@ class Challenge(ChallengeBase):
         agents_next_reshaped[:] = torch.cat([new_positions, new_velocities], dim=1)
         agents_next.copy_(agents_next_reshaped.view(-1))
     
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "agents": ctypes.POINTER(ctypes.c_float),
-            "agents_next": ctypes.POINTER(ctypes.c_float),
-            "N": ctypes.c_int
+            "agents": (ctypes.POINTER(ctypes.c_float), "in"),
+            "agents_next": (ctypes.POINTER(ctypes.c_float), "out"),
+            "N": (ctypes.c_int, "in")
         }
     
     def generate_example_test(self) -> Dict[str, Any]:

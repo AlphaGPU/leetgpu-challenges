@@ -22,14 +22,14 @@ class Challenge(ChallengeBase):
         
         torch.matmul(A, B, out=C)
         
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "A": ctypes.POINTER(ctypes.c_float),
-            "B": ctypes.POINTER(ctypes.c_float),
-            "C": ctypes.POINTER(ctypes.c_float),
-            "M": ctypes.c_int,
-            "N": ctypes.c_int,
-            "K": ctypes.c_int
+            "A": (ctypes.POINTER(ctypes.c_float), "in"),
+            "B": (ctypes.POINTER(ctypes.c_float), "in"),
+            "C": (ctypes.POINTER(ctypes.c_float), "out"),
+            "M": (ctypes.c_int, "in"),
+            "N": (ctypes.c_int, "in"),
+            "K": (ctypes.c_int, "in")
         }
         
     def generate_example_test(self) -> Dict[str, Any]:

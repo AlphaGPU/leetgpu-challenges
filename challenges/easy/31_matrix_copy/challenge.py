@@ -22,11 +22,11 @@ class Challenge(ChallengeBase):
         # Copy matrix A to B
         B[:] = A
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "A": ctypes.POINTER(ctypes.c_float),
-            "B": ctypes.POINTER(ctypes.c_float),
-            "N": ctypes.c_int
+            "A": (ctypes.POINTER(ctypes.c_float), "in"),
+            "B": (ctypes.POINTER(ctypes.c_float), "out"),
+            "N": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

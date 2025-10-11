@@ -41,11 +41,11 @@ class Challenge(ChallengeBase):
         spec_ri = torch.stack((spec_c.real, spec_c.imag), dim=1).contiguous()
         spectrum.copy_(spec_ri.view(-1))
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "signal": ctypes.POINTER(ctypes.c_float),    # in  (2 × N)
-            "spectrum": ctypes.POINTER(ctypes.c_float),  # out (2 × N)
-            "N": ctypes.c_int
+            "signal": (ctypes.POINTER(ctypes.c_float), "in"),    # in  (2 × N)
+            "spectrum": (ctypes.POINTER(ctypes.c_float), "out"),  # out (2 × N)
+            "N": (ctypes.c_int, "in")
         }
 
     def generate_example_test(self) -> Dict[str, Any]:

@@ -21,12 +21,12 @@ class Challenge(ChallengeBase):
 
         output.copy_(input.transpose(0, 1))
 
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": ctypes.POINTER(ctypes.c_float),
-            "output": ctypes.POINTER(ctypes.c_float),
-            "rows": ctypes.c_int,
-            "cols": ctypes.c_int
+            "input": (ctypes.POINTER(ctypes.c_float), "in"),
+            "output": (ctypes.POINTER(ctypes.c_float), "out"),
+            "rows": (ctypes.c_int, "in"),
+            "cols": (ctypes.c_int, "in")
         }
         
     def generate_example_test(self) -> Dict[str, Any]:

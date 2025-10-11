@@ -21,11 +21,11 @@ class Challenge(ChallengeBase):
             result = model(input)
             output.copy_(result)
         
-    def get_solve_signature(self) -> Dict[str, Any]:
+    def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "input": torch.Tensor,
-            "model": nn.Module,
-            "output": torch.Tensor
+            "input": (torch.Tensor, "in"),
+            "model": (nn.Module, "in"),
+            "output": (torch.Tensor, "out")
         }
         
     def generate_example_test(self) -> Dict[str, Any]:
