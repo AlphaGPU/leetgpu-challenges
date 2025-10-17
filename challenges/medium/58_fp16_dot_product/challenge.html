@@ -1,5 +1,5 @@
 <p>
-    Implement a CUDA program that computes the dot product of two vectors containing 16-bit floating point numbers (FP16/<code>half</code>).
+    Implement a GPU program that computes the dot product of two vectors containing 16-bit floating point numbers (FP16/<code>half</code>).
     The dot product is the sum of the products of the corresponding elements of two vectors.
 </p>
 <p>
@@ -13,7 +13,7 @@
 </p>
 <h2>Implementation Requirements</h2>
 <ul>
-    <li>Use only CUDA native features (external libraries are not permitted)</li>
+    <li>External libraries are not permitted</li>
     <li>The <code>solve</code> function signature must remain unchanged</li>
     <li>Accumulation during multiplication should use FP32 for better precision before converting the final result to FP16</li>
     <li>The final result must be stored in the output variable as <code>half</code></li>
