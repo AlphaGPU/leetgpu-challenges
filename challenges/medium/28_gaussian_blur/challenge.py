@@ -14,16 +14,12 @@ class Challenge(ChallengeBase):
         )
 
     def reference_impl(self, input: torch.Tensor, kernel: torch.Tensor, output: torch.Tensor, input_rows: int, input_cols: int, kernel_rows: int, kernel_cols: int):
-        input_2d = input.view(input_rows, input_cols)
-        kernel_2d = kernel.view(kernel_rows, kernel_cols)
-        output_2d = output.view(input_rows, input_cols)
+        input_2d = input.view(1, 1, input_rows, input_cols)
+        kernel_2d = kernel.view(1, 1, kernel_rows, kernel_cols)
         pad_h = kernel_rows // 2
         pad_w = kernel_cols // 2
-        padded = torch.nn.functional.pad(input_2d, (pad_w, pad_w, pad_h, pad_h), mode='constant', value=0)
-        for i in range(input_rows):
-            for j in range(input_cols):
-                region = padded[i:i+kernel_rows, j:j+kernel_cols]
-                output_2d[i, j] = torch.sum(region * kernel_2d)
+        result = torch.nn.functional.conv2d(input_2d, kernel_2d, padding=(pad_h, pad_w))
+        output[:] = result.view(-1)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
