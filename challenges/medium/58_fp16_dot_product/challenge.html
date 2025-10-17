@@ -1,0 +1,33 @@
+<p>
+    Implement a GPU program that computes the dot product of two vectors containing 16-bit floating point numbers (FP16/<code>half</code>).
+    The dot product is the sum of the products of the corresponding elements of two vectors.
+</p>
+<p>
+    Mathematically, the dot product of two vectors \(A\) and \(B\) of length \(n\) is defined as:
+    \[
+    A \cdot B = \sum_{i=0}^{n-1} A_i \cdot B_i = A_0 \cdot B_0 + A_1 \cdot B_1 + \ldots + A_{n-1} \cdot B_{n-1}
+    \]
+</p>
+<p>
+    All inputs are stored as 16-bit floating point numbers (FP16/<code>half</code>). For best precision, accumulation during multiplication should use FP32 before converting the final result to FP16.
+</p>
+<h2>Implementation Requirements</h2>
+<ul>
+    <li>External libraries are not permitted</li>
+    <li>The <code>solve</code> function signature must remain unchanged</li>
+    <li>Accumulation during multiplication should use FP32 for better precision before converting the final result to FP16</li>
+    <li>The final result must be stored in the output variable as <code>half</code></li>
+</ul>
+<h2>Example 1:</h2>
+<pre>Input:  A = [1.0, 2.0, 3.0, 4.0]
+               B = [5.0, 6.0, 7.0, 8.0]
+       Output: result = 70.0  (1.0*5.0 + 2.0*6.0 + 3.0*7.0 + 4.0*8.0)</pre>
+<h2>Example 2:</h2>
+<pre>Input:  A = [0.5, 1.5, 2.5]
+               B = [2.0, 3.0, 4.0]
+       Output: result = 15.5  (0.5*2.0 + 1.5*3.0 + 2.5*4.0)</pre>
+<h2>Constraints</h2>
+<ul>
+    <li><code>A</code> and <code>B</code> have identical lengths</li>
+    <li>1 ≤ <code>N</code> ≤ 100,000,000</li>
+</ul>
