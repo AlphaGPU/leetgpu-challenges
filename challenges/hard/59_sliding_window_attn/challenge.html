@@ -1,0 +1,148 @@
+<p>
+  Implement <strong>Sliding Window Self-Attention</strong> for a given set of matrices.  
+  Before introducing the sliding window version, let's first recall standard Self-Attention.
+</p>
+
+<h3>1. Standard Softmax Attention</h3>
+<p>
+  Given query matrix <code>Q</code>, key matrix <code>K</code>, and value matrix <code>V</code>, each position <code>i</code> attends to all positions <code>j</code> using a softmax-weighted sum:
+</p>
+
+<p style="text-align:center;">
+  \( \text{score}_{i,j} = \frac{Q_i \cdot K_j}{\sqrt{d}} \)
+</p>
+
+<p style="text-align:center;">
+  \( \text{output}_i = \sum_{j=1}^{M} \text{softmax}(\text{score}_{i,*})_j \cdot V_j \)
+</p>
+
+<p>
+  In other words, each query computes similarity with all keys, applies a softmax to get attention weights, and then computes a weighted sum of values.
+</p>
+
+<h3>2. Sliding Window Self-Attention</h3>
+<p>
+  Sliding Window Attention modifies standard attention by restricting each query to attend only to a local window around its position.
+</p>
+
+<ul>
+  <li>For each position <code>i</code>, only consider the keys and values within a window of size <code>window_size</code> around <code>i</code> (positions <code>[i-window_size, ..., i+window_size]</code>).</li>
+  <li>Compute similarity scores between <code>Q<sub>i</sub></code> and the keys in this window:</li>
+</ul>
+
+<p style="text-align:center;">
+  \( \text{score}_{i,j} = \frac{Q_i \cdot K_j}{\sqrt{d}} \)
+</p>
+
+<ul>
+  <li>Apply <code>softmax</code> over these local scores to obtain attention weights.</li>
+  <li>Use the weights to compute a weighted average of the values in the same window:</li>
+</ul>
+
+<p style="text-align:center;">
+  \( \text{output}_i = \sum_{j \in [i-\text{window_size}, \, i+\text{window_size}]} \text{softmax}(\text{score}_{i,*})_j \cdot V_j \)
+</p>
+
+<p>
+  In short, each query only attends to its nearby neighbors.
+</p>
+
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The
+    <code>solve</code> function signature must remain unchanged
+  </li>
+  <li>The final result must be stored in the output matrix
+    <code>output</code>
+  </li>
+</ul>
+<h2>Example 1:</h2>
+<p>
+<strong>Input:</strong><br>
+<code>Q</code> (2×4):
+\[
+\begin{bmatrix}
+1.0 & 0.0 & 0.0 & 0.0 \\
+0.0 & 1.0 & 0.0 & 0.0
+\end{bmatrix}
+\]
+<code>K</code> (2×4):
+\[
+\begin{bmatrix}
+1.0 & 0.0 & 0.0 & 0.0 \\
+0.0 & 1.0 & 0.0 & 0.0
+\end{bmatrix}
+\]
+<code>V</code> (2×4):
+\[
+\begin{bmatrix}
+1.0 & 2.0 & 3.0 & 4.0 \\
+5.0 & 6.0 & 7.0 & 8.0
+\end{bmatrix}
+\]
+<code>window_size</code>: 1
+</p>
+
+<p>
+<strong>Output:</strong><br>
+<code>output</code> (2×4):
+\[
+\begin{bmatrix}
+2.5101628 & 3.5101628 & 4.510163 & 5.510163 \\
+3.4898374 & 4.4898376 & 5.4898376 & 6.489837
+\end{bmatrix}
+\]
+</p>
+
+
+<h2>Example 2:</h2>
+<p>
+  <strong>Input:</strong><br>
+  <code>Q</code> (2×3):
+  \[
+  \begin{bmatrix}
+  0.0 & 0.0 & 0.0 \\
+  0.0 & 1.0 & 0.0
+  \end{bmatrix}
+  \]
+  <code>K</code> (2×3):
+  \[
+  \begin{bmatrix}
+  1.0 & 0.0 & 0.0 \\
+  0.0 & 1.0 & 0.0
+  \end{bmatrix}
+  \]
+  <code>V</code> (2×3):
+  \[
+  \begin{bmatrix}
+  1.0 & 2.0 & 3.0 \\
+  5.0 & 6.0 & 7.0
+  \end{bmatrix}
+  \]
+  <code>window_size</code>: 1
+  </p>
+  
+  <p>
+  <strong>Output:</strong><br>
+  <code>output</code> (2×3):
+  \[
+  \begin{bmatrix}
+  3.0 & 4.0 & 5.0 \\
+  3.5618298 & 4.56183 & 5.5618296
+  \end{bmatrix}
+  \]
+  </p>
+  
+
+
+<h2>Constraints</h2>
+<ul>
+  <li>Matrix <code>Q</code>, <code>K</code>, and <code>V</code> are all of size <code>M×d</code></li>
+  <li>1 &le; <code>M</code> &le; 10000</li>
+  <li>1 &le; <code>d</code> &le; 128</li>
+  <li>1 &le; <code>window_size</code> &le; 32</li>
+  <li>All elements in <code>Q</code>, <code>K</code>, and <code>V</code> are sampled from<code>[-100.0, 100.0]</code></li>
+  <li>Data type for all matrices is <code>float32</code></li>
+</ul>
