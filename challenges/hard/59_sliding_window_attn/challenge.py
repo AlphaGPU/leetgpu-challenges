@@ -28,13 +28,13 @@ class Challenge(ChallengeBase):
 
     def get_solve_signature(self) -> Dict[str, Any]:
         return {
-            "Q": ctypes.POINTER(ctypes.c_float),
-            "K": ctypes.POINTER(ctypes.c_float),
-            "V": ctypes.POINTER(ctypes.c_float),
-            "output": ctypes.POINTER(ctypes.c_float),
-            "M": ctypes.c_int,
-            "d": ctypes.c_int,
-            "window_size": ctypes.c_int,
+            "Q": (ctypes.POINTER(ctypes.c_float), "in"),
+            "K": (ctypes.POINTER(ctypes.c_float), "in"),
+            "V": (ctypes.POINTER(ctypes.c_float), "in"),
+            "output": (ctypes.POINTER(ctypes.c_float), "out"),
+            "M": (ctypes.c_int, "in"),
+            "d": (ctypes.c_int, "in"),
+            "window_size": (ctypes.c_int, "in"),
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
@@ -99,7 +99,7 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        M, d, window_size = 10000, 128, 32
+        M, d, window_size = 5000, 64, 16
         Q = torch.empty((M, d), device="cuda", dtype=dtype).uniform_(-100, 100)
         K = torch.empty((M, d), device="cuda", dtype=dtype).uniform_(-100, 100)
         V = torch.empty((M, d), device="cuda", dtype=dtype).uniform_(-100, 100)
