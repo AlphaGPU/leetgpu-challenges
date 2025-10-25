@@ -1,5 +1,5 @@
 <p>
-  Implement a CUDA program to calculate the categorical cross-entropy loss for a batch of predictions.
+  Implement a GPU program to calculate the categorical cross-entropy loss for a batch of predictions.
   Given a matrix of predicted logits \(Z\) of size \(N \times C\) and a vector of true class labels <code>true_labels</code> of size \(N\), compute the average cross-entropy loss over the batch.
   The loss for a single sample \(j\) with logits \(z_j = [z_{j1}, \ldots, z_{jC}]\) and true label \(y_j\) is calculated using the numerically stable formula:
   \[ \text{Loss}_j = \log\left(\sum_{k=1}^{C} e^{z_{jk}}\right) - z_{j, y_j} \]

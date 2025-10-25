@@ -1,11 +1,11 @@
-<p> Implement a CUDA program that computes the softmax attention operation for a given set of matrices. Given the query
+<p> Implement a GPU program that computes the softmax attention operation for a given set of matrices. Given the query
   matrix <code>Q</code> of size <code>M×d</code>, key matrix <code>K</code> of size <code>N×d</code>, and value matrix
   <code>V</code> of size <code>N×d</code>, your program should compute the output matrix using the formula:
   $$\text{Attention}(Q, K, V) = \text{softmax}\Bigl( \frac{QK^T}{\sqrt{d}} \Bigr)V,$$ where the softmax function is
   applied row-wise. </p>
 <h2>Implementation Requirements</h2>
 <ul>
-  <li>Use only CUDA native features (external libraries are not permitted)</li>
+  <li>Use only GPU native features (external libraries are not permitted)</li>
   <li>The
     <code>solve</code> function signature must remain unchanged
   </li>
