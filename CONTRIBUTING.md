@@ -22,7 +22,7 @@ challenges/<difficulty>/<number>_<name>/
 ├── challenge.html          # Problem description
 ├── challenge.py           # Reference implementation and metadata
 └── starter/              # Starter templates
-    ├── starter.cu           # CUDA 
+    ├── starter.cu           # GPU program 
     ├── starter.mojo         # Mojo 
     ├── starter.pytorch.py   # PyTorch 
     ├── starter.tinygrad.py  # TinyGrad 
