@@ -13,14 +13,17 @@
 
 <h2>Simulation Rules</h2>
 <ol>
-  <li>For each agent \(i\), identify all neighbors \(j\) within radius \(r = 5.0\) using:
+  <li>For each agent \(i\), identify all neighbors \(j\) (where \(i \neq j\)) within radius \(r = 5.0\) using:
       \[
-      \sqrt{(x_i - x_j)^2 + (y_i - y_j)^2} \leq r
+      \sqrt{(x_i - x_j)^2 + (y_i - y_j)^2} < r
       \]
   </li>
   <li>Compute average velocity of neighboring agents:
       \[
-      \vec{v}_{avg} = \frac{1}{|N_i|} \sum_{j \in N_i} \vec{v}_j
+      \vec{v}_{avg} = \begin{cases}
+      \frac{1}{|N_i|} \sum_{j \in N_i} \vec{v}_j & \text{if } |N_i| > 0 \\
+      \vec{v}_i & \text{if } |N_i| = 0
+      \end{cases}
       \]
       where \(N_i\) is the set of neighbors for agent \(i\)
   </li>
