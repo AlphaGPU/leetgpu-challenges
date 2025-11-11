@@ -1,0 +1,42 @@
+<p>
+  Implement a program that performs element-wise addition of two \(N \times N\) matrices containing 32-bit floating point numbers on a GPU.
+  The program should take two input matrices of equal dimensions and produce a single output matrix containing their element-wise sum.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in matrix <code>C</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:  A = [[1.0, 2.0],
+             [3.0, 4.0]]
+        B = [[5.0, 6.0],
+             [7.0, 8.0]]
+Output: C = [[6.0, 8.0],
+             [10.0, 12.0]]
+</pre>
+
+<h2>Example 2:</h2>
+<pre>
+Input:  A = [[1.5, 2.5, 3.5],
+             [4.5, 5.5, 6.5],
+             [7.5, 8.5, 9.5]]
+        B = [[0.5, 0.5, 0.5],
+             [0.5, 0.5, 0.5],
+             [0.5, 0.5, 0.5]]
+Output: C = [[2.0, 3.0, 4.0],
+             [5.0, 6.0, 7.0],
+             [8.0, 9.0, 10.0]]
+</pre>
+
+<h2>Constraints</h2>
+
+<ul>
+  <li>Input matrices <code>A</code> and <code>B</code> have identical dimensions</li>
+  <li>1 &le; <code>N</code> &le; 4096</li>
+  <li>All elements are 32-bit floating point numbers</li>
+</ul>
