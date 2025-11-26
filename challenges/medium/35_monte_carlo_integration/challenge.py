@@ -38,7 +38,7 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         y_samples = torch.tensor([0.0625, 0.25, 0.5625, 1.0, 1.5625, 2.25, 3.0625, 4.0], device="cuda", dtype=dtype)
-        result = torch.empty(1, device="cuda", dtype=dtype)
+        result = torch.zeros(1, device="cuda", dtype=dtype)
         return {
             "y_samples": y_samples,
             "result": result,
@@ -63,7 +63,7 @@ class Challenge(ChallengeBase):
             n_samples = len(y_vals)
             test_cases.append({
                 "y_samples": torch.tensor(y_vals, device="cuda", dtype=dtype),
-                "result": torch.empty(1, device="cuda", dtype=dtype),
+                "result": torch.zeros(1, device="cuda", dtype=dtype),
                 "a": a,
                 "b": b,
                 "n_samples": n_samples
@@ -78,7 +78,7 @@ class Challenge(ChallengeBase):
         ]:
             test_cases.append({
                 "y_samples": torch.empty(n_samples, device="cuda", dtype=dtype).uniform_(-10.0, 10.0),
-                "result": torch.empty(1, device="cuda", dtype=dtype),
+                "result": torch.zeros(1, device="cuda", dtype=dtype),
                 "a": a,
                 "b": b,
                 "n_samples": n_samples
@@ -92,7 +92,7 @@ class Challenge(ChallengeBase):
         ]:
             test_cases.append({
                 "y_samples": torch.empty(n_samples, device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "result": torch.empty(1, device="cuda", dtype=dtype),
+                "result": torch.zeros(1, device="cuda", dtype=dtype),
                 "a": a,
                 "b": b,
                 "n_samples": n_samples
@@ -105,7 +105,7 @@ class Challenge(ChallengeBase):
         n_samples = 10000000  
         return {
             "y_samples": torch.empty(n_samples, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0),
-            "result": torch.empty(1, device="cuda", dtype=dtype),
+            "result": torch.zeros(1, device="cuda", dtype=dtype),
             "a": -10.0,
             "b": 10.0,
             "n_samples": n_samples
