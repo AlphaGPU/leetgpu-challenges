@@ -30,15 +30,19 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def find_solution_file(challenge_dir: Path) -> tuple[str, str]:
-    solution_dir = challenge_dir / "solution"
-    if not solution_dir.is_dir():
-        raise FileNotFoundError("No solution directory found. Add a solution/ folder with your file.")
-    candidates = sorted([p for p in solution_dir.iterdir() if p.is_file()])
-    if not candidates:
-        raise FileNotFoundError("solution/ directory is empty.")
-    path = candidates[0]
-    return path.name, path.read_text()
+def find_solution_file(challenge_dir: Path, language: str) -> tuple[str, str]:
+    language_to_extension = {
+        "cuda": "cu",
+        "mojo": "mojo",
+        "pytorch": "pytorch.py",
+        "cute": "cute.py",
+        "triton": "triton.py",
+    }
+    
+    solution_file = challenge_dir / "solution" / f"solution.{language_to_extension[language]}"
+    if not solution_file.exists():
+        raise FileNotFoundError(f"No solution file found for {language}. Add a solution/{language}.py file.")
+    return solution_file.name, solution_file.read_text()
 
 
 def submit_solution(ws_url: str, api_key: str, challenge_id: int, file_name: str, content: str,
@@ -100,7 +104,7 @@ def main() -> int:
 
     # Submit solution
     try:
-        file_name, content = find_solution_file(args.challenge_path)
+        file_name, content = find_solution_file(args.challenge_path, args.language)
     except Exception as e:
         logger.error("Failed to find solution file: %s", e)
         return 1
