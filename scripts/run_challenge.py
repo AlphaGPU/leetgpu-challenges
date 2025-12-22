@@ -37,13 +37,12 @@ def find_solution_file(challenge_dir: Path, language: str) -> tuple[str, str]:
         "pytorch": "pytorch.py",
         "cute": "cute.py",
         "triton": "triton.py",
+        "jax": "jax.py",
     }
-    
     solution_file = challenge_dir / "solution" / f"solution.{language_to_extension[language]}"
     if not solution_file.exists():
-        raise FileNotFoundError(f"No solution file found for {language}. Add a solution/{language}.py file.")
+        raise FileNotFoundError(f"No solution file found for {language}. Add a solution/solution.{language}.py file.")
     return solution_file.name, solution_file.read_text()
-
 
 def submit_solution(ws_url: str, api_key: str, challenge_id: int, file_name: str, content: str,
                     language: str, gpu: str, action: str, public: bool) -> bool:
