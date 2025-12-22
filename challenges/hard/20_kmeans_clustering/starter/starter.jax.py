@@ -7,5 +7,6 @@ def solve(data_x: jax.Array,
           data_y: jax.Array, 
           initial_centroid_x: jax.Array, 
           initial_centroid_y: jax.Array, 
-          sample_size: int, k: int, max_iterations: int):
+          sample_size: int, k: int, max_iterations: int) -> jax.Array:
+    # return output tensor directly
     pass
