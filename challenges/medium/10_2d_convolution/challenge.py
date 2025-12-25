@@ -29,9 +29,7 @@ class Challenge(ChallengeBase):
         input_prepared = input_2d.unsqueeze(0).unsqueeze(0)
         # Perform cross-correlation using PyTorch's F.conv2d
         # (which does cross-correlation by default)
-        result = torch.nn.functional.conv2d(
-            input_prepared, kernel_prepared, padding=0
-        )
+        result = torch.nn.functional.conv2d(input_prepared, kernel_prepared, padding=0)
         # Copy result to output tensor (removing the extra dimensions and flattening)
         output.copy_(result.view(-1))
 
