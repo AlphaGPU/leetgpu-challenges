@@ -5,9 +5,9 @@
 
 <p>
   The Gaussian blur is performed by convolving each pixel with a weighted average of its neighbors, where the weights are determined by the Gaussian kernel. For each output pixel at position (i, j), the value is calculated as:
-  
+
   \[ output[i, j] = \sum_{m=-k_h/2}^{k_h/2} \sum_{n=-k_w/2}^{k_w/2} input[i+m, j+n] \times kernel[m+k_h/2, n+k_w/2] \]
-  
+
   where \(k_h\) and \(k_w\) are the kernel height and width.
 </p>
 
@@ -21,7 +21,7 @@
 
 <h2>Example 1:</h2>
 <pre>
-Input: 
+Input:
   image (5, 5) = [
     [1.0, 2.0, 3.0, 4.0, 5.0],
     [6.0, 7.0, 8.0, 9.0, 10.0],
@@ -29,13 +29,13 @@ Input:
     [16.0, 17.0, 18.0, 19.0, 20.0],
     [21.0, 22.0, 23.0, 24.0, 25.0]
   ]
-  
+
   kernel (3, 3) = [
     [0.0625, 0.125, 0.0625],
     [0.125, 0.25, 0.125],
     [0.0625, 0.125, 0.0625]
   ]
-  
+
 Output:
   output (5, 5) = [
     [1.6875, 2.75, 3.5, 4.25, 3.5625],
@@ -44,7 +44,7 @@ Output:
     [12.25, 17.0, 18.0, 19.0, 14.75],
     [11.0625, 15.25, 16.0, 16.75, 12.9375]
   ]
- 
+
 </pre>
 
 <h2>Example 2:</h2>
@@ -55,13 +55,13 @@ Input:
     [40.0, 50.0, 60.0],
     [70.0, 80.0, 90.0]
   ]
-  
+
   kernel (3, 3) = [
     [0.1, 0.1, 0.1],
     [0.1, 0.2, 0.1],
     [0.1, 0.1, 0.1]
   ]
-  
+
 Output:
   output (3, 3) = [
     [13.0, 23.0, 19.0],
@@ -76,4 +76,4 @@ Output:
   <li>3 ≤ <code>kernel_rows</code>, <code>kernel_cols</code> ≤ 21</li>
   <li>Both <code>kernel_rows</code> and <code>kernel_cols</code> will be odd numbers</li>
   <li>All kernel values will be non-negative and sum to 1.0 (normalized)</li>
-</ul> 
+</ul>

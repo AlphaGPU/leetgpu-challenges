@@ -4,6 +4,6 @@ from memory import UnsafePointer
 from math import ceildiv
 
 # input, output are device pointers (i.e. pointers to memory on the GPU)
-@export                         
+@export
 def solve(input: UnsafePointer[Float32], output: UnsafePointer[Float32], N: Int32):
-    pass 
+    pass

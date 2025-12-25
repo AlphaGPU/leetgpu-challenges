@@ -5,4 +5,4 @@ from math import ceildiv
 
 @export
 def solve(A: UnsafePointer[Float32], B: UnsafePointer[Float32], result: UnsafePointer[Float32], N: Int32):
-    pass 
+    pass

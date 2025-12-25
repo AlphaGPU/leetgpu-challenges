@@ -5,7 +5,7 @@ from math import ceildiv
 
 # input, gamma, beta, output are device pointers
 @export
-def solve(input: UnsafePointer[Float32], gamma: UnsafePointer[Float32], 
-          beta: UnsafePointer[Float32], output: UnsafePointer[Float32], 
+def solve(input: UnsafePointer[Float32], gamma: UnsafePointer[Float32],
+          beta: UnsafePointer[Float32], output: UnsafePointer[Float32],
           N: Int32, C: Int32, eps: Float32):
     pass

@@ -85,21 +85,21 @@ jobs:
               echo "Error: $file is empty"
               exit 1
             fi
-            
+
             # Check for required imports in Mojo starter files
             if ! grep -q "from gpu.host import DeviceContext" "$file" && \
                ! grep -q "from gpu.id import" "$file" && \
                ! grep -q "from memory import UnsafePointer" "$file"; then
               echo "Warning: $file may be missing standard GPU imports"
             fi
-            
+
             # Check for @export decorator in starter files
             if echo "$file" | grep -q "starter.mojo"; then
               if ! grep -q "@export" "$file"; then
                 echo "Warning: $file may be missing @export decorator"
               fi
             fi
-            
+
             echo "✓ $file passed basic checks"
           done
           echo "✅ All Mojo files passed basic validation"

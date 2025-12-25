@@ -1,5 +1,5 @@
 <p>
-  Implement the Swish-Gated Linear Unit (SWiGLU) activation function forward pass for 1D input vectors. 
+  Implement the Swish-Gated Linear Unit (SWiGLU) activation function forward pass for 1D input vectors.
   Given an input tensor of shape [N] where N is the number of elements, compute the output using the elementwise formula.
   The input and output tensor must be of type <code>float32</code>.
 </p>
@@ -10,7 +10,7 @@
     <li>Split input \(x\) into two halves: \(x_1\) and \(x_2\)</li>
     <li>Compute SiLU on the first half:
       \[
-        \text{SiLU}(x_1) = x_1 \cdot \sigma(x_1), \quad 
+        \text{SiLU}(x_1) = x_1 \cdot \sigma(x_1), \quad
         \sigma(x) = \frac{1}{1 + e^{-x}}
       \]
     </li>

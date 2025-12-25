@@ -1,7 +1,7 @@
 <p>
   Solve the logistic regression problem on a GPU. Given a feature matrix \(X\) of size \(n\_samples \times n\_features\) and a binary target vector \(y\) of size \(n\_samples\) (containing only 0s and 1s), compute the coefficient vector \(\beta\) that maximizes the log-likelihood:
   \[ \max_{\beta} \sum_{i=1}^{n} \left[ y_i \log(p_i) + (1-y_i) \log(1-p_i) \right] \]
-  
+
   where \(p_i = \sigma(X_i^T \beta)\) and \(\sigma(z) = \frac{1}{1 + e^{-z}}\) is the sigmoid function.
 </p>
 
@@ -16,7 +16,7 @@
 <h2>Example:</h2>
 <p>
 Input:<br>
-\(X\) (samples × features): 
+\(X\) (samples × features):
 \[
 \begin{bmatrix}
 2.0 & 1.0 \\
@@ -29,7 +29,7 @@ Input:<br>
 -3.0 & -3.0
 \end{bmatrix}
 \]
-\(y\): 
+\(y\):
 \[
 \begin{bmatrix}
 1 \\
@@ -43,7 +43,7 @@ Input:<br>
 \end{bmatrix}
 \]
 Output:<br>
-\(\beta\): 
+\(\beta\):
 \[
 \begin{bmatrix}
 2.26 \\

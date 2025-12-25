@@ -51,12 +51,30 @@ python scripts/generate_starter_code.py path/to/challenge_dir # can be either ab
 
 All starter code must pass automated linting checks before being merged. We use:
 
+#### Automated Pre-commit Hooks (Recommended)
+
+The easiest way to ensure your code is properly formatted is to use pre-commit hooks:
+
+```bash
+# Install pre-commit
+pip install pre-commit
+
+# Install the git hooks
+pre-commit install
+
+# Now formatting happens automatically when you commit!
+# To run manually on all files:
+pre-commit run --all-files
+```
+
+This will automatically format your code with black, isort, and clang-format before each commit.
+
 #### Python (`.py` files)
 - **black**: Code formatting (line length: 100)
 - **isort**: Import sorting
 - **flake8**: Style and error checking
 
-Format your Python code:
+Format your Python code manually:
 ```bash
 pip install black==24.1.1 flake8==7.0.0 isort==5.13.2
 black challenges/ scripts/
@@ -67,7 +85,7 @@ flake8 challenges/ scripts/
 #### C++/CUDA (`.cu`, `.cpp`, `.h` files)
 - **clang-format**: Code formatting (LLVM style with modifications)
 
-Format your C++/CUDA code:
+Format your C++/CUDA code manually:
 ```bash
 sudo apt-get install clang-format
 find challenges -name "*.cu" -o -name "*.cpp" -o -name "*.h" | xargs clang-format -i
