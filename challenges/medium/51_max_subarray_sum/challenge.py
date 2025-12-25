@@ -1,16 +1,14 @@
 import ctypes
-from typing import Any, List, Dict
+from typing import Any, Dict, List
+
 import torch
 from core.challenge_base import ChallengeBase
+
 
 class Challenge(ChallengeBase):
     def __init__(self):
         super().__init__(
-            name="Max Subarray Sum",
-            atol=1e-05,
-            rtol=1e-05,
-            num_gpus=1,
-            access_tier="free"
+            name="Max Subarray Sum", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
         )
 
     def reference_impl(self, input: torch.Tensor, output: torch.Tensor, N: int, window_size: int):
@@ -34,7 +32,7 @@ class Challenge(ChallengeBase):
             # Update the current sum by subtracting the element leaving the window
             # and adding the new element entering the window
             current_sum += input[i] - input[i - window_size]
-    
+
             # Update max_sum if the current sum is greater
             max_sum = torch.max(max_sum, current_sum)
 
@@ -46,71 +44,78 @@ class Challenge(ChallengeBase):
             "input": (ctypes.POINTER(ctypes.c_int), "in"),
             "output": (ctypes.POINTER(ctypes.c_int), "out"),
             "N": (ctypes.c_int, "in"),
-            "window_size": (ctypes.c_int, "in")
+            "window_size": (ctypes.c_int, "in"),
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.int32
         input = torch.tensor([1, 2, 4, 2, 3], device="cuda", dtype=dtype)
         output = torch.empty(1, device="cuda", dtype=dtype)
-        return {
-            "input": input,
-            "output": output,
-            "N": 5,
-            "window_size": 2
-        }
+        return {"input": input, "output": output, "N": 5, "window_size": 2}
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.int32
         tests = []
 
         # basic_example
-        tests.append({
-            "input": torch.tensor([-1, -4, -2, 1], device="cuda", dtype=dtype),
-            "output": torch.empty(1, device="cuda", dtype=dtype),
-            "N": 4,
-            "window_size": 3
-        })
+        tests.append(
+            {
+                "input": torch.tensor([-1, -4, -2, 1], device="cuda", dtype=dtype),
+                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "N": 4,
+                "window_size": 3,
+            }
+        )
 
         # all_same_value
-        tests.append({
-            "input": torch.tensor([2]*16, device="cuda", dtype=dtype),
-            "output": torch.empty(1, device="cuda", dtype=dtype),
-            "N": 16,
-            "window_size": 15
-        })
+        tests.append(
+            {
+                "input": torch.tensor([2] * 16, device="cuda", dtype=dtype),
+                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "N": 16,
+                "window_size": 15,
+            }
+        )
 
         # all_minus_value
-        tests.append({
-            "input": torch.tensor([-10]*1000, device="cuda", dtype=dtype),
-            "output": torch.empty(1, device="cuda", dtype=dtype),
-            "N": 1000,
-            "window_size": 500
-        })
+        tests.append(
+            {
+                "input": torch.tensor([-10] * 1000, device="cuda", dtype=dtype),
+                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "N": 1000,
+                "window_size": 500,
+            }
+        )
 
         # increasing_sequence
-        tests.append({
-            "input": torch.randint(-10, 11, (123,), device="cuda", dtype=dtype),
-            "output": torch.empty(1, device="cuda", dtype=dtype),
-            "N": 123,
-            "window_size": 7
-        })
+        tests.append(
+            {
+                "input": torch.randint(-10, 11, (123,), device="cuda", dtype=dtype),
+                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "N": 123,
+                "window_size": 7,
+            }
+        )
 
         # medium_size
-        tests.append({
-            "input": torch.randint(-10, 11, (1000,), device="cuda", dtype=dtype),
-            "output": torch.empty(1, device="cuda", dtype=dtype),
-            "N": 1000,
-            "window_size": 476
-        })
+        tests.append(
+            {
+                "input": torch.randint(-10, 11, (1000,), device="cuda", dtype=dtype),
+                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "N": 1000,
+                "window_size": 476,
+            }
+        )
 
         # large_size
-        tests.append({
-            "input": torch.randint(-10, 11, (10000,), device="cuda", dtype=dtype),
-            "output": torch.empty(1, device="cuda", dtype=dtype),
-            "N": 10000,
-            "window_size": 7011
-        })
+        tests.append(
+            {
+                "input": torch.randint(-10, 11, (10000,), device="cuda", dtype=dtype),
+                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "N": 10000,
+                "window_size": 7011,
+            }
+        )
 
         return tests
 
@@ -118,9 +123,4 @@ class Challenge(ChallengeBase):
         dtype = torch.int32
         input = torch.randint(-10, 11, (50000,), device="cuda", dtype=dtype)
         output = torch.empty(1, device="cuda", dtype=dtype)
-        return {
-            "input": input,
-            "output": output,
-            "N": 50000,
-            "window_size": 25000
-        }
+        return {"input": input, "output": output, "N": 50000, "window_size": 25000}
