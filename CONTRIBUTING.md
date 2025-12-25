@@ -47,6 +47,37 @@ python scripts/generate_starter_code.py path/to/challenge_dir # can be either ab
 - **Medium/Hard problems**: Just have an empty solve function
 - All templates should compile but not solve the problem
 
+### Code Style and Linting
+
+All starter code must pass automated linting checks before being merged. We use:
+
+#### Python (`.py` files)
+- **black**: Code formatting (line length: 100)
+- **isort**: Import sorting
+- **flake8**: Style and error checking
+
+Format your Python code:
+```bash
+pip install black==24.1.1 flake8==7.0.0 isort==5.13.2
+black challenges/ scripts/
+isort challenges/ scripts/
+flake8 challenges/ scripts/
+```
+
+#### C++/CUDA (`.cu`, `.cpp`, `.h` files)
+- **clang-format**: Code formatting (LLVM style with modifications)
+
+Format your C++/CUDA code:
+```bash
+sudo apt-get install clang-format
+find challenges -name "*.cu" -o -name "*.cpp" -o -name "*.h" | xargs clang-format -i
+```
+
+#### Mojo (`.mojo` files)
+- Basic validation checks (file not empty, required imports, `@export` decorator)
+
+The CI will automatically check all code submissions. Fix any linting errors before submitting your PR.
+
 ### Difficulty Levels
 - **Easy**: Single concept, basic kernel launches
 - **Medium**: Multiple concepts, memory optimizations
