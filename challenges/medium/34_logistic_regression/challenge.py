@@ -33,7 +33,7 @@ class Challenge(ChallengeBase):
         tol = 1e-8
         l2_reg = 1e-6
 
-        for iteration in range(max_iter):
+        for _ in range(max_iter):
             z = torch.mv(X_reshaped, beta)
             p = torch.sigmoid(z)
             W = p * (1 - p)
