@@ -17,6 +17,9 @@ on:
       - '.clang-format'
       - 'pyproject.toml'
 
+permissions:
+  contents: read
+
 jobs:
   lint-python:
     name: Lint Python Files
