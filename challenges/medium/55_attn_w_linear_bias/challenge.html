@@ -2,11 +2,11 @@
   Implement Attention with Linear Biases (ALiBi), following the method described in
   <a href="https://arxiv.org/pdf/2108.12409" target="_blank">
   "Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation"
-  </a>, for a given set of matrices.  
+  </a>, for a given set of matrices.
   Given the query matrix <code>Q</code> of size <code>M×d</code>, key matrix <code>K</code> of size <code>N×d</code>, and value matrix
   <code>V</code> of size <code>N×d</code>, your program should compute the output matrix using the formula:
 </p>
-  
+
 <p>
   $$
   \text{Attention}_{ALiBi}(Q, K, V) = \text{softmax}\Bigl( \frac{QK^T}{\sqrt{d}} + \alpha \cdot \Delta \Bigr)V
@@ -14,8 +14,8 @@
 </p>
 
 <p>
-  where &alpha; is a slope controlling the linear bias and <code>&Delta; = i - j</code> represents the relative position between query <code>i</code> and key <code>j</code>. 
-  The softmax function is applied row-wise. <code>Q</code>, <code>K</code>, <code>V</code>, <code>output</code>, and <code>&alpha;</code> are all of data type <code>float32</code>; 
+  where &alpha; is a slope controlling the linear bias and <code>&Delta; = i - j</code> represents the relative position between query <code>i</code> and key <code>j</code>.
+  The softmax function is applied row-wise. <code>Q</code>, <code>K</code>, <code>V</code>, <code>output</code>, and <code>&alpha;</code> are all of data type <code>float32</code>;
   <code>M</code>, <code>N</code>, <code>d</code> are of data type <code>int32</code>.
 </p>
 

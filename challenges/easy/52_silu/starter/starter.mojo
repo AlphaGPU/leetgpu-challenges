@@ -11,13 +11,13 @@ fn silu_kernel(input: UnsafePointer[Float32], output: UnsafePointer[Float32], N:
 def solve(input: UnsafePointer[Float32], output: UnsafePointer[Float32], N: Int32):
     var threadsPerBlock: Int32 = 256
     var ctx = DeviceContext()
-    
+
     var blocksPerGrid = ceildiv(N, threadsPerBlock)
-    
+
     ctx.enqueue_function[silu_kernel](
         input, output, N,
         grid_dim = blocksPerGrid,
         block_dim = threadsPerBlock
     )
-    
-    ctx.synchronize() 
+
+    ctx.synchronize()

@@ -7,7 +7,7 @@ fn count_equal_kernel(input: UnsafePointer[Int32], output: UnsafePointer[Int32],
     pass
 
 # input, output are device pointers (i.e. pointers to memory on the GPU)
-@export                         
+@export
 def solve(input: UnsafePointer[Int32], output: UnsafePointer[Int32], N: Int32, K: Int32):
     var BLOCK_SIZE: Int32 = 256
     var ctx = DeviceContext()

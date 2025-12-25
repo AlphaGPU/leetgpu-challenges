@@ -78,13 +78,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: update-pset
     if: always()
-    
+
     steps:
     - name: Notify Success
       if: needs.update-pset.result == 'success'
       run: |
         echo "Challenge deployment completed successfully!"
-        
+
     - name: Notify Failure
       if: needs.update-pset.result == 'failure'
       run: |

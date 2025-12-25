@@ -1,18 +1,16 @@
+import ctypes
 import os
 import sys
-from importlib import util, machinery
-import types
-import ctypes
-import urllib.request
 import tempfile
+import types
+import urllib.request
+from importlib import machinery, util
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-CONST_HINTS = {
-    "input"
-}
+CONST_HINTS = {"input"}
 
 CTYPE_TO_CUDA = {
     ctypes.c_int: "int",
@@ -51,6 +49,7 @@ CTYPE_TO_CUTE = {
     ctypes.c_ulong: "cute.Uint64",
 }
 
+
 def ctype_to_cuda(ctype, name) -> str:
     if isinstance(ctype, type) and issubclass(ctype, ctypes._Pointer):
         base_type = getattr(ctype, "_type_", None)
@@ -63,10 +62,10 @@ def ctype_to_cuda(ctype, name) -> str:
 
     if ctype not in CTYPE_TO_CUDA:
         raise ValueError(
-            f"Unsupported scalar type: {ctype}. "
-            "Please extend CTYPE_TO_CUDA mapping."
+            f"Unsupported scalar type: {ctype}. " "Please extend CTYPE_TO_CUDA mapping."
         )
     return CTYPE_TO_CUDA[ctype]
+
 
 def ctype_to_mojo(ctype) -> str:
     if isinstance(ctype, type) and issubclass(ctype, ctypes._Pointer):
@@ -80,10 +79,10 @@ def ctype_to_mojo(ctype) -> str:
 
     if ctype not in CTYPE_TO_MOJO:
         raise ValueError(
-            f"Unsupported scalar type: {ctype}. "
-            "Please extend CTYPE_TO_MOJO mapping."
+            f"Unsupported scalar type: {ctype}. " "Please extend CTYPE_TO_MOJO mapping."
         )
     return CTYPE_TO_MOJO[ctype]
+
 
 def ctype_to_torch(ctype, name) -> str:
     if isinstance(ctype, type) and issubclass(ctype, ctypes._Pointer):
@@ -95,9 +94,9 @@ def ctype_to_torch(ctype, name) -> str:
         return f"{name}: float"
 
     raise ValueError(
-        f"Unsupported type {ctype} for PyTorch mapping. "
-        "Please extend CTYPE_TO_TORCH mapping."
+        f"Unsupported type {ctype} for PyTorch mapping. " "Please extend CTYPE_TO_TORCH mapping."
     )
+
 
 def ctype_to_cute(ctype, name) -> str:
     if isinstance(ctype, type) and issubclass(ctype, ctypes._Pointer):
@@ -105,10 +104,10 @@ def ctype_to_cute(ctype, name) -> str:
 
     if ctype not in CTYPE_TO_CUTE:
         raise ValueError(
-            f"Unsupported scalar type: {ctype}. "
-            "Please extend CTYPE_TO_CUTE mapping."
+            f"Unsupported scalar type: {ctype}. " "Please extend CTYPE_TO_CUTE mapping."
         )
     return f"{name}: {CTYPE_TO_CUTE[ctype]}"
+
 
 def load_module(name: str, path: str):
     spec = util.spec_from_file_location(name, path)
@@ -119,6 +118,7 @@ def load_module(name: str, path: str):
     spec.loader.exec_module(module)
     sys.modules[name] = module
     return module
+
 
 def load_challenge(challenge_dir: str):
     base_url = "https://api.leetgpu.com/api/v1/core-files/challenge_base.py"
@@ -132,13 +132,18 @@ def load_challenge(challenge_dir: str):
 
     return challenge.Challenge()
 
+
 def generate_starter_cuda(sig, starter_file):
     arg_str = ", ".join(ctype_to_cuda(typ, name) + f" {name}" for name, typ in sig.items())
     include_half = "#include <cuda_fp16.h>\n" if "__half" in arg_str else ""
-    
-    device_pointers = [name for name, typ in sig.items() if isinstance(typ, type) and issubclass(typ, ctypes._Pointer)]
+
+    device_pointers = [
+        name
+        for name, typ in sig.items()
+        if isinstance(typ, type) and issubclass(typ, ctypes._Pointer)
+    ]
     comment = f"// {', '.join(device_pointers)} are device pointers" if device_pointers else ""
-    
+
     code = f"""#include <cuda_runtime.h>
 {include_half}
 {comment}
@@ -148,12 +153,17 @@ extern "C" void solve({arg_str}) {{
     with open(starter_file, "w") as f:
         f.write(code)
 
+
 def generate_starter_mojo(sig, starter_file):
     arg_str = ", ".join(f"{name}: {ctype_to_mojo(typ)}" for name, typ in sig.items())
-    
-    device_pointers = [name for name, typ in sig.items() if isinstance(typ, type) and issubclass(typ, ctypes._Pointer)]
+
+    device_pointers = [
+        name
+        for name, typ in sig.items()
+        if isinstance(typ, type) and issubclass(typ, ctypes._Pointer)
+    ]
     comment = f"# {', '.join(device_pointers)} are device pointers" if device_pointers else ""
-    
+
     code = f"""from gpu.host import DeviceContext
 from gpu.id import block_dim, block_idx, thread_idx
 from memory import UnsafePointer
@@ -167,12 +177,17 @@ def solve({arg_str}):
     with open(starter_file, "w") as f:
         f.write(code)
 
+
 def generate_starter_pytorch(sig, starter_file):
     arg_str = ", ".join(ctype_to_torch(typ, name) for name, typ in sig.items())
-    
-    tensors = [name for name, typ in sig.items() if isinstance(typ, type) and issubclass(typ, ctypes._Pointer)]
+
+    tensors = [
+        name
+        for name, typ in sig.items()
+        if isinstance(typ, type) and issubclass(typ, ctypes._Pointer)
+    ]
     comment = f"# {', '.join(tensors)} are tensors on the GPU" if tensors else ""
-    
+
     code = f"""import torch
 
 {comment}
@@ -182,6 +197,7 @@ def solve({arg_str}):
     with open(starter_file, "w") as f:
         f.write(code)
 
+
 def generate_starter_triton(sig, starter_file):
     def ctype_to_triton(ctype, name):
         if isinstance(ctype, type) and issubclass(ctype, ctypes._Pointer):
@@ -190,13 +206,19 @@ def generate_starter_triton(sig, starter_file):
             return f"{name}: int"
         if ctype in (ctypes.c_float, ctypes.c_double):
             return f"{name}: float"
-        raise ValueError(f"Unsupported type {ctype} for Triton mapping. Please extend ctype_to_triton mapping.")
+        raise ValueError(
+            f"Unsupported type {ctype} for Triton mapping. Please extend ctype_to_triton mapping."
+        )
 
     arg_str = ", ".join(ctype_to_triton(typ, name) for name, typ in sig.items())
-    
-    tensors = [name for name, typ in sig.items() if isinstance(typ, type) and issubclass(typ, ctypes._Pointer)]
+
+    tensors = [
+        name
+        for name, typ in sig.items()
+        if isinstance(typ, type) and issubclass(typ, ctypes._Pointer)
+    ]
     comment = f"# {', '.join(tensors)} are tensors on the GPU" if tensors else ""
-    
+
     code = f"""import torch
 import triton
 import triton.language as tl
@@ -208,12 +230,17 @@ def solve({arg_str}):
     with open(starter_file, "w") as f:
         f.write(code)
 
+
 def generate_starter_cute(sig, starter_file):
     arg_str = ", ".join(ctype_to_cute(typ, name) for name, typ in sig.items())
-    
-    tensors = [name for name, typ in sig.items() if isinstance(typ, type) and issubclass(typ, ctypes._Pointer)]
+
+    tensors = [
+        name
+        for name, typ in sig.items()
+        if isinstance(typ, type) and issubclass(typ, ctypes._Pointer)
+    ]
     comment = f"# {', '.join(tensors)} are tensors on the GPU" if tensors else ""
-    
+
     code = f"""import cutlass
 import cutlass.cute as cute
 
@@ -224,6 +251,7 @@ def solve({arg_str}):
 """
     with open(starter_file, "w") as f:
         f.write(code)
+
 
 def main():
     if len(sys.argv) != 2:
@@ -252,6 +280,7 @@ def main():
     generate_starter_pytorch(sig, os.path.join(starter_dir, "starter.pytorch.py"))
     generate_starter_triton(sig, os.path.join(starter_dir, "starter.triton.py"))
     generate_starter_cute(sig, os.path.join(starter_dir, "starter.cute.py"))
+
 
 if __name__ == "__main__":
     main()

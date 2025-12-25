@@ -1,22 +1,22 @@
 <p>
-  Implement <strong>Linear Attention</strong> for a given set of matrices, following the method described in 
+  Implement <strong>Linear Attention</strong> for a given set of matrices, following the method described in
   <a href="https://arxiv.org/pdf/2006.16236" target="_blank">
   "Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention"
-  </a>.  
+  </a>.
   Given the query matrix <code>Q</code> of size <code>M×d</code>, key matrix <code>K</code> of size <code>M×d</code>, and value matrix
   <code>V</code> of size <code>M×d</code>, your program should compute the output matrix using the formula:
   $$
   \text{LinearAttention}(Q, K, V) = \frac{\phi(Q) \left(\phi(K)^T V \right)}{\phi(Q) \left(\sum_j \phi(K_j) \right)}
   $$
   </p>
-  
+
   <p>
   where \( \phi(x) \) is a feature map applied element-wise, for example:
   $$
-  \phi(x) = \text{ELU}(x) + 1 = 
-  \begin{cases} 
-  x + 1, & x > 0 \\ 
-  e^x, & x \le 0 
+  \phi(x) = \text{ELU}(x) + 1 =
+  \begin{cases}
+  x + 1, & x > 0 \\
+  e^x, & x \le 0
   \end{cases}
   $$
   All matrices <code>Q</code>, <code>K</code>, <code>V</code>, and <code>output</code> are of type <code>float32</code>, and <code>M</code> and <code>d</code> are of type <code>int32</code>.

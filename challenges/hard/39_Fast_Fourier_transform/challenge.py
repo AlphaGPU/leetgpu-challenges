@@ -1,16 +1,14 @@
 import ctypes
-from typing import Any, List, Dict
+from typing import Any, Dict, List
+
 import torch
 from core.challenge_base import ChallengeBase
+
 
 class Challenge(ChallengeBase):
     def __init__(self):
         super().__init__(
-            name="Fast Fourier Transform",
-            atol=1e-3,         
-            rtol=1e-3,
-            num_gpus=1,
-            access_tier="free"
+            name="Fast Fourier Transform", atol=1e-3, rtol=1e-3, num_gpus=1, access_tier="free"
         )
 
     def reference_impl(self, signal: torch.Tensor, spectrum: torch.Tensor, N: int):
@@ -32,7 +30,7 @@ class Challenge(ChallengeBase):
 
         # View as (N, 2) → complex tensor
         sig_ri = signal.view(N, 2)
-        sig_c  = torch.complex(sig_ri[:, 0], sig_ri[:, 1])
+        sig_c = torch.complex(sig_ri[:, 0], sig_ri[:, 1])
 
         # Torch reference FFT
         spec_c = torch.fft.fft(sig_c)
@@ -43,18 +41,16 @@ class Challenge(ChallengeBase):
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "signal": (ctypes.POINTER(ctypes.c_float), "in"),    # in  (2 × N)
-            "spectrum": (ctypes.POINTER(ctypes.c_float), "out"),  # out (2 × N)
-            "N": (ctypes.c_int, "in")
+            "signal": (ctypes.POINTER(ctypes.c_float), "in"),  # in  (2 × N),
+            "spectrum": (ctypes.POINTER(ctypes.c_float), "out"),  # out (2 × N),
+            "N": (ctypes.c_int, "in"),
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         N = 4
         # Impulse signal δ[n] = 1 when n=0 else 0 (expected flat spectrum)
-        signal = torch.tensor([1.0, 0.0,   0.0, 0.0,
-                               0.0, 0.0,   0.0, 0.0],
-                              device="cuda", dtype=dtype)
+        signal = torch.tensor([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], device="cuda", dtype=dtype)
         spectrum = torch.empty(2 * N, device="cuda", dtype=dtype)
         return {"signal": signal, "spectrum": spectrum, "N": N}
 
@@ -100,7 +96,7 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        N = 262_144          # 256 K complex samples  (~2 MiB real/imag)
+        N = 262_144  # 256 K complex samples  (~2 MiB real/imag)
         big_sig = torch.empty(2 * N, device="cuda", dtype=dtype).normal_(0.0, 1.0)
         big_spec = torch.empty_like(big_sig)
         return {"signal": big_sig, "spectrum": big_spec, "N": N}

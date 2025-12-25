@@ -1,17 +1,13 @@
 import ctypes
-from typing import Any, List, Dict
+from typing import Any, Dict, List
+
 import torch
 from core.challenge_base import ChallengeBase
 
+
 class Challenge(ChallengeBase):
     def __init__(self):
-        super().__init__(
-            name="Leaky ReLU",
-            atol=1e-06,
-            rtol=1e-06,
-            num_gpus=1,
-            access_tier="free"
-        )
+        super().__init__(name="Leaky ReLU", atol=1e-06, rtol=1e-06, num_gpus=1, access_tier="free")
 
     def reference_impl(self, input: torch.Tensor, output: torch.Tensor, N: int):
         assert input.shape == (N,)
@@ -27,7 +23,7 @@ class Challenge(ChallengeBase):
         return {
             "input": (ctypes.POINTER(ctypes.c_float), "in"),
             "output": (ctypes.POINTER(ctypes.c_float), "out"),
-            "N": (ctypes.c_int, "in")
+            "N": (ctypes.c_int, "in"),
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
@@ -37,7 +33,7 @@ class Challenge(ChallengeBase):
         return {
             "input": input_tensor,
             "output": output_tensor,
-            "N": 4
+            "N": 4,
         }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
@@ -45,39 +41,49 @@ class Challenge(ChallengeBase):
         test_cases = []
 
         # basic_example
-        test_cases.append({
-            "input": torch.tensor([1.0, -2.0, 3.0, -4.0], device="cuda", dtype=dtype),
-            "output": torch.zeros(4, device="cuda", dtype=dtype),
-            "N": 4
-        })
+        test_cases.append(
+            {
+                "input": torch.tensor([1.0, -2.0, 3.0, -4.0], device="cuda", dtype=dtype),
+                "output": torch.zeros(4, device="cuda", dtype=dtype),
+                "N": 4,
+            }
+        )
 
         # all_positive
-        test_cases.append({
-            "input": torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device="cuda", dtype=dtype),
-            "output": torch.zeros(5, device="cuda", dtype=dtype),
-            "N": 5
-        })
+        test_cases.append(
+            {
+                "input": torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device="cuda", dtype=dtype),
+                "output": torch.zeros(5, device="cuda", dtype=dtype),
+                "N": 5,
+            }
+        )
 
         # all_negative
-        test_cases.append({
-            "input": torch.tensor([-1.0, -2.0, -3.0, -4.0, -5.0], device="cuda", dtype=dtype),
-            "output": torch.zeros(5, device="cuda", dtype=dtype),
-            "N": 5
-        })
+        test_cases.append(
+            {
+                "input": torch.tensor([-1.0, -2.0, -3.0, -4.0, -5.0], device="cuda", dtype=dtype),
+                "output": torch.zeros(5, device="cuda", dtype=dtype),
+                "N": 5,
+            }
+        )
 
         # zeros
-        test_cases.append({
-            "input": torch.zeros(1024, device="cuda", dtype=dtype),
-            "output": torch.zeros(1024, device="cuda", dtype=dtype),
-            "N": 1024
-        })
+        test_cases.append(
+            {
+                "input": torch.zeros(1024, device="cuda", dtype=dtype),
+                "output": torch.zeros(1024, device="cuda", dtype=dtype),
+                "N": 1024,
+            }
+        )
 
         # medium_random
-        test_cases.append({
-            "input": torch.empty(10000, device="cuda", dtype=dtype).uniform_(-100.0, 100.0),
-            "output": torch.zeros(10000, device="cuda", dtype=dtype),
-            "N": 10000
-        })
+        test_cases.append(
+            {
+                "input": torch.empty(10000, device="cuda", dtype=dtype).uniform_(-100.0, 100.0),
+                "output": torch.zeros(10000, device="cuda", dtype=dtype),
+                "N": 10000,
+            }
+        )
 
         return test_cases
 
@@ -87,5 +93,5 @@ class Challenge(ChallengeBase):
         return {
             "input": torch.empty(N, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0),
             "output": torch.zeros(N, device="cuda", dtype=dtype),
-            "N": N
+            "N": N,
         }

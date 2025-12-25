@@ -5,4 +5,4 @@ from math import ceildiv
 
 @export
 def solve(agents: UnsafePointer[Float32], agents_next: UnsafePointer[Float32], N: Int32):
-    pass 
+    pass

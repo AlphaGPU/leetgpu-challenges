@@ -1,17 +1,13 @@
 import ctypes
-from typing import Any, List, Dict
+from typing import Any, Dict, List
+
 import torch
 from core.challenge_base import ChallengeBase
 
+
 class Challenge(ChallengeBase):
     def __init__(self):
-        super().__init__(
-            name="Rainbow Table",
-            atol=0,
-            rtol=0,
-            num_gpus=1,
-            access_tier="free"
-        )
+        super().__init__(name="Rainbow Table", atol=0, rtol=0, num_gpus=1, access_tier="free")
 
     def fnv1a_hash(self, x: torch.Tensor) -> torch.Tensor:
         FNV_PRIME = 16777619
@@ -44,7 +40,7 @@ class Challenge(ChallengeBase):
             "input": (ctypes.POINTER(ctypes.c_int32), "in"),
             "output": (ctypes.POINTER(ctypes.c_uint32), "out"),
             "N": (ctypes.c_int, "in"),
-            "R": (ctypes.c_int, "in")
+            "R": (ctypes.c_int, "in"),
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
@@ -54,7 +50,7 @@ class Challenge(ChallengeBase):
             "input": input_tensor,
             "output": output_tensor,
             "N": 3,
-            "R": 2
+            "R": 2,
         }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
@@ -63,44 +59,54 @@ class Challenge(ChallengeBase):
         test_cases = []
 
         # basic_example
-        test_cases.append({
-            "input": torch.tensor([123, 456, 789], device="cuda", dtype=dtype),
-            "output": torch.zeros(3, device="cuda", dtype=torch.uint32),
-            "N": 3,
-            "R": 2
-        })
+        test_cases.append(
+            {
+                "input": torch.tensor([123, 456, 789], device="cuda", dtype=dtype),
+                "output": torch.zeros(3, device="cuda", dtype=torch.uint32),
+                "N": 3,
+                "R": 2,
+            }
+        )
 
         # zero_and_max
-        test_cases.append({
-            "input": torch.tensor([0, 1, 2147483647], device="cuda", dtype=dtype),
-            "output": torch.zeros(3, device="cuda", dtype=torch.uint32),
-            "N": 3,
-            "R": 3
-        })
+        test_cases.append(
+            {
+                "input": torch.tensor([0, 1, 2147483647], device="cuda", dtype=dtype),
+                "output": torch.zeros(3, device="cuda", dtype=torch.uint32),
+                "N": 3,
+                "R": 3,
+            }
+        )
 
         # single_round
-        test_cases.append({
-            "input": torch.tensor([1, 2, 3, 4, 5], device="cuda", dtype=dtype),
-            "output": torch.zeros(5, device="cuda", dtype=torch.uint32),
-            "N": 5,
-            "R": 1
-        })
+        test_cases.append(
+            {
+                "input": torch.tensor([1, 2, 3, 4, 5], device="cuda", dtype=dtype),
+                "output": torch.zeros(5, device="cuda", dtype=torch.uint32),
+                "N": 5,
+                "R": 1,
+            }
+        )
 
         # many_rounds
-        test_cases.append({
-            "input": torch.randint(0, 2147483647 + 1, (1024,), device="cuda", dtype=dtype),
-            "output": torch.zeros(1024, device="cuda", dtype=torch.uint32),
-            "N": 1024,
-            "R": 50
-        })
+        test_cases.append(
+            {
+                "input": torch.randint(0, 2147483647 + 1, (1024,), device="cuda", dtype=dtype),
+                "output": torch.zeros(1024, device="cuda", dtype=torch.uint32),
+                "N": 1024,
+                "R": 50,
+            }
+        )
 
         # large_size
-        test_cases.append({
-            "input": torch.randint(0, 2147483647 + 1, (10000,), device="cuda", dtype=dtype),
-            "output": torch.zeros(10000, device="cuda", dtype=torch.uint32),
-            "N": 10000,
-            "R": 10
-        })
+        test_cases.append(
+            {
+                "input": torch.randint(0, 2147483647 + 1, (10000,), device="cuda", dtype=dtype),
+                "output": torch.zeros(10000, device="cuda", dtype=torch.uint32),
+                "N": 10000,
+                "R": 10,
+            }
+        )
 
         return test_cases
 
@@ -110,5 +116,5 @@ class Challenge(ChallengeBase):
             "input": torch.randint(0, 2147483647 + 1, (N,), device="cuda", dtype=torch.int32),
             "output": torch.zeros(N, device="cuda", dtype=torch.uint32),
             "N": N,
-            "R": R
+            "R": R,
         }

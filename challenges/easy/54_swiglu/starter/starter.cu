@@ -1,8 +1,6 @@
 #include <cuda_runtime.h>
 
-__global__ void swiglu_kernel(const float* input, float* output, int halfN) {
-
-}
+__global__ void swiglu_kernel(const float* input, float* output, int halfN) {}
 
 // input, output are device pointers
 extern "C" void solve(const float* input, float* output, int N) {

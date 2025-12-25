@@ -5,4 +5,4 @@ from math import ceildiv
 
 @export
 def solve(input: UnsafePointer[Int32], histogram: UnsafePointer[Int32], N: Int32, num_bins: Int32):
-    pass 
+    pass

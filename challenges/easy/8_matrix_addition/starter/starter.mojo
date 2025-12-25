@@ -7,7 +7,7 @@ fn matrix_add_kernel(A: UnsafePointer[Float32], B: UnsafePointer[Float32], C: Un
     pass
 
 # A, B, C are device pointers (i.e. pointers to memory on the GPU)
-@export                         
+@export
 def solve(A: UnsafePointer[Float32], B: UnsafePointer[Float32], C: UnsafePointer[Float32], N: Int32):
     var BLOCK_SIZE: Int32 = 256
     var ctx = DeviceContext()

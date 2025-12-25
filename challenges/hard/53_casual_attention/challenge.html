@@ -1,7 +1,7 @@
-<p> Implement Causal (masked) Self-Attention for a given set of matrices. 
+<p> Implement Causal (masked) Self-Attention for a given set of matrices.
   Given the query matrix <code>Q</code> of size <code>M×d</code>, key matrix <code>K</code> of size <code>M×d</code>, and value matrix
   <code>V</code> of size <code>M×d</code>, your program should compute the output matrix using the formula:
-  $$\text{Attention}_{\text{causal}}(Q, K, V) = \text{softmax}\Bigl(\text{masked}\Bigl( \frac{QK^T}{\sqrt{d}} \Bigr)\Bigr)V$$  
+  $$\text{Attention}_{\text{causal}}(Q, K, V) = \text{softmax}\Bigl(\text{masked}\Bigl( \frac{QK^T}{\sqrt{d}} \Bigr)\Bigr)V$$
 </p>
 
 
@@ -16,7 +16,7 @@
   -\infty, & j > i
   \end{cases}
   $$
-  The softmax function is applied row-wise. <code>Q</code>, <code>K</code>, <code>V</code>, and <code>output</code> are all of data type <code>float32</code>; 
+  The softmax function is applied row-wise. <code>Q</code>, <code>K</code>, <code>V</code>, and <code>output</code> are all of data type <code>float32</code>;
   <code>M</code>, and <code>d</code> are of data type <code>int32</code>.
 </p>
 
