@@ -31,7 +31,11 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         width, height = 1, 2
         image = torch.tensor([255, 0, 128, 255, 0, 255, 0, 255], device="cuda", dtype=torch.uint8)
-        return {"image": image, "width": width, "height": height}
+        return {
+            "image": image,
+            "width": width,
+            "height": height,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         return [

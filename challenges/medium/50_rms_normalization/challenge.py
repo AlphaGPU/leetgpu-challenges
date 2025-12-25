@@ -51,7 +51,14 @@ class Challenge(ChallengeBase):
         beta = 0.0
         output = torch.empty(N, device="cuda", dtype=dtype)
         eps = 1e-5
-        return {"input": input, "gamma": gamma, "beta": beta, "output": output, "N": N, "eps": eps}
+        return {
+            "input": input,
+            "gamma": gamma,
+            "beta": beta,
+            "output": output,
+            "N": N,
+            "eps": eps,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32

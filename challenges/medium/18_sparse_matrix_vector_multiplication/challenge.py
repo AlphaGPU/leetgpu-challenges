@@ -47,7 +47,14 @@ class Challenge(ChallengeBase):
         )
         x = torch.tensor([1.0, 2.0, 3.0, 4.0], device="cuda", dtype=dtype)
         y = torch.empty(3, device="cuda", dtype=dtype)
-        return {"A": A, "x": x, "y": y, "M": 3, "N": 4, "nnz": 5}
+        return {
+            "A": A,
+            "x": x,
+            "y": y,
+            "M": 3,
+            "N": 4,
+            "nnz": 5,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
@@ -252,4 +259,11 @@ class Challenge(ChallengeBase):
         # Create a mask: 35% entries will be kept, 65% set to zero
         x = torch.empty(N, device="cuda", dtype=dtype).uniform_(-5.0, 5.0)
         y = torch.empty(M, device="cuda", dtype=dtype)
-        return {"A": A, "x": x, "y": y, "M": M, "N": N, "nnz": nnz}
+        return {
+            "A": A,
+            "x": x,
+            "y": y,
+            "M": M,
+            "N": N,
+            "nnz": nnz,
+        }

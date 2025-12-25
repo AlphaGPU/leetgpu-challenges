@@ -41,7 +41,14 @@ class Challenge(ChallengeBase):
             [[[1, 2, 3], [4, 5, 1]], [[1, 1, 1], [2, 2, 2]]], device="cuda", dtype=dtype
         )
         output = torch.empty(1, device="cuda", dtype=dtype)
-        return {"input": input, "output": output, "N": 2, "M": 2, "K": 3, "P": 1}
+        return {
+            "input": input,
+            "output": output,
+            "N": 2,
+            "M": 2,
+            "K": 3,
+            "P": 1,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.int32
@@ -115,4 +122,11 @@ class Challenge(ChallengeBase):
         dtype = torch.int32
         input = torch.randint(1, 3, (500, 500, 500), device="cuda", dtype=dtype)
         output = torch.empty(1, device="cuda", dtype=dtype)
-        return {"input": input, "output": output, "N": 500, "M": 500, "K": 500, "P": 2}
+        return {
+            "input": input,
+            "output": output,
+            "N": 500,
+            "M": 500,
+            "K": 500,
+            "P": 2,
+        }

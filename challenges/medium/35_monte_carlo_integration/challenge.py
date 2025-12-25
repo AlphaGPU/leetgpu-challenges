@@ -41,7 +41,13 @@ class Challenge(ChallengeBase):
             [0.0625, 0.25, 0.5625, 1.0, 1.5625, 2.25, 3.0625, 4.0], device="cuda", dtype=dtype
         )
         result = torch.zeros(1, device="cuda", dtype=dtype)
-        return {"y_samples": y_samples, "result": result, "a": 0.0, "b": 2.0, "n_samples": 8}
+        return {
+            "y_samples": y_samples,
+            "result": result,
+            "a": 0.0,
+            "b": 2.0,
+            "n_samples": 8,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32

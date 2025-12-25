@@ -37,7 +37,12 @@ class Challenge(ChallengeBase):
         dtype = torch.int32
         input = torch.tensor([0, 1, 2, 1, 0], device="cuda", dtype=dtype)
         histogram = torch.empty(3, device="cuda", dtype=dtype)
-        return {"input": input, "histogram": histogram, "N": 5, "num_bins": 3}
+        return {
+            "input": input,
+            "histogram": histogram,
+            "N": 5,
+            "num_bins": 3,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.int32
@@ -99,4 +104,9 @@ class Challenge(ChallengeBase):
         dtype = torch.int32
         input = torch.randint(0, 256, (50000000,), device="cuda", dtype=dtype)
         histogram = torch.zeros(256, device="cuda", dtype=dtype)
-        return {"input": input, "histogram": histogram, "N": 50000000, "num_bins": 256}
+        return {
+            "input": input,
+            "histogram": histogram,
+            "N": 50000000,
+            "num_bins": 256,
+        }

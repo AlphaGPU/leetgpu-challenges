@@ -51,7 +51,13 @@ class Challenge(ChallengeBase):
         logits = torch.tensor([[1.0, 2.0, 0.5], [0.1, 3.0, 1.5]], device="cuda", dtype=dtype_logits)
         true_labels = torch.tensor([1, 1], device="cuda", dtype=dtype_labels)
         loss = torch.zeros(1, device="cuda", dtype=dtype_logits)
-        return {"logits": logits, "true_labels": true_labels, "loss": loss, "N": 2, "C": 3}
+        return {
+            "logits": logits,
+            "true_labels": true_labels,
+            "loss": loss,
+            "N": 2,
+            "C": 3,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype_logits = torch.float32
@@ -151,4 +157,10 @@ class Challenge(ChallengeBase):
         logits = torch.empty(10000, 1000, device="cuda", dtype=dtype_logits).uniform_(-10.0, 10.0)
         true_labels = torch.randint(0, 1000, (10000,), device="cuda", dtype=dtype_labels)
         loss = torch.zeros(1, device="cuda", dtype=dtype_logits)
-        return {"logits": logits, "true_labels": true_labels, "loss": loss, "N": 10000, "C": 1000}
+        return {
+            "logits": logits,
+            "true_labels": true_labels,
+            "loss": loss,
+            "N": 10000,
+            "C": 1000,
+        }

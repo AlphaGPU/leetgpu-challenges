@@ -56,7 +56,15 @@ class Challenge(ChallengeBase):
         K = torch.tensor([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]], device="cuda", dtype=dtype)
         V = torch.tensor([[0.5, 1.0, 1.5, 2.0], [2.5, 3.0, 3.5, 4.0]], device="cuda", dtype=dtype)
         output = torch.empty(2, 4, device="cuda", dtype=dtype)
-        return {"Q": Q, "K": K, "V": V, "output": output, "N": 2, "d_model": 4, "h": 2}
+        return {
+            "Q": Q,
+            "K": K,
+            "V": V,
+            "output": output,
+            "N": 2,
+            "d_model": 4,
+            "h": 2,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
@@ -95,4 +103,12 @@ class Challenge(ChallengeBase):
         K = torch.empty(1024, 1024, device="cuda", dtype=dtype).uniform_(-10.0, 10.0)
         V = torch.empty(1024, 1024, device="cuda", dtype=dtype).uniform_(-10.0, 10.0)
         output = torch.zeros(1024, 1024, device="cuda", dtype=dtype)
-        return {"Q": Q, "K": K, "V": V, "output": output, "N": 1024, "d_model": 1024, "h": 16}
+        return {
+            "Q": Q,
+            "K": K,
+            "V": V,
+            "output": output,
+            "N": 1024,
+            "d_model": 1024,
+            "h": 16,
+        }

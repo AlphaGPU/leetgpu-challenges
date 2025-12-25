@@ -41,8 +41,8 @@ class Challenge(ChallengeBase):
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "signal": (ctypes.POINTER(ctypes.c_float), "in"),  # in  (2 × N)
-            "spectrum": (ctypes.POINTER(ctypes.c_float), "out"),  # out (2 × N)
+            "signal": (ctypes.POINTER(ctypes.c_float), "in"),  # in  (2 × N),
+            "spectrum": (ctypes.POINTER(ctypes.c_float), "out"),  # out (2 × N),
             "N": (ctypes.c_int, "in"),
         }
 

@@ -14,12 +14,18 @@ class Challenge(ChallengeBase):
         data.copy_(data.sort()[0])
 
     def get_solve_signature(self) -> Dict[str, tuple]:
-        return {"data": (ctypes.POINTER(ctypes.c_float), "inout"), "N": (ctypes.c_int, "in")}
+        return {
+            "data": (ctypes.POINTER(ctypes.c_float), "inout"),
+            "N": (ctypes.c_int, "in"),
+        }
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         data = torch.tensor([5.0, 2.0, 8.0, 1.0, 9.0, 4.0], device="cuda", dtype=dtype)
-        return {"data": data, "N": 6}
+        return {
+            "data": data,
+            "N": 6,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
@@ -63,4 +69,7 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         N = 1000000
         data = torch.empty(N, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0)
-        return {"data": data, "N": N}
+        return {
+            "data": data,
+            "N": N,
+        }

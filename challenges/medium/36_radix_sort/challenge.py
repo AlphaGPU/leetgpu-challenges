@@ -34,7 +34,11 @@ class Challenge(ChallengeBase):
         N = 8
         input_data = torch.tensor([170, 45, 75, 90, 2, 802, 24, 66], device="cuda", dtype=dtype)
         output_data = torch.zeros(N, device="cuda", dtype=dtype)
-        return {"input": input_data, "output": output_data, "N": N}
+        return {
+            "input": input_data,
+            "output": output_data,
+            "N": N,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.uint32

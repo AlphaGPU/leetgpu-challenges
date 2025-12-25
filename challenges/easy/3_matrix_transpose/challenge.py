@@ -32,7 +32,12 @@ class Challenge(ChallengeBase):
         rows, cols = 2, 3
         input_tensor = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device="cuda", dtype=dtype)
         output_tensor = torch.empty(cols, rows, device="cuda", dtype=dtype)
-        return {"input": input_tensor, "output": output_tensor, "rows": rows, "cols": cols}
+        return {
+            "input": input_tensor,
+            "output": output_tensor,
+            "rows": rows,
+            "cols": cols,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32

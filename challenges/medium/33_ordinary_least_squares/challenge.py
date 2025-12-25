@@ -320,7 +320,7 @@ class Challenge(ChallengeBase):
         y = torch.ones(n_samples, dtype=dtype, device=device)
         beta = torch.zeros(n_features, dtype=dtype, device=device)
         return {
-            "X": X.flatten(),  # flattened as in your other examples
+            "X": X.flatten(),  # flattened as in your other examples,
             "y": y,
             "beta": beta,
             "n_samples": n_samples,

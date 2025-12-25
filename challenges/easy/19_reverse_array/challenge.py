@@ -19,12 +19,18 @@ class Challenge(ChallengeBase):
         input[:] = torch.flip(input, [0])
 
     def get_solve_signature(self) -> Dict[str, tuple]:
-        return {"input": (ctypes.POINTER(ctypes.c_float), "inout"), "N": (ctypes.c_int, "in")}
+        return {
+            "input": (ctypes.POINTER(ctypes.c_float), "inout"),
+            "N": (ctypes.c_int, "in"),
+        }
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         input_tensor = torch.tensor([1.0, 2.0, 3.0, 4.0], device="cuda", dtype=dtype)
-        return {"input": input_tensor, "N": 4}
+        return {
+            "input": input_tensor,
+            "N": 4,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32

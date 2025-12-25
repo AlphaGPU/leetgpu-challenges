@@ -29,7 +29,11 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         A = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="cuda", dtype=dtype)
         B = torch.empty(2, 2, device="cuda", dtype=dtype)
-        return {"A": A, "B": B, "N": 2}
+        return {
+            "A": A,
+            "B": B,
+            "N": 2,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32

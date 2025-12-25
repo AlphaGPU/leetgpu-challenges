@@ -33,7 +33,12 @@ class Challenge(ChallengeBase):
         targets = torch.tensor([1.5, 2.5, 3.5, 4.5], device="cuda", dtype=dtype)
         mse = torch.empty(1, device="cuda", dtype=dtype)
         N = 4
-        return {"predictions": predictions, "targets": targets, "mse": mse, "N": N}
+        return {
+            "predictions": predictions,
+            "targets": targets,
+            "mse": mse,
+            "N": N,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
@@ -103,4 +108,9 @@ class Challenge(ChallengeBase):
         predictions = torch.empty(N, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0)
         targets = torch.empty(N, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0)
         mse = torch.empty(1, device="cuda", dtype=dtype)
-        return {"predictions": predictions, "targets": targets, "mse": mse, "N": N}
+        return {
+            "predictions": predictions,
+            "targets": targets,
+            "mse": mse,
+            "N": N,
+        }

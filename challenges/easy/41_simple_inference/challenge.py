@@ -39,7 +39,11 @@ class Challenge(ChallengeBase):
         input = torch.tensor([[1.0, 2.0]], device=device, dtype=dtype)
         output = torch.empty((1, 2), device=device, dtype=dtype)
 
-        return {"input": input, "model": model, "output": output}
+        return {
+            "input": input,
+            "model": model,
+            "output": output,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
@@ -177,4 +181,8 @@ class Challenge(ChallengeBase):
         input = torch.randn((batch_size, 512), device=device, dtype=dtype)
         output = torch.empty((batch_size, 256), device=device, dtype=dtype)
 
-        return {"input": input, "model": model, "output": output}
+        return {
+            "input": input,
+            "model": model,
+            "output": output,
+        }

@@ -60,7 +60,11 @@ class Challenge(ChallengeBase):
         )
         indices_data = torch.full((N,), -1, device="cuda", dtype=dtype_int)
 
-        return {"points": points_data, "indices": indices_data, "N": N}
+        return {
+            "points": points_data,
+            "indices": indices_data,
+            "N": N,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype_float = torch.float32

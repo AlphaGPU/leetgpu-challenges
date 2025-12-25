@@ -26,7 +26,11 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         input = torch.tensor([1.0, 2.0, 3.0, 4.0], device="cuda", dtype=dtype)
         output = torch.empty(4, device="cuda", dtype=dtype)
-        return {"input": input, "output": output, "N": 4}
+        return {
+            "input": input,
+            "output": output,
+            "N": 4,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
@@ -88,4 +92,8 @@ class Challenge(ChallengeBase):
         N = 250000
         input = torch.empty(N, device="cuda", dtype=dtype).uniform_(-100.0, 100.0)
         output = torch.empty(N, device="cuda", dtype=dtype)
-        return {"input": input, "output": output, "N": N}
+        return {
+            "input": input,
+            "output": output,
+            "N": N,
+        }

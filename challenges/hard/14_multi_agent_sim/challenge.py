@@ -50,7 +50,11 @@ class Challenge(ChallengeBase):
         N = 2
         agents = torch.tensor([0.0, 0.0, 1.0, 0.0, 5.0, 0.0, 0.0, 1.0], device="cuda", dtype=dtype)
         agents_next = torch.empty(4 * N, device="cuda", dtype=dtype)
-        return {"agents": agents, "agents_next": agents_next, "N": N}
+        return {
+            "agents": agents,
+            "agents_next": agents_next,
+            "N": N,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
@@ -91,4 +95,8 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         agents = torch.empty(40000, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0)
         agents_next = torch.empty(40000, device="cuda", dtype=dtype)
-        return {"agents": agents, "agents_next": agents_next, "N": 10000}
+        return {
+            "agents": agents,
+            "agents_next": agents_next,
+            "N": 10000,
+        }

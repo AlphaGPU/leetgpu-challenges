@@ -89,7 +89,13 @@ class Challenge(ChallengeBase):
         )
         y = torch.tensor([1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0], device="cuda", dtype=dtype)
         beta = torch.zeros(2, device="cuda", dtype=dtype)
-        return {"X": X, "y": y, "beta": beta, "n_samples": 8, "n_features": 2}
+        return {
+            "X": X,
+            "y": y,
+            "beta": beta,
+            "n_samples": 8,
+            "n_features": 2,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
@@ -225,4 +231,10 @@ class Challenge(ChallengeBase):
         )
         beta = torch.zeros(8, device=device, dtype=dtype)
 
-        return {"X": X, "y": y, "beta": beta, "n_samples": 16, "n_features": 8}
+        return {
+            "X": X,
+            "y": y,
+            "beta": beta,
+            "n_samples": 16,
+            "n_features": 8,
+        }

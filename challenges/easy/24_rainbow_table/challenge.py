@@ -46,7 +46,12 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         input_tensor = torch.tensor([123, 456, 789], device="cuda", dtype=torch.int32)
         output_tensor = torch.empty(3, device="cuda", dtype=torch.uint32)
-        return {"input": input_tensor, "output": output_tensor, "N": 3, "R": 2}
+        return {
+            "input": input_tensor,
+            "output": output_tensor,
+            "N": 3,
+            "R": 2,
+        }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.int32
