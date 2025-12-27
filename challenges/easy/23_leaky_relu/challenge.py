@@ -40,6 +40,33 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         test_cases = []
 
+        # Edge case: single element (N=1)
+        test_cases.append(
+            {
+                "input": torch.tensor([2.0], device="cuda", dtype=dtype),
+                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "N": 1,
+            }
+        )
+
+        # Edge case: N=2
+        test_cases.append(
+            {
+                "input": torch.tensor([-1.0, 1.0], device="cuda", dtype=dtype),
+                "output": torch.empty(2, device="cuda", dtype=dtype),
+                "N": 2,
+            }
+        )
+
+        # Edge case: N=3
+        test_cases.append(
+            {
+                "input": torch.tensor([-2.0, 0.0, 2.0], device="cuda", dtype=dtype),
+                "output": torch.empty(3, device="cuda", dtype=dtype),
+                "N": 3,
+            }
+        )
+
         # basic_example
         test_cases.append(
             {
