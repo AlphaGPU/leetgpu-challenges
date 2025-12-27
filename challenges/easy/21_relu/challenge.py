@@ -44,7 +44,7 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "input": torch.tensor([2.0], device="cuda", dtype=dtype),
-                "output": torch.zeros(1, device="cuda", dtype=dtype),
+                "output": torch.empty(1, device="cuda", dtype=dtype),
                 "N": 1,
             }
         )
@@ -53,7 +53,7 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "input": torch.tensor([-1.0, 1.0], device="cuda", dtype=dtype),
-                "output": torch.zeros(2, device="cuda", dtype=dtype),
+                "output": torch.empty(2, device="cuda", dtype=dtype),
                 "N": 2,
             }
         )
@@ -62,7 +62,7 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "input": torch.tensor([-2.0, 0.0, 2.0], device="cuda", dtype=dtype),
-                "output": torch.zeros(3, device="cuda", dtype=dtype),
+                "output": torch.empty(3, device="cuda", dtype=dtype),
                 "N": 3,
             }
         )
