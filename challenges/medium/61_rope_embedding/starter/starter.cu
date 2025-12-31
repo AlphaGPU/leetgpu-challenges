@@ -1,6 +1,6 @@
 #include <cuda_runtime.h>
 
-// Q, Cos, Sin, Output are device pointers
-extern "C" void solve(float* Q, float* Cos, float* Sin, float* Output, int M, int D) {
+// Q, cos, sin, output are device pointers
+extern "C" void solve(float* Q, float* cos, float* sin, float* output, int M, int D) {
 
 }

@@ -18,16 +18,16 @@ class Challenge(ChallengeBase):
     def reference_impl(
         self,
         Q: torch.Tensor,
-        Cos: torch.Tensor,
-        Sin: torch.Tensor,
-        Output: torch.Tensor,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+        output: torch.Tensor,
         M: int,
         D: int,
     ):
         assert Q.shape == (M, D)
-        assert Cos.shape == (M, D)
-        assert Sin.shape == (M, D)
-        assert Output.shape == (M, D)
+        assert cos.shape == (M, D)
+        assert sin.shape == (M, D)
+        assert output.shape == (M, D)
 
         # rotate_half implementation
         # Split the last dimension into two halves
@@ -38,16 +38,16 @@ class Challenge(ChallengeBase):
 
         # RoPE calculation
         # Output = Q * Cos + rotate_half(Q) * Sin
-        result = (Q * Cos) + (rotated_Q * Sin)
+        result = (Q * cos) + (rotated_Q * sin)
 
-        Output.copy_(result)
+        output.copy_(result)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "Q": (ctypes.POINTER(ctypes.c_float), "in"),
-            "Cos": (ctypes.POINTER(ctypes.c_float), "in"),
-            "Sin": (ctypes.POINTER(ctypes.c_float), "in"),
-            "Output": (ctypes.POINTER(ctypes.c_float), "out"),
+            "cos": (ctypes.POINTER(ctypes.c_float), "in"),
+            "sin": (ctypes.POINTER(ctypes.c_float), "in"),
+            "output": (ctypes.POINTER(ctypes.c_float), "out"),
             "M": (ctypes.c_int, "in"),
             "D": (ctypes.c_int, "in"),
         }
@@ -64,9 +64,9 @@ class Challenge(ChallengeBase):
 
         return {
             "Q": Q,
-            "Cos": Cos,
-            "Sin": Sin,
-            "Output": Output,
+            "cos": Cos,
+            "sin": Sin,
+            "output": Output,
             "M": M,
             "D": D,
         }
@@ -81,9 +81,9 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "Q": torch.randn(M, D, device="cuda", dtype=dtype),
-                "Cos": torch.randn(M, D, device="cuda", dtype=dtype),
-                "Sin": torch.randn(M, D, device="cuda", dtype=dtype),
-                "Output": torch.zeros(M, D, device="cuda", dtype=dtype),
+                "cos": torch.randn(M, D, device="cuda", dtype=dtype),
+                "sin": torch.randn(M, D, device="cuda", dtype=dtype),
+                "output": torch.zeros(M, D, device="cuda", dtype=dtype),
                 "M": M,
                 "D": D,
             }
@@ -95,11 +95,72 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "Q": torch.randn(M, D, device="cuda", dtype=dtype),
-                "Cos": torch.randn(M, D, device="cuda", dtype=dtype),
-                "Sin": torch.randn(M, D, device="cuda", dtype=dtype),
-                "Output": torch.zeros(M, D, device="cuda", dtype=dtype),
+                "cos": torch.randn(M, D, device="cuda", dtype=dtype),
+                "sin": torch.randn(M, D, device="cuda", dtype=dtype),
+                "output": torch.zeros(M, D, device="cuda", dtype=dtype),
                 "M": M,
                 "D": D,
+            }
+        )
+
+
+        # zero_matrices: outputs should remain zero when inputs are zero
+        tests.append(
+            {
+                "Q": torch.zeros((3, 6), device="cuda", dtype=dtype),
+                "cos": torch.zeros((3, 6), device="cuda", dtype=dtype),
+                "sin": torch.zeros((3, 6), device="cuda", dtype=dtype),
+                "output": torch.zeros(3, 6, device="cuda", dtype=dtype),
+                "M": 3,
+                "D": 6,
+            }
+        )
+
+        # minimal_dims: smallest even D that still allows rotation
+        tests.append(
+            {
+                "Q": torch.randn((1, 2), device="cuda", dtype=dtype),
+                "cos": torch.randn((1, 2), device="cuda", dtype=dtype),
+                "sin": torch.randn((1, 2), device="cuda", dtype=dtype),
+                "output": torch.zeros(1, 2, device="cuda", dtype=dtype),
+                "M": 1,
+                "D": 2,
+            }
+        )
+
+        # mixed_values: negative and positive entries
+        tests.append(
+            {
+                "Q": torch.tensor(
+                    [[-1.0, 2.0, -3.0, 4.0], [5.0, -6.0, 7.0, -8.0]],
+                    device="cuda",
+                    dtype=dtype,
+                ),
+                "cos": torch.tensor(
+                    [[0.5, 0.5, 0.5, 0.5], [0.1, 0.2, 0.3, 0.4]],
+                    device="cuda",
+                    dtype=dtype,
+                ),
+                "sin": torch.tensor(
+                    [[0.5, -0.5, 0.5, -0.5], [0.4, -0.3, 0.2, -0.1]],
+                    device="cuda",
+                    dtype=dtype,
+                ),
+                "output": torch.zeros(2, 4, device="cuda", dtype=dtype),
+                "M": 2,
+                "D": 4,
+            }
+        )
+
+        # large_matrices: random uniform values for stress testing
+        tests.append(
+            {
+                "Q": torch.empty((256, 128), device="cuda", dtype=dtype).uniform_(-0.1, 0.1),
+                "cos": torch.empty((256, 128), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
+                "sin": torch.empty((256, 128), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
+                "output": torch.zeros(256, 128, device="cuda", dtype=dtype),
+                "M": 256,
+                "D": 128,
             }
         )
 
@@ -111,9 +172,9 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         return {
             "Q": torch.randn(M, D, device="cuda", dtype=dtype),
-            "Cos": torch.randn(M, D, device="cuda", dtype=dtype),
-            "Sin": torch.randn(M, D, device="cuda", dtype=dtype),
-            "Output": torch.zeros(M, D, device="cuda", dtype=dtype),
+            "cos": torch.randn(M, D, device="cuda", dtype=dtype),
+            "sin": torch.randn(M, D, device="cuda", dtype=dtype),
+            "output": torch.zeros(M, D, device="cuda", dtype=dtype),
             "M": M,
             "D": D,
         }

@@ -1,124 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rotary Positional Embedding (RoPE)</title>
-    <style>
-      body {
-        font-family: system-ui, -apple-system, sans-serif;
-        line-height: 1.6;
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 2rem;
-        color: #333;
-      }
-      h1 {
-        border-bottom: 2px solid #eee;
-        padding-bottom: 0.5rem;
-      }
-      code {
-        background: #f4f4f4;
-        padding: 0.2rem 0.4rem;
-        border-radius: 4px;
-        font-family: monospace;
-      }
-      pre {
-        background: #f4f4f4;
-        padding: 1rem;
-        border-radius: 4px;
-        overflow-x: auto;
-      }
-      .math {
-        font-family: "Times New Roman", serif;
-        font-style: italic;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Rotary Positional Embedding (RoPE)</h1>
-
-    <p>
-      Implement the Rotary Positional Embedding (RoPE) operation. RoPE is a
-      method for encoding positional information in transformer models by
-      rotating the query and key vectors.
-    </p>
-
-    <p>
-      Given a query vector $x$, and precomputed cosine and sine components
-      corresponding to its position, the operation is:
-    </p>
-
-    <div
-      style="
-        background: #f8f9fa;
-        padding: 1rem;
-        border-radius: 8px;
-        margin: 1rem 0;
-        text-align: center;
-      "
-    >
-      RoPE(x) = x \odot \cos + \text{rotate\_half}(x) \odot \sin
-    </div>
-
-    <p>
-      Where $\odot$ denotes element-wise multiplication, and
-      <code>rotate_half(x)</code> is defined as:
-    </p>
-    <pre>
-rotate_half([x_1, ..., x_{d/2}, x_{d/2+1}, ..., x_d]) = [-x_{d/2+1}, ..., -x_d, x_1, ..., x_{d/2}]</pre
-    >
-
-    <p>
-      Essentially, it swaps the first half and the second half of the vector,
-      and negates the first half (which was originally the second half).
-    </p>
-
-    <h2>Input Tensors</h2>
-    <ul>
-      <li>
-        <code>Q</code>: Input tensor of shape <code>(M, D)</code>, where M is
-        the number of tokens and D is the head dimension.
-      </li>
-      <li><code>Cos</code>: Cosine tensor of shape <code>(M, D)</code>.</li>
-      <li><code>Sin</code>: Sine tensor of shape <code>(M, D)</code>.</li>
-      <li><code>Output</code>: Output tensor of shape <code>(M, D)</code>.</li>
-    </ul>
-
-    <h3>Reference Implementation</h3>
-    <pre>
-def rotate_half(x):
-    d = x.shape[-1]
-    x1 = x[..., :d//2]
-    x2 = x[..., d//2:]
-    return torch.cat((-x2, x1), dim=-1)
-
-def rope(Q, Cos, Sin):
-    return (Q * Cos) + (rotate_half(Q) * Sin)
-    </pre>
-
-    <h2>Example 1</h2>
-    <p>
-      <strong>Input:</strong><br />
-      <code>M = 2</code>, <code>D = 4</code><br />
-      <code>Q</code>: \[ \begin{bmatrix} 1.0 & 2.0 & 3.0 & 4.0 \\ 1.0 & 1.0 &
-      1.0 & 1.0 \end{bmatrix} \] <code>Cos</code>: \[ \begin{bmatrix} 1.0 & 1.0
-      & 1.0 & 1.0 \\ 0.0 & 0.0 & 0.0 & 0.0 \end{bmatrix} \] <code>Sin</code>: \[
-      \begin{bmatrix} 0.0 & 0.0 & 0.0 & 0.0 \\ 1.0 & 1.0 & 1.0 & 1.0
-      \end{bmatrix} \]
-    </p>
-    <p>
-      <strong>Output:</strong><br />
-      <code>Output</code>: \[ \begin{bmatrix} 1.0 & 2.0 & 3.0 & 4.0 \\ -1.0 &
-      -1.0 & 1.0 & 1.0 \end{bmatrix} \]
-    </p>
-    <p>
-      <strong>Explanation:</strong><br />
-      For the first row, Cos is all 1s and Sin is all 0s, so the output is just
-      Q.<br />
-      For the second row, Cos is all 0s and Sin is all 1s, so the output is
-      rotate_half(Q).<br />
-      rotate_half([1, 1, 1, 1]) = [-1, -1, 1, 1].
-    </p>
-  </body>
-</html>
+<p>
+    Implement a GPU program that computes the Rotary Positional Embedding (RoPE) for a batch of query vectors.
+    RoPE is a method for encoding positional information in transformer models by rotating the query and key vectors using precomputed cosine and sine components.
+</p>
+<p>
+    Mathematically, given a query vector \(x\) and corresponding cosine and sine vectors, the operation is defined as:
+    \[
+    \text{RoPE}(x) = x \odot \cos + \text{rotate\_half}(x) \odot \sin
+    \]
+</p>
+<p>
+    Where \(\odot\) denotes element-wise multiplication. The \(\text{rotate\_half}(x)\) operation swaps the first and second halves of the vector and negates the first half. For a vector of dimension \(d\):
+    \[
+    \text{rotate\_half}([x_1, \dots, x_{d/2}, x_{d/2+1}, \dots, x_d]) = [-x_{d/2+1}, \dots, -x_d, x_1, \dots, x_{d/2}]
+    \]
+</p>
+<h2>Implementation Requirements</h2>
+<ul>
+    <li>External libraries are not permitted</li>
+    <li>The <code>solve</code> function signature must remain unchanged</li>
+    <li>The input tensors <code>Q</code>, <code>cos</code>, and <code>sin</code> have shape <code>(M, D)</code>, where <code>M</code> is the number of tokens and <code>D</code> is the head dimension</li>
+    <li><code>D</code> (head dimension) is guaranteed to be an even number</li>
+    <li>The final result must be stored in the output variable with the same shape <code>(M, D)</code></li>
+</ul>
+<h2>Example 1:</h2>
+<pre>Input:  Q   = [[1.0, 2.0, 3.0, 4.0], 
+               [1.0, 1.0, 1.0, 1.0]]
+        Cos = [[1.0, 1.0, 1.0, 1.0], 
+               [0.0, 0.0, 0.0, 0.0]]
+        Sin = [[0.0, 0.0, 0.0, 0.0], 
+               [1.0, 1.0, 1.0, 1.0]]
+Output: result = [[1.0, 2.0, 3.0, 4.0], 
+                  [-1.0, -1.0, 1.0, 1.0]] 
+        (Row 0 is identity via Cos; Row 1 is rotated via Sin)</pre>
+<h2>Constraints</h2>
+<ul>
+    <li><code>Q</code>, <code>cos</code>, and <code>sin</code> have identical dimensions</li>
+    <li><code>D</code> % 2 == 0</li>
+    <li>1 ≤ <code>M</code>, <code>D</code> ≤ 10,000</li>
+</ul>
