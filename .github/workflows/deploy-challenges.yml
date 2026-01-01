@@ -1,0 +1,59 @@
+name: Deploy Challenges
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'challenges/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          pip install requests
+      
+      - name: Get changed challenges
+        id: changed
+        run: |
+          git diff --name-only HEAD~1 HEAD | grep '^challenges/' > changed_files.txt || true
+          
+          if [ -s changed_files.txt ]; then
+            # Extract unique challenge directories (e.g., challenges/easy/1_vector_add -> challenges/easy/1_vector_add)
+            cat changed_files.txt | sed 's|\(challenges/[^/]*/[^/]*\)/.*|\1|' | sort -u > challenge_paths.txt
+            
+            if [ -s challenge_paths.txt ]; then
+              echo "paths<<EOF" >> $GITHUB_OUTPUT
+              cat challenge_paths.txt >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            fi
+          fi
+      
+      - name: Deploy changed challenges
+        if: steps.changed.outputs.paths != ''
+        env:
+          SERVICE_URL: ${{ secrets.LEETGPU_SERVICE_URL }}
+          LEETGPU_API_KEY: ${{ secrets.LEETGPU_API_KEY }}
+        run: |
+          if [ -z "$LEETGPU_API_KEY" ]; then
+            echo "Error: LEETGPU_API_KEY secret is not set"
+            exit 1
+          fi
+          
+          echo "${{ steps.changed.outputs.paths }}" | while read -r path; do
+            if [ -d "$path" ]; then
+              echo "Deploying $path"
+              python scripts/update_challenges.py "$path"
+            fi
+          done
