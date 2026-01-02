@@ -69,7 +69,9 @@ class Challenge(ChallengeBase):
         N = 6
         tests.append(
             {
-                "input": torch.tensor([-1.0, -2.0, -3.0, -4.0, -5.0, -6.0], device="cuda", dtype=dtype),
+                "input": torch.tensor(
+                    [-1.0, -2.0, -3.0, -4.0, -5.0, -6.0], device="cuda", dtype=dtype
+                    ),
                 "output": torch.empty(N, device="cuda", dtype=dtype),
                 "N": N,
                 "lo": -3.0,
