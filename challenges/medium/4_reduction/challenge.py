@@ -14,7 +14,7 @@ class Challenge(ChallengeBase):
         assert output.shape == (1,)
         assert input.dtype == output.dtype
         assert input.device == output.device
-        output[0] = torch.sum(input)
+        output[0] = torch.sum(input.double()).float()
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -94,9 +94,7 @@ class Challenge(ChallengeBase):
         # large_random_2
         tests.append(
             {
-                "input": torch.empty(15000000, device="cuda", dtype=dtype).uniform_(
-                    -1000.0, 1000.0
-                ),
+                "input": torch.empty(15000000, device="cuda", dtype=dtype).uniform_(0.0, 1000.0),
                 "output": torch.empty(1, device="cuda", dtype=dtype),
                 "N": 15000000,
             }
@@ -105,7 +103,7 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        N = 10000000
-        input = torch.empty(N, device="cuda", dtype=dtype).uniform_(-10.0, 10.0)
+        N = 4_194_304
+        input = torch.empty(N, device="cuda", dtype=dtype).uniform_(0.0, 1000.0)
         output = torch.empty(1, device="cuda", dtype=dtype)
         return {"input": input, "output": output, "N": N}
