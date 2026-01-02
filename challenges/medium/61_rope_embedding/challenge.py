@@ -103,7 +103,6 @@ class Challenge(ChallengeBase):
             }
         )
 
-
         # zero_matrices: outputs should remain zero when inputs are zero
         tests.append(
             {
@@ -155,9 +154,15 @@ class Challenge(ChallengeBase):
         # large_matrices: random uniform values for stress testing
         tests.append(
             {
-                "Q": torch.empty((256, 128), device="cuda", dtype=dtype).uniform_(-0.1, 0.1),
-                "cos": torch.empty((256, 128), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "sin": torch.empty((256, 128), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
+                "Q": torch.empty((256, 128), device="cuda", dtype=dtype).uniform_(
+                    -0.1, 0.1
+                    ),
+                "cos": torch.empty((256, 128), device="cuda", dtype=dtype).uniform_(
+                    -1.0, 1.0
+                    ),
+                "sin": torch.empty((256, 128), device="cuda", dtype=dtype).uniform_(
+                    -1.0, 1.0
+                    ),
                 "output": torch.zeros(256, 128, device="cuda", dtype=dtype),
                 "M": 256,
                 "D": 128,
