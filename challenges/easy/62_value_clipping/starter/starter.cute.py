@@ -6,5 +6,5 @@ import cutlass.cute as cute
 @cute.jit
 def solve(
     input: cute.Tensor, output: cute.Tensor, N: cute.Int32, lo: cute.Float32, hi: cute.Float32
-    ):
+):
     pass
