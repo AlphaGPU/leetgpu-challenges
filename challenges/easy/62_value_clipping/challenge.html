@@ -1,0 +1,43 @@
+<p>
+  Implement a clipping kernel for 1D input vectors. 
+  Given an input tensor of shape [N] where N is the number of elements, 
+  compute the output by clipping each element to a specified range [<code>lo</code>, <code>hi</code>]. 
+  The input and output tensor must be of type <code>float32</code>.
+</p>
+
+<p>
+  Clipping is defined as:
+  <ol>
+    <li>For each element <code>x</code> in the input tensor, "clip" the element so that it falls within the allowed range <code>[lo, hi]</code>.
+    </li>
+    <li>Optionally, branchless implementations (using <code>min</code>/<code>max</code> functions) are preferred to avoid warp divergence.</li>
+    <li>This operation ensures all values are within the specified range and is commonly used in ML for activation stabilization and pre-quantization.</li>
+  </ol>
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>output</code> tensor</li>
+  <li>Branchless implementations are preferred for performance on GPUs</li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:  [1.5, -2.0, 3.0, 4.5], lo = 0.0, hi = 3.5
+Output: [1.5, 0.0, 3.0, 3.5]
+</pre>
+
+<h2>Example 2:</h2>
+<pre>
+Input:  [-1.0, 2.0, 5.0], lo = -0.5, hi = 2.5
+Output: [-0.5, 2.0, 2.5]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 ≤ <code>N</code> ≤ 100,000</li>
+  <li>-10<sup>6</sup> ≤ input[i] ≤ 10<sup>6</sup></li>
+  <li><code>lo</code> ≤ <code>hi</code></li>
+</ul>
