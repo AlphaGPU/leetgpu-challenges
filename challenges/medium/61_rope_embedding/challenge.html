@@ -23,14 +23,14 @@
     <li>The final result must be stored in the output variable with the same shape <code>(M, D)</code></li>
 </ul>
 <h2>Example 1:</h2>
-<pre>Input:  Q   = [[1.0, 2.0, 3.0, 4.0], 
+<pre>Input:  Q   = [[1.0, 2.0, 3.0, 4.0],
                [1.0, 1.0, 1.0, 1.0]]
-        Cos = [[1.0, 1.0, 1.0, 1.0], 
+        Cos = [[1.0, 1.0, 1.0, 1.0],
                [0.0, 0.0, 0.0, 0.0]]
-        Sin = [[0.0, 0.0, 0.0, 0.0], 
+        Sin = [[0.0, 0.0, 0.0, 0.0],
                [1.0, 1.0, 1.0, 1.0]]
-Output: result = [[1.0, 2.0, 3.0, 4.0], 
-                  [-1.0, -1.0, 1.0, 1.0]] 
+Output: result = [[1.0, 2.0, 3.0, 4.0],
+                  [-1.0, -1.0, 1.0, 1.0]]
         (Row 0 is identity via Cos; Row 1 is rotated via Sin)</pre>
 <h2>Constraints</h2>
 <ul>
