@@ -11,7 +11,9 @@ class Challenge(ChallengeBase):
             name="Weight Dequantization", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
         )
 
-    def reference_impl(self, X: torch.Tensor, S: torch.Tensor, Y: torch.Tensor, M: int, N: int, BLOCK_SIZE: int):
+    def reference_impl(
+        self, X: torch.Tensor, S: torch.Tensor, Y: torch.Tensor, M: int, N: int, BLOCK_SIZE: int
+    ):
         # S shape: (ceil(M/BLOCK_SIZE), ceil(N/BLOCK_SIZE))
         # We expand S to match X's shape (M, N)
 
