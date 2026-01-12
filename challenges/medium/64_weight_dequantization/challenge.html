@@ -1,60 +1,29 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weight Dequantization</title>
-    <style>
-        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }
-        h1 { color: #2d3748; }
-        code { background: #f7fafc; padding: 2px 6px; border-radius: 4px; font-family: 'Fira Code', monospace; }
-        .math { font-family: 'Times New Roman', serif; font-style: italic; }
-        pre { background: #f7fafc; padding: 16px; border-radius: 8px; overflow-x: auto; }
-    </style>
-</head>
-<body>
-    <h1>Weight Dequantization</h1>
-    
-    <p>
-        In modern Large Language Model (LLM) inference, weights are often quantized to lower precision (like INT8 or FP8) to save memory and increase bandwidth.
-        A common technique is <strong>block-wise quantization</strong>, where a large weight matrix is divided into smaller blocks (e.g., 128x128), and each block shares a single scaling factor.
-    </p>
+<p>
+    In modern Large Language Model (LLM) inference, weights are often quantized to lower precision (like INT8 or FP8) to save memory and increase bandwidth.
+    A common technique is <strong>block-wise quantization</strong>, where a large weight matrix is divided into smaller blocks (e.g., 128x128), and each block shares a single scaling factor.
+</p>
+<p>
+    Implement a kernel that "dequantizes" a weight matrix. You are given an input matrix \(X\) of shape \((M, N)\) containing quantized values and a scale matrix \(S\) of shape \((\lceil M/B \rceil, \lceil N/B \rceil)\), where \(B\) is the block size.
+</p>
+<p>
+    For each element \(X_{ij}\), the corresponding scale factor is \(S_{row, col}\) where \(row = i / B\) and \(col = j / B\).
+    The output \(Y_{ij}\) should be computed as:
+    \[
+    Y_{ij} = X_{ij} \times S_{row, col}
+    \]
+</p>
+<h2>Implementation Requirements</h2>
+<ul>
+    <li>Implement the kernel efficiently using Triton</li>
+    <li>Handle arbitrary \(M\) and \(N\) dimensions (padding might be needed implicitly via masking)</li>
+    <li>The block size <code>BLOCK_SIZE</code> is a compile-time constant (constexpr)</li>
+</ul>
+<h2>Example 1:</h2>
+<pre>Input:  M, N = 256, 256
+        BLOCK_SIZE = 128
+        X = random((256, 256))
+        S = matrix of shape (2, 2)
 
-    <p>
-        Your task is to implement a kernel that "dequantizes" a weight matrix. 
-        You are given:
-        <ul>
-            <li>Input matrix \(X\) of shape \((M, N)\) containing quantized values.</li>
-            <li>Scale matrix \(S\) of shape \((\lceil M/B \rceil, \lceil N/B \rceil)\), where \(B\) is the block size (e.g., 128).</li>
-        </ul>
-    </p>
-
-    <p>
-        For each element \(X_{ij}\), the corresponding scale factor is \(S_{row, col}\) where:
-        \[ row = i / B \]
-        \[ col = j / B \]
-        
-        The output \(Y_{ij}\) should be computed as:
-        \[ Y_{ij} = X_{ij} \times S_{row, col} \]
-    </p>
-
-    <h2>Requirements</h2>
-    <ul>
-        <li>Implement the kernel efficiently using Triton.</li>
-        <li>Handle arbitrary \(M\) and \(N\) dimensions (padding might be needed implicitly via masking).</li>
-        <li>The block size \(BLOCK\_SIZE\) is a compile-time constant (constexpr).</li>
-    </ul>
-
-    <h2>Example</h2>
-    <pre>
-M, N = 256, 256
-BLOCK_SIZE = 128
-X = random((256, 256))
-S = matrix of shape (2, 2)
-
-Block (0,0) of X (top-left 128x128) is multiplied by S[0,0]
-Block (0,1) of X (top-right 128x128) is multiplied by S[0,1]
-... and so on.
-    </pre>
-</body>
-</html>
+Output: Block (0,0) of X (top-left 128x128) is multiplied by S[0,0]
+        Block (0,1) of X (top-right 128x128) is multiplied by S[0,1]
+        ... and so on.</pre>

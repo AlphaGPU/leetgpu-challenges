@@ -1,5 +1,4 @@
 import ctypes
-import math
 from typing import Any, Dict, List
 
 import torch
@@ -12,11 +11,9 @@ class Challenge(ChallengeBase):
             name="Weight Dequantization", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
         )
 
-    def reference_impl(self, X: torch.Tensor, S: torch.Tensor, Y: torch.Tensor, BLOCK_SIZE: int):
+    def reference_impl(self, X: torch.Tensor, S: torch.Tensor, Y: torch.Tensor, M: int, N: int, BLOCK_SIZE: int):
         # S shape: (ceil(M/BLOCK_SIZE), ceil(N/BLOCK_SIZE))
         # We expand S to match X's shape (M, N)
-
-        M, N = X.shape
 
         # Expand rows
         S_expanded = S.repeat_interleave(BLOCK_SIZE, dim=0)
@@ -39,6 +36,8 @@ class Challenge(ChallengeBase):
             "X": (ctypes.POINTER(ctypes.c_float), "in"),
             "S": (ctypes.POINTER(ctypes.c_float), "in"),
             "Y": (ctypes.POINTER(ctypes.c_float), "out"),
+            "M": (ctypes.c_int, "in"),
+            "N": (ctypes.c_int, "in"),
             "BLOCK_SIZE": (ctypes.c_int, "in"),
         }
 
@@ -56,6 +55,8 @@ class Challenge(ChallengeBase):
             "X": X,
             "S": S,
             "Y": Y,
+            "M": M,
+            "N": N,
             "BLOCK_SIZE": BLOCK_SIZE,
         }
 
@@ -71,6 +72,8 @@ class Challenge(ChallengeBase):
                 "X": torch.randn(M, N, device="cuda", dtype=torch.float32),
                 "S": torch.randn(2, 2, device="cuda", dtype=torch.float32),
                 "Y": torch.zeros(M, N, device="cuda", dtype=torch.float32),
+                "M": M,
+                "N": N,
                 "BLOCK_SIZE": BLOCK_SIZE,
             }
         )
@@ -85,6 +88,8 @@ class Challenge(ChallengeBase):
                 "X": torch.randn(M, N, device="cuda", dtype=torch.float32),
                 "S": torch.randn(2, 2, device="cuda", dtype=torch.float32),
                 "Y": torch.zeros(M, N, device="cuda", dtype=torch.float32),
+                "M": M,
+                "N": N,
                 "BLOCK_SIZE": BLOCK_SIZE,
             }
         )
@@ -98,6 +103,8 @@ class Challenge(ChallengeBase):
                 "X": torch.randn(M, N, device="cuda", dtype=torch.float32),
                 "S": torch.randn(2, 2, device="cuda", dtype=torch.float32),
                 "Y": torch.zeros(M, N, device="cuda", dtype=torch.float32),
+                "M": M,
+                "N": N,
                 "BLOCK_SIZE": BLOCK_SIZE,
             }
         )
@@ -117,5 +124,7 @@ class Challenge(ChallengeBase):
             "X": X,
             "S": S,
             "Y": Y,
+            "M": M,
+            "N": N,
             "BLOCK_SIZE": BLOCK_SIZE,
         }
