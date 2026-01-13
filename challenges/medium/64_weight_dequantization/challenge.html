@@ -1,0 +1,52 @@
+<p>
+  Implement a GPU program that "dequantizes" a weight matrix on the GPU. You are given an input matrix <code>X</code> of shape <code>[M, N]</code> containing quantized values and a scale matrix <code>S</code> of shape <code>[ceil(M/T), ceil(N/T)]</code>, where <code>T</code> is the tile size.
+</p>
+<p>
+  For each element \(X_{i,j}\), the corresponding scale factor is \(S_{row, col}\) where \(row = \lfloor i / T \rfloor\) and \(col = \lfloor j / T \rfloor\).
+  The output \(Y_{i,j}\) should be computed as:
+  \[
+    Y_{i,j} = X_{i,j} \times S_{row, col}
+  \]
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the output buffer <code>Y</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:
+M = 4, N = 4, TILE_SIZE = 2
+X = [
+  [10, 10,  5,  5],
+  [10, 10,  5,  5],
+  [ 2,  2,  8,  8],
+  [ 2,  2,  8,  8]
+]
+S = [
+  [0.5, 2.0],
+  [4.0, 0.25]
+]
+
+Output:
+Y = [
+  [ 5.0,  5.0, 10.0, 10.0],
+  [ 5.0,  5.0, 10.0, 10.0],
+  [ 8.0,  8.0,  2.0,  2.0],
+  [ 8.0,  8.0,  2.0,  2.0]
+]
+Explanation:
+Tile (0,0) of X is multiplied by S[0,0] (0.5).
+Tile (0,1) of X is multiplied by S[0,1] (2.0).
+Tile (1,0) is multiplied by S[1,0] (4.0).
+Tile (1,1) is multiplied by S[1,1] (0.25).
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code>, <code>N</code> &le; 8192</li>
+  <li><code>TILE_SIZE</code> &in; {16, 32, 64, 128}</li>
+</ul>
