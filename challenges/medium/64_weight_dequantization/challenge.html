@@ -1,29 +1,52 @@
 <p>
-    In modern Large Language Model (LLM) inference, weights are often quantized to lower precision (like INT8 or FP8) to save memory and increase bandwidth.
-    A common technique is <strong>block-wise quantization</strong>, where a large weight matrix is divided into smaller blocks (e.g., 128x128), and each block shares a single scaling factor.
+  Implement a GPU program that "dequantizes" a weight matrix on the GPU. You are given an input matrix <code>X</code> of shape <code>[M, N]</code> containing quantized values and a scale matrix <code>S</code> of shape <code>[ceil(M/T), ceil(N/T)]</code>, where <code>T</code> is the tile size.
 </p>
 <p>
-    Implement a kernel that "dequantizes" a weight matrix. You are given an input matrix \(X\) of shape \((M, N)\) containing quantized values and a scale matrix \(S\) of shape \((\lceil M/B \rceil, \lceil N/B \rceil)\), where \(B\) is the block size.
+  For each element \(X_{i,j}\), the corresponding scale factor is \(S_{row, col}\) where \(row = \lfloor i / T \rfloor\) and \(col = \lfloor j / T \rfloor\).
+  The output \(Y_{i,j}\) should be computed as:
+  \[
+    Y_{i,j} = X_{i,j} \times S_{row, col}
+  \]
 </p>
-<p>
-    For each element \(X_{ij}\), the corresponding scale factor is \(S_{row, col}\) where \(row = i / B\) and \(col = j / B\).
-    The output \(Y_{ij}\) should be computed as:
-    \[
-    Y_{ij} = X_{ij} \times S_{row, col}
-    \]
-</p>
+
 <h2>Implementation Requirements</h2>
 <ul>
-    <li>Implement the kernel efficiently using Triton</li>
-    <li>Handle arbitrary \(M\) and \(N\) dimensions (padding might be needed implicitly via masking)</li>
-    <li>The block size <code>BLOCK_SIZE</code> is a compile-time constant (constexpr)</li>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the output buffer <code>Y</code></li>
 </ul>
-<h2>Example 1:</h2>
-<pre>Input:  M, N = 256, 256
-        BLOCK_SIZE = 128
-        X = random((256, 256))
-        S = matrix of shape (2, 2)
 
-Output: Block (0,0) of X (top-left 128x128) is multiplied by S[0,0]
-        Block (0,1) of X (top-right 128x128) is multiplied by S[0,1]
-        ... and so on.</pre>
+<h2>Example 1:</h2>
+<pre>
+Input:
+M = 4, N = 4, TILE_SIZE = 2
+X = [
+  [10, 10,  5,  5],
+  [10, 10,  5,  5],
+  [ 2,  2,  8,  8],
+  [ 2,  2,  8,  8]
+]
+S = [
+  [0.5, 2.0],
+  [4.0, 0.25]
+]
+
+Output:
+Y = [
+  [ 5.0,  5.0, 10.0, 10.0],
+  [ 5.0,  5.0, 10.0, 10.0],
+  [ 8.0,  8.0,  2.0,  2.0],
+  [ 8.0,  8.0,  2.0,  2.0]
+]
+Explanation:
+Tile (0,0) of X is multiplied by S[0,0] (0.5).
+Tile (0,1) of X is multiplied by S[0,1] (2.0).
+Tile (1,0) is multiplied by S[1,0] (4.0).
+Tile (1,1) is multiplied by S[1,1] (0.25).
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code>, <code>N</code> &le; 8192</li>
+  <li><code>TILE_SIZE</code> &in; {16, 32, 64, 128}</li>
+</ul>

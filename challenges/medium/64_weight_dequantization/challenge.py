@@ -12,20 +12,20 @@ class Challenge(ChallengeBase):
         )
 
     def reference_impl(
-        self, X: torch.Tensor, S: torch.Tensor, Y: torch.Tensor, M: int, N: int, BLOCK_SIZE: int
+        self, X: torch.Tensor, S: torch.Tensor, Y: torch.Tensor, M: int, N: int, TILE_SIZE: int
     ):
-        # S shape: (ceil(M/BLOCK_SIZE), ceil(N/BLOCK_SIZE))
+        # S shape: (ceil(M/TILE_SIZE), ceil(N/TILE_SIZE))
         # We expand S to match X's shape (M, N)
 
         # Expand rows
-        S_expanded = S.repeat_interleave(BLOCK_SIZE, dim=0)
-        # Crop if M is not a multiple of BLOCK_SIZE
+        S_expanded = S.repeat_interleave(TILE_SIZE, dim=0)
+        # Crop if M is not a multiple of TILE_SIZE
         if S_expanded.shape[0] > M:
             S_expanded = S_expanded[:M, :]
 
         # Expand cols
-        S_expanded = S_expanded.repeat_interleave(BLOCK_SIZE, dim=1)
-        # Crop if N is not a multiple of BLOCK_SIZE
+        S_expanded = S_expanded.repeat_interleave(TILE_SIZE, dim=1)
+        # Crop if N is not a multiple of TILE_SIZE
         if S_expanded.shape[1] > N:
             S_expanded = S_expanded[:, :N]
 
@@ -40,16 +40,16 @@ class Challenge(ChallengeBase):
             "Y": (ctypes.POINTER(ctypes.c_float), "out"),
             "M": (ctypes.c_int, "in"),
             "N": (ctypes.c_int, "in"),
-            "BLOCK_SIZE": (ctypes.c_int, "in"),
+            "TILE_SIZE": (ctypes.c_int, "in"),
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
         M, N = 256, 256
-        BLOCK_SIZE = 128
+        TILE_SIZE = 128
         X = torch.randn(M, N, device="cuda", dtype=torch.float32)
         # S shape
-        s_rows = (M + BLOCK_SIZE - 1) // BLOCK_SIZE
-        s_cols = (N + BLOCK_SIZE - 1) // BLOCK_SIZE
+        s_rows = (M + TILE_SIZE - 1) // TILE_SIZE
+        s_cols = (N + TILE_SIZE - 1) // TILE_SIZE
         S = torch.randn(s_rows, s_cols, device="cuda", dtype=torch.float32)
         Y = torch.empty_like(X)
 
@@ -59,7 +59,7 @@ class Challenge(ChallengeBase):
             "Y": Y,
             "M": M,
             "N": N,
-            "BLOCK_SIZE": BLOCK_SIZE,
+            "TILE_SIZE": TILE_SIZE,
         }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
@@ -67,7 +67,7 @@ class Challenge(ChallengeBase):
 
         # Case 1: Perfect Multiple
         M, N = 256, 256
-        BLOCK_SIZE = 128
+        TILE_SIZE = 128
         tests.append(
             {
                 "name": "perfect_multiple",
@@ -76,13 +76,13 @@ class Challenge(ChallengeBase):
                 "Y": torch.zeros(M, N, device="cuda", dtype=torch.float32),
                 "M": M,
                 "N": N,
-                "BLOCK_SIZE": BLOCK_SIZE,
+                "TILE_SIZE": TILE_SIZE,
             }
         )
 
         # Case 2: Odd sizes (padding needed)
         M, N = 130, 200
-        BLOCK_SIZE = 128
+        TILE_SIZE = 128
         # Rows: ceil(130/128) = 2. Cols: ceil(200/128) = 2.
         tests.append(
             {
@@ -92,22 +92,22 @@ class Challenge(ChallengeBase):
                 "Y": torch.zeros(M, N, device="cuda", dtype=torch.float32),
                 "M": M,
                 "N": N,
-                "BLOCK_SIZE": BLOCK_SIZE,
+                "TILE_SIZE": TILE_SIZE,
             }
         )
 
-        # Case 3: Small Block Size
+        # Case 3: Small Tile Size
         M, N = 64, 64
-        BLOCK_SIZE = 32
+        TILE_SIZE = 32
         tests.append(
             {
-                "name": "small_blocks",
+                "name": "small_tiles",
                 "X": torch.randn(M, N, device="cuda", dtype=torch.float32),
                 "S": torch.randn(2, 2, device="cuda", dtype=torch.float32),
                 "Y": torch.zeros(M, N, device="cuda", dtype=torch.float32),
                 "M": M,
                 "N": N,
-                "BLOCK_SIZE": BLOCK_SIZE,
+                "TILE_SIZE": TILE_SIZE,
             }
         )
 
@@ -115,10 +115,10 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         M, N = 8192, 8192
-        BLOCK_SIZE = 128
+        TILE_SIZE = 128
         X = torch.randn(M, N, device="cuda", dtype=torch.float32)
-        s_rows = (M + BLOCK_SIZE - 1) // BLOCK_SIZE
-        s_cols = (N + BLOCK_SIZE - 1) // BLOCK_SIZE
+        s_rows = (M + TILE_SIZE - 1) // TILE_SIZE
+        s_cols = (N + TILE_SIZE - 1) // TILE_SIZE
         S = torch.randn(s_rows, s_cols, device="cuda", dtype=torch.float32)
         Y = torch.empty_like(X)
 
@@ -128,5 +128,5 @@ class Challenge(ChallengeBase):
             "Y": Y,
             "M": M,
             "N": N,
-            "BLOCK_SIZE": BLOCK_SIZE,
+            "TILE_SIZE": TILE_SIZE,
         }
