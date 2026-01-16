@@ -16,22 +16,7 @@ This guide provides instructions for adding new challenges to the LeetGPU challe
 
 ## Challenge Structure
 
-Each challenge must be placed in a specific directory hierarchy:
-
-```
-challenges/
-├── easy/
-│   ├── <number>_<challenge_name>/
-│   │   ├── challenge.html          # Problem description
-│   │   ├── challenge.py            # Python implementation file
-│   │   └── starter/                # Starter code templates
-│   │       ├── starter.cu          # CUDA
-│   │       ├── starter.pytorch.py  # PyTorch
-│   │       ├── starter.triton.py   # Triton
-│   │       ├── starter.mojo        # Mojo
-│   │       ├── starter.cute.py     # CuTe
-│   │       └── starter.jax.py      # JAX
-```
+Each challenge must be placed in a specific directory hierarchy as specified [here](CONTRIBUTING.md)
 
 ### Directory Naming Convention
 
@@ -307,12 +292,9 @@ Use appropriate tolerances: `atol=1e-5`, `rtol=1e-5` for float32. Avoid extreme 
    - 1-3 examples
    - Precise constraints
 
-4. **Generate Starter Code**
-   ```bash
-   python scripts/generate_starter_code.py challenges/easy/<number>_challenge_name
-   ```
-
-5. **Test Locally**
+4. **Write Starter Code and Test Locally**
+    - Follow format and comment specifications for each framework to write starter code
+    - Test:
    ```bash
    python -c "from challenges.easy.<number>_challenge_name.challenge import Challenge; c = Challenge(); print('Tests:', len(c.generate_functional_test()))"
    ```
