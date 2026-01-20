@@ -2,18 +2,6 @@
 
 This guide provides instructions for adding new challenges to the LeetGPU challenge set, covering structure, metadata, test cases, and best practices.
 
-## Table of Contents
-
-1. [Challenge Structure](#challenge-structure)
-2. [Challenge Types & Difficulty Levels](#challenge-types--difficulty-levels)
-3. [Challenge.py Specification](#challengepy-specification)
-4. [Challenge.html Specification](#challengehtml-specification)
-5. [Starter Code Guidelines](#starter-code-guidelines)
-6. [Test Case Design](#test-case-design)
-7. [Creating & Testing Challenges](#creating--testing-challenges)
-8. [Formatting & Linting](#formatting--linting)
-9. [Directory Structure Checklist](#directory-structure-checklist)
-
 ## Challenge Structure
 
 Each challenge must be placed in a specific directory hierarchy as specified [here](CONTRIBUTING.md)
@@ -101,7 +89,7 @@ def get_solve_signature(self) -> Dict[str, tuple]:
 ```
 
 **Common ctypes**: `ctypes.POINTER(ctypes.c_float)`, `ctypes.c_int`, `ctypes.c_size_t`
-**Directions**: `"in"`, `"out"`, `"inout"`
+**Parameter directions**: `"in"` (read-only), `"out"` (write-only), `"inout"` (read and write)
 
 ### Test Case Generation
 
