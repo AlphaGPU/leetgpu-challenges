@@ -40,7 +40,7 @@ Each challenge must be placed in a specific directory hierarchy as specified [he
 
 ## Challenge.py Specification
 
-The `challenge.py` file contains the reference implementation, test cases, and metadata. It must inherit from `ChallengeBase`.
+The `challenge.py` file contains the reference implementation, test cases, and metadata. It must inherit from `ChallengeBase` and it must follow Black python code formatting rules.
 
 ### Class Declaration & Initialization
 
