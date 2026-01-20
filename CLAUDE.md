@@ -185,7 +185,7 @@ Starter code must compile without errors but not solve the problem. Follow exist
 ### General Principles
 1. **Compilation**: Must compile/run without errors
 2. **Non-functional**: Use `pass` or empty kernels
-3. **Comments**: Only parameter descriptions (location, data type)
+3. **Comments**: No comments outside of those displayed below. 
 4. **Consistency**: Match existing starters for each framework
 
 ### Framework Examples
@@ -232,10 +232,23 @@ def solve(a: torch.Tensor, b: torch.Tensor, c: torch.Tensor, N: int):
     kernel[grid](a, b, c, N, BLOCK_SIZE)
 ```
 
+#### JAX (`starter.jax.py`)
+```python
+import jax
+import jax.numpy as jnp
+
+
+# A, B are tensors on GPU
+@jax.jit
+def solve(A: jax.Array, B: jax.Array, N: int) -> jax.Array:
+    # return output tensor directly
+    pass
+```
+
+
 #### Other Frameworks
 - **Mojo**: Use `UnsafePointer[Float32]`, `DeviceContext`, grid/block dimensions
-- **CuTe**: Use `@cute.jit` decorator, `cute.Tensor` types  
-- **JAX**: Use `@jax.jit`, return output tensor directly
+- **CuTe**: Use `@cute.jit` decorator, `cute.Tensor` types
 
 ---
 

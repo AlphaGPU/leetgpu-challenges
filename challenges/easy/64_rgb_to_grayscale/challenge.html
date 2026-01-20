@@ -1,0 +1,43 @@
+<p>
+  Implement a GPU program that converts an RGB image to grayscale on the GPU.
+  Given an input RGB image represented as a 1D array of 32-bit floating point values,
+  compute the corresponding grayscale image using the standard RGB to grayscale conversion formula.
+</p>
+
+<p>
+  The conversion formula is: <code>gray = 0.299 × R + 0.587 × G + 0.114 × B</code>
+</p>
+
+<p>
+  The input array <code>input</code> contains <code>height × width × 3</code> elements,
+  where the RGB values for each pixel are stored consecutively (R, G, B, R, G, B, ...).
+  The output array <code>output</code> should contain <code>height × width</code> grayscale values.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the array <code>output</code></li>
+  <li>Use the exact coefficients: 0.299 for red, 0.587 for green, 0.114 for blue</li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:  input = [255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 128.0, 128.0, 128.0], width=2, height=2
+Output: output = [76.245, 149.685, 29.07, 128.0]
+</pre>
+
+<h2>Example 2:</h2>
+<pre>
+Input:  input = [100.0, 150.0, 200.0], width=1, height=1
+Output: output = [140.75]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 ≤ <code>width</code> ≤ 4096</li>
+  <li>1 ≤ <code>height</code> ≤ 4096</li>
+  <li><code>width × height</code> ≤ 4,194,304</li>
+  <li>All RGB values are in the range [0.0, 255.0]</li>
+</ul>
