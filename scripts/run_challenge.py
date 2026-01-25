@@ -27,15 +27,16 @@ def find_solution_file(challenge_dir: Path, language: str) -> tuple[str, str]:
     language_to_extension = {
         "cuda": "cu",
         "mojo": "mojo",
-        "pytorch": "pytorch.py",
-        "cute": "cute.py",
-        "triton": "triton.py",
-        "jax": "jax.py",
+        "pytorch": "py",
+        "cute": "py",
+        "triton": "py",
+        "jax": "py",
     }
     solution_file = challenge_dir / "solution" / f"solution.{language_to_extension[language]}"
     if not solution_file.exists():
         raise FileNotFoundError(
-            f"No solution file found for {language}. Add a solution/solution.{language}.py file."
+            f"No solution file found for {language}. "
+            f"Add a solution/solution.{language_to_extension[language]} file. "
         )
     return solution_file.name, solution_file.read_text()
 
