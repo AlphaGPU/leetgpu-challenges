@@ -1,0 +1,48 @@
+<p>
+  Implement the Gaussian Error Gated Linear Unit (GEGLU) activation function forward pass for 1D input
+  vectors. Given an input tensor of shape [N] where N is the number of elements, compute the output
+  using the elementwise formula. The input and output tensor must be of type <code>float32</code>.
+</p>
+
+<p>
+  GEGLU is defined as:
+  <ol>
+    <li>Split input \(x\) into two halves: \(x_1\) and \(x_2\)</li>
+    <li>Compute GELU on the second half:
+      \[
+        \text{GELU}(x_2) = \frac{1}{2} x_2 \left(1 + \text{erf}\left(\frac{x_2}{\sqrt{2}}\right)\right)
+      \]
+    </li>
+    <li>Compute the GEGLU output:
+      \[
+        \text{GEGLU}(x_1, x_2) = x_1 \cdot \text{GELU}(x_2)
+      \]
+    </li>
+  </ol>
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>output</code> tensor</li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:  [1.0, 1.0]  (N=2)
+Output: [0.8413447]
+</pre>
+
+<h2>Example 2:</h2>
+<pre>
+Input:  [2.0, -1.0, 1.0, 0.5]  (N=4)
+Output: [1.6826895, -0.3457312]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 ≤ <code>N</code> ≤ 100,000</li>
+  <li>N is an even number</li>
+  <li>-100.0 ≤ input values ≤ 100.0</li>
+</ul>
