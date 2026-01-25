@@ -22,7 +22,7 @@ jobs:
       
       - name: Install dependencies
         run: |
-          pip install requests
+          pip install -r scripts/requirements.txt
       
       - name: Get changed challenges
         id: changed
@@ -45,12 +45,7 @@ jobs:
         env:
           SERVICE_URL: ${{ secrets.LEETGPU_SERVICE_URL }}
           LEETGPU_API_KEY: ${{ secrets.LEETGPU_API_KEY }}
-        run: |
-          if [ -z "$LEETGPU_API_KEY" ]; then
-            echo "Error: LEETGPU_API_KEY secret is not set"
-            exit 1
-          fi
-          
+        run: |          
           echo "${{ steps.changed.outputs.paths }}" | while read -r path; do
             if [ -d "$path" ]; then
               echo "Deploying $path"
