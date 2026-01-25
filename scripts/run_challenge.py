@@ -109,7 +109,7 @@ def main() -> int:
         return 1
 
     ok = submit_solution(
-        ws_url=f"ws://{SERVICE_URL}/ws/submit",
+        ws_url=f"ws://{SERVICE_URL}/api/v1/ws/submit",
         api_key=LEETGPU_API_KEY,
         challenge_id=payload["id"],
         file_name=file_name,

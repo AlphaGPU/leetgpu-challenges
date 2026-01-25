@@ -85,20 +85,20 @@ def load_challenge(problem_dir: Path) -> Dict:
         for f in starter_dir.iterdir():
             if f.is_file() and (lang := get_language(f.name)):
                 starter_code.append({
-                    "language_name": lang,
-                    "file_name": f.name,
-                    "file_content": f.read_text()
+                    "language": lang,
+                    "fileName": f.name,
+                    "fileContent": f.read_text()
                 })
     
     return {
         "id": problem_id,
         "title": title,
         "spec": spec_path.read_text(),
-        "challenge_code": challenge_path.read_text(),
-        "difficulty_level": get_difficulty(problem_dir),
-        "access_tier": access_tier,
+        "challengeCode": challenge_path.read_text(),
+        "difficultyLevel": get_difficulty(problem_dir),
+        "accessTier": access_tier,
         "gpus": GPUS, # TODO: get from challenge.py or API
-        "starter_code": starter_code,
+        "starterCode": starter_code,
     }
 
 def update_challenge(service_url: str, payload: Dict, api_key: str) -> bool:
