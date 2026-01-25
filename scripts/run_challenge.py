@@ -6,7 +6,7 @@ Usage:
     python scripts/run_challenge.py /path/to/challenges/easy/1_vector_add
 
 Env vars:
-    SERVICE_URL       - API base URL (default: localhost:8080)
+    SERVICE_URL       - API base URL with protocol (default: http://localhost:8080)
     LEETGPU_API_KEY   - required, Bearer token
 """
 
@@ -119,8 +119,10 @@ def main() -> int:
         logger.error("Failed to find solution file: %s", e)
         return 1
 
+    # Convert http(s) URL to ws(s) URL
+    ws_url = SERVICE_URL.replace("https://", "wss://").replace("http://", "ws://")
     ok = submit_solution(
-        ws_url=f"ws://{SERVICE_URL}/api/v1/ws/submit",
+        ws_url=f"{ws_url.rstrip('/')}/api/v1/ws/submit",
         api_key=LEETGPU_API_KEY,
         challenge_id=payload["id"],
         file_name=file_name,

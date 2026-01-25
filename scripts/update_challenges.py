@@ -3,7 +3,7 @@
 Deploy challenges to LeetGPU.com
 
 Environment variables:
-    SERVICE_URL - API service URL (default: localhost:8080)
+    SERVICE_URL - API service URL with protocol (default: http://localhost:8080)
     LEETGPU_API_KEY - API key for authentication (required)
 """
 
@@ -21,7 +21,7 @@ import requests
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
 
-SERVICE_URL = os.getenv("SERVICE_URL", "localhost:8080")
+SERVICE_URL = os.getenv("SERVICE_URL", "http://localhost:8080")
 LEETGPU_API_KEY = os.getenv("LEETGPU_API_KEY")
 
 GPUS = ["NVIDIA H100", "NVIDIA H200", "NVIDIA TESLA T4", "NVIDIA B200", "NVIDIA A100-80GB"]
@@ -106,11 +106,13 @@ def load_challenge(problem_dir: Path) -> Dict:
 
 
 def update_challenge(service_url: str, payload: Dict, api_key: str) -> bool:
-    url = f"http://{service_url.rstrip('/')}/api/v1/challenges"
+    url = f"{service_url.rstrip('/')}/api/v1/challenges"
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+
     try:
-        r = requests.post(url, json=payload, headers=headers, timeout=30)
-        r.raise_for_status()
+        with requests.Session() as session:
+            r = session.post(url, json=payload, headers=headers, timeout=30, allow_redirects=True)
+            r.raise_for_status()
         logger.info("Updated challenge %s: %s", payload["id"], payload["title"])
         return True
     except Exception as e:
