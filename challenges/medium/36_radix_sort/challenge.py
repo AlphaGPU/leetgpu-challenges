@@ -1,5 +1,6 @@
 import ctypes
-from typing import Any, List, Dict
+from typing import Any, Dict, List
+
 import torch
 from core.challenge_base import ChallengeBase
 

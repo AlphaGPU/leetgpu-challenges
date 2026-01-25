@@ -17,14 +17,7 @@ import sys
 from pathlib import Path
 
 import websocket
-
-from update_challenges import (
-    load_challenge,
-    update_challenge,
-    SERVICE_URL,
-    LEETGPU_API_KEY,
-)
-
+from update_challenges import LEETGPU_API_KEY, SERVICE_URL, load_challenge, update_challenge
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -41,12 +34,24 @@ def find_solution_file(challenge_dir: Path, language: str) -> tuple[str, str]:
     }
     solution_file = challenge_dir / "solution" / f"solution.{language_to_extension[language]}"
     if not solution_file.exists():
-        raise FileNotFoundError(f"No solution file found for {language}. Add a solution/solution.{language}.py file.")
+        raise FileNotFoundError(
+            f"No solution file found for {language}. Add a solution/solution.{language}.py file."
+        )
     return solution_file.name, solution_file.read_text()
 
-def submit_solution(ws_url: str, api_key: str, challenge_id: int, file_name: str, content: str,
-                    language: str, gpu: str, action: str, public: bool) -> bool:
-    
+
+def submit_solution(
+    ws_url: str,
+    api_key: str,
+    challenge_id: int,
+    file_name: str,
+    content: str,
+    language: str,
+    gpu: str,
+    action: str,
+    public: bool,
+) -> bool:
+
     headers = [f"Authorization: Bearer {api_key}"] if api_key else []
     ws = websocket.create_connection(ws_url, header=headers, timeout=120)
     try:
@@ -83,11 +88,17 @@ def main() -> int:
         logger.error("LEETGPU_API_KEY environment variable is required")
         return 1
 
-    parser = argparse.ArgumentParser(description="Upsert a challenge and submit a solution via API.")
+    parser = argparse.ArgumentParser(
+        description="Upsert a challenge and submit a solution via API."
+    )
     parser.add_argument("challenge_path", type=Path, help="Path to the challenge directory")
     parser.add_argument("--language", default="cuda", help="Language (default: cuda)")
-    parser.add_argument("--gpu", default="NVIDIA TESLA T4", help="GPU name (default: NVIDIA TESLA T4)")
-    parser.add_argument("--action", default="run", choices=["run", "submit"], help="Action (run or submit)")
+    parser.add_argument(
+        "--gpu", default="NVIDIA TESLA T4", help="GPU name (default: NVIDIA TESLA T4)"
+    )
+    parser.add_argument(
+        "--action", default="run", choices=["run", "submit"], help="Action (run or submit)"
+    )
     args = parser.parse_args()
 
     # Upsert challenge
@@ -124,4 +135,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

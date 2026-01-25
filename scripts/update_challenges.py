@@ -15,6 +15,7 @@ import re
 import sys
 from pathlib import Path
 from typing import Dict, Optional
+
 import requests
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
@@ -25,11 +26,13 @@ LEETGPU_API_KEY = os.getenv("LEETGPU_API_KEY")
 
 GPUS = ["NVIDIA H100", "NVIDIA H200", "NVIDIA TESLA T4", "NVIDIA B200", "NVIDIA A100-80GB"]
 
+
 def extract_id(name: str) -> int:
     match = re.match(r"^(\d+)_", name)
     if not match:
         raise ValueError(f"Directory name must start with number: {name}")
     return int(match.group(1))
+
 
 def get_difficulty(path: Path) -> str:
     s = str(path).lower()
@@ -37,6 +40,7 @@ def get_difficulty(path: Path) -> str:
         if d in s:
             return d
     return "easy"
+
 
 def get_language(filename: str) -> Optional[str]:
     if filename == "starter.cu":
@@ -49,24 +53,25 @@ def get_language(filename: str) -> Optional[str]:
             return parts[1]
     return None
 
+
 def load_challenge(problem_dir: Path) -> Dict:
     logger.info("Loading %s", problem_dir)
-    
+
     problem_id = extract_id(problem_dir.name)
-    
+
     spec_path = problem_dir / "challenge.html"
     if not spec_path.exists():
         spec_path = problem_dir / "problem.html"
     if not spec_path.exists():
         raise FileNotFoundError(f"No spec file in {problem_dir}")
-    
+
     challenge_path = problem_dir / "challenge.py"
     if not challenge_path.exists():
         raise FileNotFoundError(f"No challenge.py in {problem_dir}")
-    
+
     challenges_dir = problem_dir.parent.parent
     sys.path.insert(0, str(challenges_dir))
-    
+
     try:
         spec = importlib.util.spec_from_file_location("challenge", challenge_path)
         module = importlib.util.module_from_spec(spec)
@@ -78,18 +83,16 @@ def load_challenge(problem_dir: Path) -> Dict:
         sys.path.remove(str(challenges_dir))
         if "challenge" in sys.modules:
             del sys.modules["challenge"]
-    
+
     starter_code = []
     starter_dir = problem_dir / "starter"
     if starter_dir.exists():
         for f in starter_dir.iterdir():
             if f.is_file() and (lang := get_language(f.name)):
-                starter_code.append({
-                    "language": lang,
-                    "fileName": f.name,
-                    "fileContent": f.read_text()
-                })
-    
+                starter_code.append(
+                    {"language": lang, "fileName": f.name, "fileContent": f.read_text()}
+                )
+
     return {
         "id": problem_id,
         "title": title,
@@ -97,9 +100,10 @@ def load_challenge(problem_dir: Path) -> Dict:
         "challengeCode": challenge_path.read_text(),
         "difficultyLevel": get_difficulty(problem_dir),
         "accessTier": access_tier,
-        "gpus": GPUS, # TODO: get from challenge.py or API
+        "gpus": GPUS,  # TODO: get from challenge.py or API
         "starterCode": starter_code,
     }
+
 
 def update_challenge(service_url: str, payload: Dict, api_key: str) -> bool:
     url = f"http://{service_url.rstrip('/')}/api/v1/challenges"
@@ -113,22 +117,22 @@ def update_challenge(service_url: str, payload: Dict, api_key: str) -> bool:
         logger.error("Failed challenge %s: %s", payload["id"], e)
         return False
 
+
 def main():
     if not LEETGPU_API_KEY:
         logger.error("LEETGPU_API_KEY environment variable is required")
         return 1
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument("path", type=Path, nargs="?")
     args = parser.parse_args()
-    
+
     if args.path:
         dirs = [args.path]
     else:
         base = Path(__file__).parent.parent / "challenges"
-        dirs = [d for diff in base.iterdir() if diff.is_dir()
-                for d in diff.iterdir() if d.is_dir()]
-    
+        dirs = [d for diff in base.iterdir() if diff.is_dir() for d in diff.iterdir() if d.is_dir()]
+
     success = fail = 0
     for d in sorted(dirs):
         try:
@@ -140,9 +144,10 @@ def main():
         except Exception as e:
             logger.error("Failed %s: %s", d, e)
             fail += 1
-    
+
     logger.info("Summary: %d succeeded, %d failed", success, fail)
     return 0 if fail == 0 else 1
+
 
 if __name__ == "__main__":
     sys.exit(main())
