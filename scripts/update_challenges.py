@@ -54,6 +54,21 @@ def get_language(filename: str) -> Optional[str]:
     return None
 
 
+# Mapping from disk filename to backend filename
+STARTER_FILENAME_MAP = {
+    "starter.cu": "starter.cu",
+    "starter.mojo": "starter.mojo",
+    "starter.pytorch.py": "starter.py",
+    "starter.triton.py": "starter.py",
+    "starter.jax.py": "starter.py",
+    "starter.cute.py": "starter.py",
+}
+
+
+def get_backend_filename(disk_filename: str) -> str:
+    return STARTER_FILENAME_MAP.get(disk_filename, disk_filename)
+
+
 def load_challenge(problem_dir: Path) -> Dict:
     logger.info("Loading %s", problem_dir)
 
@@ -90,7 +105,11 @@ def load_challenge(problem_dir: Path) -> Dict:
         for f in starter_dir.iterdir():
             if f.is_file() and (lang := get_language(f.name)):
                 starter_code.append(
-                    {"language": lang, "fileName": f.name, "fileContent": f.read_text()}
+                    {
+                        "language": lang,
+                        "fileName": get_backend_filename(f.name),
+                        "fileContent": f.read_text(),
+                    }
                 )
 
     return {
