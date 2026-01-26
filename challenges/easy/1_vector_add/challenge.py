@@ -42,6 +42,9 @@ class Challenge(ChallengeBase):
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
         test_specs = [
+            ("scalar_tail_1", [1.0], [2.0]),
+            ("scalar_tail_2", [1.0, 2.0], [3.0, 4.0]),
+            ("scalar_tail_3", [1.0, 2.0, 3.0], [4.0, 5.0, 6.0]),
             ("basic_small", [1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]),
             ("all_zeros", [0.0] * 16, [0.0] * 16),
             ("non_power_of_two", [1.0] * 30, [2.0] * 30),

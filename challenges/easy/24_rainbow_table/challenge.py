@@ -58,6 +58,25 @@ class Challenge(ChallengeBase):
 
         test_cases = []
 
+        # Force users to handle "0 chunks" logic
+        test_cases.append(
+            {
+                "input": torch.tensor([100], device="cuda", dtype=dtype),
+                "output": torch.zeros(1, device="cuda", dtype=torch.uint32),
+                "N": 1,
+                "R": 1,
+            }
+        )
+
+        test_cases.append(
+            {
+                "input": torch.tensor([100, 200], device="cuda", dtype=dtype),
+                "output": torch.zeros(2, device="cuda", dtype=torch.uint32),
+                "N": 2,
+                "R": 1,
+            }
+        )
+
         # basic_example
         test_cases.append(
             {

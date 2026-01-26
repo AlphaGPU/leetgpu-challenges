@@ -35,5 +35,4 @@ jobs:
                 if len(questions[idx]) > 1:
                     print(f"PR duplicated found: \n {questions[idx]}.")
                     exit(1)
-        print("✅ All indexes are unique.")
         EOF
