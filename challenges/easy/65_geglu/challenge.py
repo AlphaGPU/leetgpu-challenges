@@ -115,7 +115,7 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        N = 100000
+        N = 1000000
         return {
             "input": torch.empty(N, device="cuda", dtype=dtype).uniform_(-100.0, 100.0),
             "output": torch.empty(N // 2, device="cuda", dtype=dtype),
