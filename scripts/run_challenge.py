@@ -53,11 +53,11 @@ def submit_solution(
     public: bool,
 ) -> bool:
 
-    headers = [f"Authorization: Bearer {api_key}"] if api_key else []
-    ws = websocket.create_connection(ws_url, header=headers, timeout=120)
+    ws = websocket.create_connection(ws_url, timeout=120)
     try:
         submission = {
             "action": action,
+            "token": api_key,
             "submission": {
                 "files": [{"name": file_name, "content": content}],
                 "language": language,
