@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MoE Top-K Gating</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        line-height: 1.6;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      code {
+        background: #f4f4f4;
+        padding: 2px 5px;
+        border-radius: 4px;
+      }
+      pre {
+        background: #f4f4f4;
+        padding: 15px;
+        border-radius: 8px;
+        overflow-x: auto;
+      }
+      .latex {
+        font-family: "Times New Roman", serif;
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>MoE Top-K Gating</h1>
+
+    <p>
+      In Mixture of Experts (MoE) models, a scaling "gating" network determines
+      which experts are activated for each token. Given that modern MoEs have
+      many experts (e.g., 8, 64, or more), we typically only activate a small
+      subset (Top-K) to correct usage.
+    </p>
+
+    <h2>The Task</h2>
+    <p>Implement a kernel that performs Top-K Gating.</p>
+    <p>
+      For an input logit matrix $L$ of shape $(M, E)$ (where $M$ is the number
+      of tokens and $E$ is the number of experts):
+    </p>
+    <ol>
+      <li>Identify the $k$ largest values in each row.</li>
+      <li>Extract their indices.</li>
+      <li>Apply Softmax to these $k$ values to get mixing weights.</li>
+    </ol>
+
+    <h2>Mathematical Formulation</h2>
+    <p>
+      For each row $i$: $$ \text{indices}_i = \text{argsort}(L_i)[-k:] $$ $$
+      \text{vals}_i = L_i[\text{indices}_i] $$ $$ \text{weights}_i =
+      \text{Softmax}(\text{vals}_i) $$
+    </p>
+
+    <h2>Constraints</h2>
+    <ul>
+      <li>Input tensors are on GPU.</li>
+      <li>$k$ is small (typically 2).</li>
+      <li>$E$ is typically 8, 64, or 256.</li>
+    </ul>
+  </body>
+</html>
