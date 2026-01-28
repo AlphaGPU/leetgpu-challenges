@@ -1,7 +1,6 @@
 import ctypes
 from typing import Any, Dict, List
 
-import numpy as np
 import torch
 from core.challenge_base import ChallengeBase
 
