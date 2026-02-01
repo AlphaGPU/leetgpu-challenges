@@ -166,6 +166,19 @@ class Challenge(ChallengeBase):
                 }
             )
 
+        # Larger realistic sizes
+        for w, h in [(100, 100), (64, 48)]:
+            test_cases.append(
+                {
+                    "input": torch.empty(h * w * 3, device="cuda", dtype=torch.float32).uniform_(
+                        0.0, 255.0
+                    ),
+                    "output": torch.zeros(h * w, device="cuda", dtype=torch.float32),
+                    "width": w,
+                    "height": h,
+                }
+            )
+
         # Non-square images
         test_cases.append(
             {
