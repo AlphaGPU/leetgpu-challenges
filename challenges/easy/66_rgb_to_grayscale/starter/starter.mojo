@@ -21,4 +21,3 @@ def solve(input: UnsafePointer[Float32], output: UnsafePointer[Float32], width: 
     )
 
     ctx.synchronize()
-    
