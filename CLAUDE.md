@@ -32,7 +32,7 @@ challenges/<difficulty>/<number>_<name>/
 Must inherit from `ChallengeBase` and follow Black formatting (line length 100).
 
 **Reference files to read for patterns:**
-- Base class: `core/challenge_base.py` (in leetgpu-pset repo)
+- Base class: `challenges/core/challenge_base.py`
 - Simple example: `challenges/easy/1_vector_add/challenge.py`
 - Matrix example: `challenges/easy/3_matrix_transpose/challenge.py`
 - Medium example: `challenges/medium/22_gemm/challenge.py`
