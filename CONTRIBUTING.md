@@ -29,13 +29,6 @@ challenges/<difficulty>/<number>_<name>/
     └── starter.triton.py    # Triton 
 ```
 
-> [!NOTE]
-Use generate_starter_code.py in scripts folder to help generate the starter code for medium and hard problems
-
-```bash
-python scripts/generate_starter_code.py path/to/challenge_dir # can be either absolute or relative path
-```
-
 ### Requirements
 - Clear problem description with 1 or more examples
 - Starter templates should follow the format of existing starter templates
