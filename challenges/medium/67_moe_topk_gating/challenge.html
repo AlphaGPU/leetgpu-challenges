@@ -1,47 +1,43 @@
 <p>
-  In Mixture of Experts (MoE) models, a gating network determines which experts are activated for each token. Given that modern MoEs have many experts (e.g., 8, 64, or more), we typically only activate a small subset (Top-K) for efficient computation.
+  Implement a GPU program that performs Top-K Gating for Mixture of Experts (MoE) models. Given a logit matrix of shape <code>[M, E]</code> where M is the number of tokens and E is the number of experts, identify the k largest values in each row, extract their indices, and apply softmax to get mixing weights.
 </p>
 
-<h2>The Task</h2>
-<p>Implement a GPU program that performs Top-K Gating.</p>
 <p>
-  For an input logit matrix of shape <code>(M, E)</code> (where <code>M</code> is the number of tokens and <code>E</code> is the number of experts):
+  For each row i, the operation computes:
+  \[
+  \begin{align}
+  \text{indices}_i &= \text{argsort}(\text{logits}_i)[-k:] \\
+  \text{vals}_i &= \text{logits}_i[\text{indices}_i] \\
+  \text{weights}_i &= \text{Softmax}(\text{vals}_i)
+  \end{align}
+  \]
 </p>
-<ol>
-  <li>Identify the <code>k</code> largest values in each row</li>
-  <li>Extract their indices</li>
-  <li>Apply Softmax to these <code>k</code> values to get mixing weights</li>
-</ol>
 
 <h2>Implementation Requirements</h2>
 <ul>
-  <li>The <code>solve</code> function signature must remain unchanged</li>
   <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
   <li>The final result must be stored in the <code>topk_weights</code> and <code>topk_indices</code> arrays</li>
 </ul>
 
-<h2>Mathematical Formulation</h2>
-<p>For each row <em>i</em>:</p>
-<pre>
-indices[i] = argsort(logits[i])[-k:]
-vals[i] = logits[i][indices[i]]
-weights[i] = Softmax(vals[i])
-</pre>
-
 <h2>Example 1:</h2>
 <pre>
-Input:  logits       = [[1.0, 2.0, 3.0, 4.0],
-                        [4.0, 3.0, 2.0, 1.0]]
-        topk_weights = [[0.0, 0.0],
-                        [0.0, 0.0]]
-        topk_indices = [[0, 0],
-                        [0, 0]]
-        M = 2, E = 4, k = 2
+Input:
+  logits = [[1.0, 2.0, 3.0, 4.0],
+            [4.0, 3.0, 2.0, 1.0]]
+  M = 2, E = 4, k = 2
 
-Output: topk_weights = [[0.2689, 0.7311],      # softmax([3.0, 4.0])
-                        [0.7311, 0.2689]]      # softmax([4.0, 3.0])
-        topk_indices = [[2, 3],                 # indices of top-2 in row 0
-                        [0, 1]]                 # indices of top-2 in row 1
+Output:
+  topk_weights = [[0.2689, 0.7311],
+                  [0.7311, 0.2689]]
+  topk_indices = [[2, 3],
+                  [0, 1]]
+
+Explanation:
+Row 0: Top-2 values are 3.0 and 4.0 at indices 2 and 3.
+       Softmax([3.0, 4.0]) = [0.2689, 0.7311]
+Row 1: Top-2 values are 4.0 and 3.0 at indices 0 and 1.
+       Softmax([4.0, 3.0]) = [0.7311, 0.2689]
 </pre>
 
 <h2>Constraints</h2>
