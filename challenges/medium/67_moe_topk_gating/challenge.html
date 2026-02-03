@@ -1,0 +1,51 @@
+<p>
+  Implement a GPU program that performs Top-K Gating for Mixture of Experts (MoE) models. Given a logit matrix of shape <code>[M, E]</code> where M is the number of tokens and E is the number of experts, identify the k largest values in each row, extract their indices, and apply softmax to get mixing weights.
+</p>
+
+<p>
+  For each row i, the operation computes:
+  \[
+  \begin{align}
+  \text{indices}_i &= \text{argsort}(\text{logits}_i)[-k:] \\
+  \text{vals}_i &= \text{logits}_i[\text{indices}_i] \\
+  \text{weights}_i &= \text{Softmax}(\text{vals}_i)
+  \end{align}
+  \]
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>topk_weights</code> and <code>topk_indices</code> arrays</li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:
+  logits = [[1.0, 2.0, 3.0, 4.0],
+            [4.0, 3.0, 2.0, 1.0]]
+  M = 2, E = 4, k = 2
+
+Output:
+  topk_weights = [[0.2689, 0.7311],
+                  [0.7311, 0.2689]]
+  topk_indices = [[2, 3],
+                  [0, 1]]
+
+Explanation:
+Row 0: Top-2 values are 3.0 and 4.0 at indices 2 and 3.
+       Softmax([3.0, 4.0]) = [0.2689, 0.7311]
+Row 1: Top-2 values are 4.0 and 3.0 at indices 0 and 1.
+       Softmax([4.0, 3.0]) = [0.7311, 0.2689]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 ≤ <code>M</code> ≤ 10,000 (number of tokens)</li>
+  <li>1 ≤ <code>E</code> ≤ 256 (number of experts)</li>
+  <li>1 ≤ <code>k</code> ≤ <code>E</code> (top-k selection, typically k=2)</li>
+  <li>All tensors are stored on GPU</li>
+  <li>Logits are 32-bit floats</li>
+  <li>Indices are 32-bit integers</li>
+</ul>
