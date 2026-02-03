@@ -26,10 +26,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           PR_NUMBER=${{ github.event.pull_request.number }}
+          # Get fork info and add as fetch URL so action can find the branch
+          FORK_URL=$(gh pr view $PR_NUMBER --json headRepositoryOwner,headRepository -q '"https://github.com/\(.headRepositoryOwner.login)/\(.headRepository.name).git"')
+          git remote set-url --add origin "$FORK_URL"
           gh pr checkout $PR_NUMBER
-          # Create remote ref so claude-code-action finds the branch on origin
-          BRANCH_NAME=$(gh pr view $PR_NUMBER --json headRefName -q .headRefName)
-          git update-ref "refs/remotes/origin/$BRANCH_NAME" HEAD
 
       - name: Run Claude Code Review
         id: claude-review
