@@ -12,9 +12,15 @@ on:
 
 jobs:
   claude:
+    # Only allow repo owners and org members to invoke Claude
+    if: >
+      (github.event_name == 'issue_comment' && contains(fromJSON('["OWNER", "MEMBER"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review_comment' && contains(fromJSON('["OWNER", "MEMBER"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review' && contains(fromJSON('["OWNER", "MEMBER"]'), github.event.review.author_association)) ||
+      (github.event_name == 'issues' && contains(fromJSON('["OWNER", "MEMBER"]'), github.event.issue.author_association))
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
       issues: write
       id-token: write
@@ -26,6 +32,7 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout PR branch (handles forks)
+        id: pr-checkout
         if: github.event.issue.pull_request
         env:
           GH_TOKEN: ${{ github.token }}
@@ -34,12 +41,24 @@ jobs:
           PR_NUMBER=${{ github.event.issue.number }}
           # Check if PR is from a fork
           IS_FORK=$(gh pr view $PR_NUMBER --repo "$REPO" --json isCrossRepository -q .isCrossRepository)
+          echo "is_fork=$IS_FORK" >> $GITHUB_OUTPUT
+
           if [ "$IS_FORK" = "true" ]; then
-            # Replace origin URL with fork URL so action can fetch the branch
+            # Get fork info for context
+            FORK_OWNER=$(gh pr view $PR_NUMBER --repo "$REPO" --json headRepositoryOwner -q .headRepositoryOwner.login)
+            FORK_BRANCH=$(gh pr view $PR_NUMBER --repo "$REPO" --json headRefName -q .headRefName)
+            echo "fork_owner=$FORK_OWNER" >> $GITHUB_OUTPUT
+            echo "fork_branch=$FORK_BRANCH" >> $GITHUB_OUTPUT
+
+            # Add fork as a separate remote to fetch the code
             FORK_URL=$(gh pr view $PR_NUMBER --repo "$REPO" --json headRepositoryOwner,headRepository -q '"https://github.com/\(.headRepositoryOwner.login)/\(.headRepository.name).git"')
-            git remote set-url origin "$FORK_URL"
+            git remote add fork "$FORK_URL"
+            git fetch fork "$FORK_BRANCH"
+            git checkout -b "pr-$PR_NUMBER-$FORK_BRANCH" "fork/$FORK_BRANCH"
+            # origin stays pointing to main repo so Claude can push there
+          else
+            gh pr checkout $PR_NUMBER --repo "$REPO"
           fi
-          gh pr checkout $PR_NUMBER --repo "$REPO"
 
       - name: Run Claude Code
         id: claude
@@ -49,6 +68,22 @@ jobs:
 
           additional_permissions: |
             actions: read
+
+          custom_instructions: |
+            IMPORTANT - Fork PR Handling:
+            This PR is from a fork: ${{ steps.pr-checkout.outputs.is_fork == 'true' }}
+
+            If this is a fork PR (is_fork=true):
+            - You CANNOT push to the fork's branch directly
+            - Instead, when you need to commit changes:
+              1. Create a new branch from the current code: git checkout -b claude/pr-${{ github.event.issue.number }}-fixes
+              2. Make your commits on this new branch
+              3. Push to origin (the main repo): git push -u origin claude/pr-${{ github.event.issue.number }}-fixes
+              4. Create a NEW PR using: gh pr create --base main --title "Fixes for PR #${{ github.event.issue.number }}" --body "This PR contains fixes for the fork PR #${{ github.event.issue.number }} by @${{ steps.pr-checkout.outputs.fork_owner }}\n\nOriginal branch: ${{ steps.pr-checkout.outputs.fork_branch }}"
+              5. Comment on the original PR (#${{ github.event.issue.number }}) linking to your new PR
+
+            If this is NOT a fork PR (is_fork=false):
+            - You can commit and push directly to the PR branch as normal
 
           claude_args: |
             --allowed-tools "Read,Glob,Grep,Task,WebFetch" "Bash(git diff:*)" "Bash(git log:*)" "Bash(git show:*)" "Bash(python -c:*)"
