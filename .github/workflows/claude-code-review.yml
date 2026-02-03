@@ -24,12 +24,17 @@ jobs:
       - name: Checkout PR branch (handles forks)
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
           PR_NUMBER=${{ github.event.pull_request.number }}
-          # Get fork info and add as fetch URL so action can find the branch
-          FORK_URL=$(gh pr view $PR_NUMBER --json headRepositoryOwner,headRepository -q '"https://github.com/\(.headRepositoryOwner.login)/\(.headRepository.name).git"')
-          git remote set-url --add origin "$FORK_URL"
-          gh pr checkout $PR_NUMBER
+          # Check if PR is from a fork
+          IS_FORK=$(gh pr view $PR_NUMBER --repo "$REPO" --json isCrossRepository -q .isCrossRepository)
+          if [ "$IS_FORK" = "true" ]; then
+            # Replace origin URL with fork URL so action can fetch the branch
+            FORK_URL=$(gh pr view $PR_NUMBER --repo "$REPO" --json headRepositoryOwner,headRepository -q '"https://github.com/\(.headRepositoryOwner.login)/\(.headRepository.name).git"')
+            git remote set-url origin "$FORK_URL"
+          fi
+          gh pr checkout $PR_NUMBER --repo "$REPO"
 
       - name: Run Claude Code Review
         id: claude-review
