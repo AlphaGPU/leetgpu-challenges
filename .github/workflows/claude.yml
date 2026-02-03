@@ -29,7 +29,12 @@ jobs:
         if: github.event.issue.pull_request
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh pr checkout ${{ github.event.issue.number }}
+        run: |
+          PR_NUMBER=${{ github.event.issue.number }}
+          gh pr checkout $PR_NUMBER
+          # Create remote ref so claude-code-action finds the branch on origin
+          BRANCH_NAME=$(gh pr view $PR_NUMBER --json headRefName -q .headRefName)
+          git update-ref "refs/remotes/origin/$BRANCH_NAME" HEAD
 
       - name: Run Claude Code
         id: claude
