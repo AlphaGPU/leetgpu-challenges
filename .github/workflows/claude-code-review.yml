@@ -24,7 +24,12 @@ jobs:
       - name: Checkout PR branch (handles forks)
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh pr checkout ${{ github.event.pull_request.number }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          gh pr checkout $PR_NUMBER
+          # Create remote ref so claude-code-action finds the branch on origin
+          BRANCH_NAME=$(gh pr view $PR_NUMBER --json headRefName -q .headRefName)
+          git update-ref "refs/remotes/origin/$BRANCH_NAME" HEAD
 
       - name: Run Claude Code Review
         id: claude-review
