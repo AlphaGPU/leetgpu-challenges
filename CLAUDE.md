@@ -101,13 +101,17 @@ HTML fragment with four required sections:
 1. **Problem description** — 2-3 sentences: what the function does, data types, constraints
 2. **Implementation requirements** — Signature unchanged, no external libs, output location
 3. **Examples** — 1-3 examples in `<pre>` blocks with Input/Output
-4. **Constraints** — Size bounds, data types, value ranges
+4. **Constraints** — Size bounds, data types, value ranges, **and performance test size**
 
 **Formatting rules:**
 - `<code>` for variables/functions, `<pre>` for examples
 - `&le;`, `&ge;`, `&times;` for math symbols
+- **Performance test size bullet**: Must include a bullet documenting the exact parameters used in `generate_performance_test()`, formatted as:
+  - `<li>Performance is measured with <code>param</code> = value</li>`
+  - Use commas for numbers ≥ 1,000 (e.g., `25,000,000`)
+  - Multiple parameters: `<code>M</code> = 8,192, <code>N</code> = 6,144, <code>K</code> = 4,096`
 
-**Reference**: `challenges/easy/1_vector_add/challenge.html`
+**Reference**: `challenges/easy/2_matrix_multiplication/challenge.html`
 
 ## Starter Code
 
@@ -142,7 +146,7 @@ Must compile/run without errors but not solve the problem. No comments except th
 
 - [ ] Directory follows `<number>_<name>` convention
 - [ ] `challenge.py`: inherits ChallengeBase, has reference_impl with assertions, all test generators
-- [ ] `challenge.html`: description, requirements, examples, constraints
+- [ ] `challenge.html`: description, requirements, examples, constraints with performance test size bullet
 - [ ] `starter/`: all 6 framework files present, compilable, non-functional
 - [ ] Functional tests: 12-15 cases covering edges, powers-of-2, non-powers, special values
 - [ ] Performance test: appropriately sized for 16GB VRAM
