@@ -64,7 +64,7 @@ def submit_solution(
                 "gpu": gpu,
                 "mode": "accelerated",
                 "public": public,
-                "challenge_id": challenge_id,
+                "challengeId": challenge_id,
             },
         }
         ws.send(json.dumps(submission))
