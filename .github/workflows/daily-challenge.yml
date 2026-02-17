@@ -1,0 +1,42 @@
+name: Daily Challenge Creation
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # Every day at 9 AM UTC
+  workflow_dispatch: {} # Allow manual trigger
+
+jobs:
+  create-challenge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install black isort
+
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          prompt: |
+            Read CLAUDE.md and follow the Creation Workflow to create a new LeetGPU coding challenge. Pick a topic that doesn't duplicate any existing challenge, vary the difficulty, and open a PR.
