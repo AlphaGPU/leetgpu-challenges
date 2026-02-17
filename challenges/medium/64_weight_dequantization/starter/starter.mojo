@@ -5,5 +5,5 @@ from math import ceildiv
 
 # X, S, Y are device pointers
 @export
-def solve(X: UnsafePointer[Float32], S: UnsafePointer[Float32], Y: UnsafePointer[Float32], TILE_SIZE: Int32):
+def solve(X: UnsafePointer[Float32], S: UnsafePointer[Float32], Y: UnsafePointer[Float32], M: Int32, N: Int32, TILE_SIZE: Int32):
     pass
