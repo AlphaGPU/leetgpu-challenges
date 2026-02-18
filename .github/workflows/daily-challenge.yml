@@ -49,13 +49,12 @@ jobs:
             }
 
           prompt: |
-            Read CLAUDE.md and follow the Creation Workflow to create a new LeetGPU coding challenge that doesn't duplicate any existing challenge, then open a PR.
+            Read CLAUDE.md and follow the Creation Workflow to create a new LeetGPU coding challenge, then open a PR.
 
-            IMPORTANT: We already have too many easy element-wise challenges. Follow these rules when picking difficulty:
-            - Do NOT create easy challenges unless the topic truly warrants it. We have plenty.
-            - Strongly prefer medium or hard difficulty.
-            - Pick topics that require interesting GPU techniques: shared memory tiling, warp-level primitives, cooperative groups, multi-pass algorithms, graph algorithms, signal processing, scientific computing, or ML training kernels.
-            - Good medium examples: parallel scan variants, image processing (morphological ops, bilateral filter), sparse operations, tree/graph traversals, numerical methods (conjugate gradient, LU decomposition), quantization schemes.
-            - Good hard examples: GPU merge sort, parallel hash tables, breadth-first search on large graphs, flash attention variants, tensor contraction, parallel Huffman coding, N-body simulation.
+            Before writing any code, think hard about what would make a genuinely interesting GPU programming challenge. List existing challenges (ls challenges/*/), study what's already covered, and brainstorm problems that would teach people something new about GPU programming.
 
-            List existing challenges first (ls challenges/*/), then pick something genuinely different.
+            HARD RULES:
+            - Do NOT create trivial element-wise challenges. We have way too many (sigmoid, relu, silu, clipping, etc). If your idea is just "apply f(x) to every element", pick something else.
+            - Do NOT duplicate existing challenges.
+            - Prefer medium or hard difficulty. Only create easy if the topic involves a non-trivial GPU concept (not just a map operation).
+            - The challenge should require the solver to think about memory access patterns, synchronization, work distribution, or algorithm design — not just write a one-line kernel.
