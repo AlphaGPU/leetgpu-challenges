@@ -1,0 +1,42 @@
+<p>
+  Given an array of <code>N</code> 32-bit floating point <code>values</code> and an integer array
+  <code>flags</code> of the same length, where <code>flags[i] = 1</code> marks the start of a new
+  segment and <code>flags[i] = 0</code> continues the current segment, compute the
+  <strong>exclusive prefix sum within each segment</strong> and store the result in
+  <code>output</code>. The first element is always a segment start
+  (<code>flags[0] = 1</code>). Within each segment, <code>output[i]</code> equals the sum of all
+  <code>values</code> elements in the same segment that appear before index <code>i</code>, so the
+  first element of every segment is always <code>0.0</code>.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>output</code></li>
+  <li>Read from <code>values</code> and <code>flags</code>; write to <code>output</code></li>
+</ul>
+
+<h2>Example</h2>
+<pre>
+Input values: [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+Input flags:  [  1,   0,   0,   1,   0,   1]
+
+Segments:     [1.0, 2.0, 3.0] | [4.0, 5.0] | [6.0]
+
+Output:       [0.0, 1.0, 3.0,   0.0, 4.0,   0.0]
+</pre>
+<p>
+  Segment 1: exclusive prefix sums of [1, 2, 3] &rarr; [0, 1, 3]<br>
+  Segment 2: exclusive prefix sums of [4, 5] &rarr; [0, 4]<br>
+  Segment 3: exclusive prefix sums of [6] &rarr; [0]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 100,000,000</li>
+  <li><code>flags[0] = 1</code> always (the first element starts the first segment)</li>
+  <li><code>flags[i]</code> &isin; {0, 1} for all <code>i</code></li>
+  <li>Values are 32-bit floats in the range [-100, 100]</li>
+  <li>Performance is measured with <code>N</code> = 50,000,000</li>
+</ul>
