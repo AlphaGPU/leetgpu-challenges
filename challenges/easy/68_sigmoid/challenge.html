@@ -1,0 +1,32 @@
+<p>
+  Write a GPU program that applies the sigmoid activation function element-wise to a vector of
+  32-bit floating point numbers. For each element <code>x</code> in the input vector <code>X</code>,
+  compute <code>sigmoid(x) = 1 / (1 + exp(-x))</code> and store the result in the output vector
+  <code>Y</code>. The sigmoid function maps any real number to the range (0, 1).
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in vector <code>Y</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:  X = [0.0, 1.0, -1.0, 2.0]
+Output: Y = [0.5, 0.7311, 0.2689, 0.8808]
+</pre>
+
+<h2>Example 2:</h2>
+<pre>
+Input:  X = [0.5, -0.5, 3.0, -3.0]
+Output: Y = [0.6225, 0.3775, 0.9526, 0.0474]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 100,000,000</li>
+  <li>Input values are finite 32-bit floating point numbers</li>
+  <li>Performance is measured with <code>N</code> = 50,000,000</li>
+</ul>
