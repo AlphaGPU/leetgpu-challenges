@@ -1,0 +1,27 @@
+<p>
+  Write a GPU kernel that applies the hyperbolic tangent (tanh) activation function element-wise to
+  a 1D array of 32-bit floating point numbers. Given an input array <code>X</code> of length
+  <code>N</code>, compute <code>Y[i] = tanh(X[i])</code> for all <code>i</code>.
+  The tanh function maps any real number to the range (-1, 1).
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in array <code>Y</code></li>
+</ul>
+
+<h2>Example:</h2>
+<pre>
+Input:  X = [0.0, 1.0, -1.0, 2.0], N = 4
+Output: Y = [0.0, 0.76159, -0.76159, 0.96403]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 100,000,000</li>
+  <li>Input values are 32-bit floats in the range [-1000, 1000]</li>
+  <li>Output values are 32-bit floats in the range (-1, 1)</li>
+  <li>Performance is measured with <code>N</code> = 50,000,000</li>
+</ul>
