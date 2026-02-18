@@ -36,10 +36,15 @@ jobs:
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           show_full_output: true
 
-          claude_args: "--dangerouslySkipPermissions"
+          settings: |
+            {
+              "permissions": {
+                "allow": ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task"]
+              }
+            }
 
           prompt: |
             Read CLAUDE.md and follow the Creation Workflow to create a new LeetGPU coding challenge. Pick a topic that doesn't duplicate any existing challenge, vary the difficulty, and open a PR.
