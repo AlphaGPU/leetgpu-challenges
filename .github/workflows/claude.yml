@@ -66,7 +66,9 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install requests websocket-client
+        run: |
+          pip install pre-commit requests websocket-client
+          pre-commit install
 
       - name: Run Claude Code
         id: claude

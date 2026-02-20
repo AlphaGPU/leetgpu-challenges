@@ -28,7 +28,9 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install black isort requests websocket-client
+        run: |
+          pip install pre-commit requests websocket-client
+          pre-commit install
 
       - name: Run Claude Code
         id: claude
@@ -49,7 +51,7 @@ jobs:
             }
 
           prompt: |
-            Read CLAUDE.md and follow the Creation Workflow to create and validate a new LeetGPU coding challenge, then open a PR.
+            Read CLAUDE.md and follow the Creation Workflow to create and validate (with `run_challenge.py`) a new LeetGPU coding challenge, then open a PR.
 
             Before writing any code, think hard about what would make a genuinely interesting GPU programming challenge. List existing challenges (ls challenges/*/), study what's already covered, and brainstorm problems that would teach people something new about GPU programming.
 
