@@ -40,7 +40,6 @@ jobs:
           LEETGPU_API_KEY: ${{ secrets.LEETGPU_API_KEY }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          show_full_output: true
 
           claude_args: "--model claude-sonnet-4-6"
 
