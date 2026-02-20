@@ -35,6 +35,9 @@ jobs:
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
+        env:
+          SERVICE_URL: ${{ secrets.LEETGPU_SERVICE_URL }}
+          LEETGPU_API_KEY: ${{ secrets.LEETGPU_API_KEY }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           show_full_output: true
@@ -49,7 +52,7 @@ jobs:
             }
 
           prompt: |
-            Read CLAUDE.md and follow the Creation Workflow to create a new LeetGPU coding challenge, then open a PR.
+            Read CLAUDE.md and follow the Creation Workflow to create and validate a new LeetGPU coding challenge, then open a PR.
 
             Before writing any code, think hard about what would make a genuinely interesting GPU programming challenge. List existing challenges (ls challenges/*/), study what's already covered, and brainstorm problems that would teach people something new about GPU programming.
 

@@ -63,6 +63,9 @@ jobs:
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
+        env:
+          SERVICE_URL: ${{ secrets.LEETGPU_SERVICE_URL }}
+          LEETGPU_API_KEY: ${{ secrets.LEETGPU_API_KEY }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
@@ -86,4 +89,4 @@ jobs:
             - You can commit and push directly to the PR branch as normal
 
           claude_args: |
-            --allowed-tools "Read,Glob,Grep,Task,WebFetch" "Bash(git diff:*)" "Bash(git log:*)" "Bash(git show:*)" "Bash(python -c:*)"
+            --allowed-tools "Read,Glob,Grep,Task,WebFetch" "Bash(git diff:*)" "Bash(git log:*)" "Bash(git show:*)" "Bash(python -c:*)" "Bash(python scripts/run_challenge.py:*)"
