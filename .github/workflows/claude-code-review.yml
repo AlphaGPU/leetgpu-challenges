@@ -36,14 +36,32 @@ jobs:
           fi
           gh pr checkout $PR_NUMBER --repo "$REPO"
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install pre-commit requests websocket-client
+          pre-commit install
+
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@v1
+        env:
+          SERVICE_URL: ${{ secrets.LEETGPU_SERVICE_URL }}
+          LEETGPU_API_KEY: ${{ secrets.LEETGPU_API_KEY }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: "claude[bot]"
+
+          settings: |
+            {
+              "permissions": {
+                "allow": ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task"]
+              }
+            }
 
           prompt: |
-            Review this PR for the LeetGPU challenges repository. Ensure all changes adhere to the guidelines in CLAUDE.md. Be constructive and specific in feedback.
-
-          claude_args: |
-            --allowed-tools "Read,Glob,Grep,Task"
+            Review and validate this PR for the LeetGPU challenges repository. Use `run_challenge.py` to validate the challenge. Ensure all changes adhere to the guidelines in CLAUDE.md. Be constructive and specific in feedback.
