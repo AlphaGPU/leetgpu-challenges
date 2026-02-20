@@ -41,6 +41,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: "claude[bot]"
 
           prompt: |
             Review this PR for the LeetGPU challenges repository. Ensure all changes adhere to the guidelines in CLAUDE.md. Be constructive and specific in feedback.

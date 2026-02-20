@@ -69,10 +69,19 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
+          claude_args: "--model claude-sonnet-4-6"
+
+          settings: |
+            {
+              "permissions": {
+                "allow": ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task"]
+              }
+            }
+
           additional_permissions: |
             actions: read
 
-          custom_instructions: |
+          prompt: |
             IMPORTANT - Fork PR Handling:
             This PR is from a fork: ${{ steps.pr-checkout.outputs.is_fork == 'true' }}
 
@@ -87,6 +96,3 @@ jobs:
 
             If this is NOT a fork PR (is_fork=false):
             - You can commit and push directly to the PR branch as normal
-
-          claude_args: |
-            --allowed-tools "Read,Glob,Grep,Task,WebFetch" "Bash(git diff:*)" "Bash(git log:*)" "Bash(git show:*)" "Bash(python -c:*)" "Bash(python scripts/run_challenge.py:*)"
