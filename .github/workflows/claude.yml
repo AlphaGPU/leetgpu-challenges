@@ -60,6 +60,14 @@ jobs:
             gh pr checkout $PR_NUMBER --repo "$REPO"
           fi
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests websocket-client
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1

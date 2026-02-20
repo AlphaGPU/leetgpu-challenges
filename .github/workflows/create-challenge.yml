@@ -28,9 +28,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: |
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install black isort
+        run: pip install black isort requests websocket-client
 
       - name: Run Claude Code
         id: claude
