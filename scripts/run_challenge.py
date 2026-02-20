@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Development helper to upsert a challenge and submit a solution via /ws/submit.
+Development helper to submit a solution via /ws/submit.
 
 Usage:
     python scripts/run_challenge.py /path/to/challenges/easy/1_vector_add
@@ -13,11 +13,14 @@ Env vars:
 import argparse
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
 import websocket
-from update_challenges import LEETGPU_API_KEY, SERVICE_URL, load_challenge, update_challenge
+
+SERVICE_URL = os.getenv("SERVICE_URL", "http://localhost:8080")
+LEETGPU_API_KEY = os.getenv("LEETGPU_API_KEY")
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -44,7 +47,7 @@ def find_solution_file(challenge_dir: Path, language: str) -> tuple[str, str]:
 def submit_solution(
     ws_url: str,
     api_key: str,
-    challenge_id: int,
+    challenge_code: str,
     file_name: str,
     content: str,
     language: str,
@@ -64,11 +67,11 @@ def submit_solution(
                 "gpu": gpu,
                 "mode": "accelerated",
                 "public": public,
-                "challengeId": challenge_id,
+                "challengeCode": challenge_code,
             },
         }
         ws.send(json.dumps(submission))
-        logger.info("Submitted %s to challenge %s", file_name, challenge_id)
+        logger.info("Submitted %s", file_name)
 
         while True:
             msg = ws.recv()
@@ -89,9 +92,7 @@ def main() -> int:
         logger.error("LEETGPU_API_KEY environment variable is required")
         return 1
 
-    parser = argparse.ArgumentParser(
-        description="Upsert a challenge and submit a solution via API."
-    )
+    parser = argparse.ArgumentParser(description="Submit a solution via WebSocket API.")
     parser.add_argument("challenge_path", type=Path, help="Path to the challenge directory")
     parser.add_argument("--language", default="cuda", help="Language (default: cuda)")
     parser.add_argument(
@@ -102,18 +103,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # Upsert challenge
-    try:
-        payload = load_challenge(args.challenge_path)
-    except Exception as e:
-        logger.error("Failed to load challenge: %s", e)
+    challenge_py = args.challenge_path / "challenge.py"
+    if not challenge_py.exists():
+        logger.error("No challenge.py found in %s", args.challenge_path)
         return 1
+    challenge_code = challenge_py.read_text()
 
-    if not update_challenge(SERVICE_URL, payload, LEETGPU_API_KEY):
-        logger.error("Upsert failed")
-        return 1
-
-    # Submit solution
     try:
         file_name, content = find_solution_file(args.challenge_path, args.language)
     except Exception as e:
@@ -125,7 +120,7 @@ def main() -> int:
     ok = submit_solution(
         ws_url=f"{ws_url.rstrip('/')}/api/v1/ws/submit",
         api_key=LEETGPU_API_KEY,
-        challenge_id=payload["id"],
+        challenge_code=challenge_code,
         file_name=file_name,
         content=content,
         language=args.language,

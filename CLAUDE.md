@@ -142,6 +142,19 @@ Must compile/run without errors but not solve the problem. No comments except th
    ```
 6. Lint: `pre-commit run --all-files`
 
+## Testing with `run_challenge.py`
+
+Use `scripts/run_challenge.py` to submit solutions against the live platform when creating or reviewing challenges. This reads `challenge.py` from the challenge directory and sends it along with the solution.
+
+```bash
+python scripts/run_challenge.py path/to/challenge_dir --language cuda --action run
+```
+
+**Rules:**
+- **GPU**: Always use `--gpu "NVIDIA TESLA T4"` (the default). Do not use any other GPU.
+- **Submission limit**: You may only run this script **5 times per session**. Use submissions carefully — verify your challenge locally (imports, assertions, lint) before submitting.
+- **Workflow**: Write a CUDA solution in `solution/solution.cu`, run the script with `--action run` to validate, and only use `--action submit` when confident. Do not commit the solution file to the PR.
+
 ## Checklist
 
 - [ ] Directory follows `<number>_<name>` convention
