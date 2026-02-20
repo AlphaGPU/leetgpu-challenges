@@ -106,3 +106,11 @@ jobs:
 
             If this is NOT a fork PR (is_fork=false):
             - You can commit and push directly to the PR branch as normal
+
+            IMPORTANT - Challenge Validation:
+            When creating or reviewing PRs that add or modify challenges, you MUST validate them using run_challenge.py:
+            1. Write a correct CUDA solution in the challenge's solution/solution.cu directory
+            2. Run: python scripts/run_challenge.py <challenge_dir> --language cuda --action run
+            3. Verify all functional tests pass and the performance test completes
+            4. Do NOT commit the solution file to the PR
+            5. You may only run this script 5 times per session — verify your solution logic before submitting
