@@ -4,12 +4,7 @@
   every pair of vertices using the Floyd-Warshall algorithm. The matrix is stored as a flat array in
   row-major order: <code>dist[i * N + j]</code> is the weight of the directed edge from vertex
   <code>i</code> to vertex <code>j</code>. A value of <code>+infinity</code> means no direct edge
-  exists. The diagonal is always zero.
-</p>
-
-<h2>Floyd-Warshall Algorithm</h2>
-<p>
-  For each intermediate vertex <code>k</code> from <code>0</code> to <code>N - 1</code>
+  exists. The diagonal is always zero. For each intermediate vertex <code>k</code> from <code>0</code> to <code>N - 1</code>
   (in order), update all pairs:
 </p>
 <p>
@@ -18,12 +13,6 @@
       \text{output}[i][k] + \text{output}[k][j]\bigr)
     \quad \forall\, i, j
   \]
-</p>
-<p>
-  The inner update over all <code>(i, j)</code> pairs for a fixed <code>k</code> is
-  embarrassingly parallel, but <code>k</code> must advance strictly in order: each iteration
-  depends on the results of the previous one. This sequential outer dependency is the central
-  challenge for GPU parallelisation.
 </p>
 
 <h2>Implementation Requirements</h2>
