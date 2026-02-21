@@ -31,12 +31,12 @@ jobs:
 
       - name: Checkout PR branch (handles forks)
         id: pr-checkout
-        if: github.event.issue.pull_request
+        if: github.event.issue.pull_request || github.event.pull_request
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
         run: |
-          PR_NUMBER=${{ github.event.issue.number }}
           # Check if PR is from a fork
           IS_FORK=$(gh pr view $PR_NUMBER --repo "$REPO" --json isCrossRepository -q .isCrossRepository)
           echo "is_fork=$IS_FORK" >> $GITHUB_OUTPUT
@@ -96,11 +96,11 @@ jobs:
             If this is a fork PR (is_fork=true):
             - You CANNOT push to the fork's branch directly
             - Instead, when you need to commit changes:
-              1. Create a new branch from the current code: git checkout -b claude/pr-${{ github.event.issue.number }}-fixes
+              1. Create a new branch from the current code: git checkout -b claude/pr-${{ github.event.issue.number || github.event.pull_request.number }}-fixes
               2. Make your commits on this new branch
-              3. Push to origin (the main repo): git push -u origin claude/pr-${{ github.event.issue.number }}-fixes
-              4. Create a NEW PR using: gh pr create --base main --title "Fixes for PR #${{ github.event.issue.number }}" --body "This PR contains fixes for the fork PR #${{ github.event.issue.number }} by @${{ steps.pr-checkout.outputs.fork_owner }}\n\nOriginal branch: ${{ steps.pr-checkout.outputs.fork_branch }}"
-              5. Comment on the original PR (#${{ github.event.issue.number }}) linking to your new PR
+              3. Push to origin (the main repo): git push -u origin claude/pr-${{ github.event.issue.number || github.event.pull_request.number }}-fixes
+              4. Create a NEW PR using: gh pr create --base main --title "Fixes for PR #${{ github.event.issue.number || github.event.pull_request.number }}" --body "This PR contains fixes for the fork PR #${{ github.event.issue.number || github.event.pull_request.number }} by @${{ steps.pr-checkout.outputs.fork_owner }}\n\nOriginal branch: ${{ steps.pr-checkout.outputs.fork_branch }}"
+              5. Comment on the original PR (#${{ github.event.issue.number || github.event.pull_request.number }}) linking to your new PR
 
             If this is NOT a fork PR (is_fork=false):
             - You can commit and push directly to the PR branch as normal
