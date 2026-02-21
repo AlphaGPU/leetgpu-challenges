@@ -12,6 +12,10 @@ on:
 
 jobs:
   claude:
+    if: >
+      github.actor == 'kunal-mansukhani' ||
+      github.actor == 'ishaan-arya' ||
+      github.actor == 'shxjames'
     runs-on: ubuntu-latest
     permissions:
       contents: write
