@@ -1,0 +1,51 @@
+<p>
+  Given two sorted arrays <code>A</code> of length <code>M</code> and <code>B</code> of length
+  <code>N</code>, both containing 32-bit floating-point values in non-decreasing order, produce a
+  single sorted array <code>C</code> of length <code>M + N</code> containing all elements of
+  <code>A</code> and <code>B</code> in non-decreasing order.
+</p>
+
+<p>
+  The sequential two-pointer merge is inherently serial. On a GPU every thread must independently
+  determine which element it writes to <code>C</code>, without communicating with other threads.
+  The key insight is that for any output index <code>k</code>, the split between how many elements
+  come from <code>A</code> versus <code>B</code> can be found with a binary search on the
+  <em>merge path</em>.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only GPU native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final merged result must be stored in <code>C</code></li>
+  <li>Read from <code>A</code> and <code>B</code>; write to <code>C</code></li>
+</ul>
+
+<h2>Example</h2>
+<pre>
+Input:
+  A = [1.0, 3.0, 5.0, 7.0],  M = 4
+  B = [2.0, 4.0, 6.0, 8.0],  N = 4
+
+Output:
+  C = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+</pre>
+
+<pre>
+Input:
+  A = [-1.0, 1.0, 3.0],  M = 3
+  B = [2.0],             N = 1
+
+Output:
+  C = [-1.0, 1.0, 2.0, 3.0]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code>, <code>N</code> &le; 50,000,000</li>
+  <li><code>M + N</code> &le; 50,000,000</li>
+  <li>Both <code>A</code> and <code>B</code> are sorted in non-decreasing order</li>
+  <li>Elements are 32-bit floats; values may be negative, zero, or positive</li>
+  <li>Duplicate values within or across arrays are allowed</li>
+  <li>Performance is measured with <code>M</code> = 25,000,000, <code>N</code> = 25,000,000</li>
+</ul>
