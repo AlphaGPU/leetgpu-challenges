@@ -12,17 +12,6 @@ on:
 
 jobs:
   claude:
-    # Only allow repo owners and org members to invoke Claude
-    if: >
-      github.event.comment.author_association == 'OWNER' ||
-      github.event.comment.author_association == 'MEMBER' ||
-      github.event.review.author_association == 'OWNER' ||
-      github.event.review.author_association == 'MEMBER' ||
-      github.event.issue.author_association == 'OWNER' ||
-      github.event.issue.author_association == 'MEMBER' ||
-      github.actor == 'kunal-mansukhani' ||
-      github.actor == 'ishaan-arya' ||
-      github.actor == 'shxjames'
     runs-on: ubuntu-latest
     permissions:
       contents: write
