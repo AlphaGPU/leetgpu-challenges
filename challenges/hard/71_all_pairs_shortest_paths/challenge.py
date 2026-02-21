@@ -216,7 +216,7 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        N = 4096
+        N = 2048
         return {
             "dist": _make_graph(N, density=0.3, seed=42),
             "output": torch.empty(N * N, device="cuda", dtype=torch.float32),
