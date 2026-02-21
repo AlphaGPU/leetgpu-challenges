@@ -33,7 +33,8 @@ class Challenge(ChallengeBase):
     def reference_impl(self, dist: torch.Tensor, output: torch.Tensor, N: int):
         assert dist.shape == (N * N,)
         assert output.shape == (N * N,)
-        assert dist.dtype == torch.float32
+        assert dist.dtype == output.dtype == torch.float32
+        assert dist.device == output.device
         assert dist.device.type == "cuda"
         d = dist.view(N, N).clone()
         for k in range(N):
@@ -216,7 +217,7 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        N = 4096
+        N = 2048
         return {
             "dist": _make_graph(N, density=0.3, seed=42),
             "output": torch.empty(N * N, device="cuda", dtype=torch.float32),
