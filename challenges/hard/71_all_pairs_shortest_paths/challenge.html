@@ -1,0 +1,57 @@
+<p>
+  Given a weighted directed graph of <code>N</code> vertices represented as an
+  <code>N</code> &times; <code>N</code> distance matrix, compute the shortest path distance between
+  every pair of vertices using the Floyd-Warshall algorithm. The matrix is stored as a flat array in
+  row-major order: <code>dist[i * N + j]</code> is the weight of the directed edge from vertex
+  <code>i</code> to vertex <code>j</code>. A value of <code>+infinity</code> means no direct edge
+  exists. The diagonal is always zero. For each intermediate vertex <code>k</code> from <code>0</code> to <code>N - 1</code>
+  (in order), update all pairs:
+</p>
+<p>
+  \[
+    \text{output}[i][j] = \min\!\bigl(\text{output}[i][j],\;
+      \text{output}[i][k] + \text{output}[k][j]\bigr)
+    \quad \forall\, i, j
+  \]
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>output</code></li>
+</ul>
+
+<h2>Example:</h2>
+<pre>
+Input: N = 4
+dist = [
+  0,   5, inf,  10,   // row 0: edges from vertex 0
+  inf, 0,   3, inf,   // row 1: edges from vertex 1
+  inf, inf, 0,   1,   // row 2: edges from vertex 2
+  inf, inf, inf, 0    // row 3: edges from vertex 3
+]
+
+Output:
+output = [
+  0,   5,   8,   9,   // shortest paths from vertex 0
+  inf, 0,   3,   4,   // shortest paths from vertex 1
+  inf, inf, 0,   1,   // shortest paths from vertex 2
+  inf, inf, inf, 0    // shortest paths from vertex 3
+]
+
+Explanation:
+- output[0][2] = 8   (path 0 -&gt; 1 -&gt; 2, cost 5 + 3 = 8)
+- output[0][3] = 9   (path 0 -&gt; 1 -&gt; 2 -&gt; 3, cost 5 + 3 + 1 = 9, beats direct 0 -&gt; 3 = 10)
+- output[1][3] = 4   (path 1 -&gt; 2 -&gt; 3, cost 3 + 1 = 4)
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 4,096</li>
+  <li>Edge weights are finite <code>float32</code> values or <code>+infinity</code> (no edge)</li>
+  <li>The input contains no negative cycles</li>
+  <li>The diagonal satisfies <code>dist[i * N + i] = 0</code> for all <code>i</code></li>
+  <li><code>dist</code> and <code>output</code> are flat arrays of <code>N &times; N</code> floats in row-major order</li>
+  <li>Performance is measured with <code>N</code> = 2,048</li>
+</ul>
