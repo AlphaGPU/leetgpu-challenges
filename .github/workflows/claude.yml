@@ -19,7 +19,10 @@ jobs:
       github.event.review.author_association == 'OWNER' ||
       github.event.review.author_association == 'MEMBER' ||
       github.event.issue.author_association == 'OWNER' ||
-      github.event.issue.author_association == 'MEMBER'
+      github.event.issue.author_association == 'MEMBER' ||
+      github.actor == 'kunal-mansukhani' ||
+      github.actor == 'ishaan-arya' ||
+      github.actor == 'shxjames'
     runs-on: ubuntu-latest
     permissions:
       contents: write
