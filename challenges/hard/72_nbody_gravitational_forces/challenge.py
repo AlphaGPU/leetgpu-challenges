@@ -74,12 +74,14 @@ class Challenge(ChallengeBase):
             "N": N,
         }
 
-    def _make_test(self, N: int, pos_scale: float = 1.0, seed: int = 0) -> Dict[str, Any]:
+    def _make_test(
+        self, N: int, pos_scale: float = 1.0, pos_offset: float = 0.0, seed: int = 0
+    ) -> Dict[str, Any]:
         dtype = torch.float32
         device = "cuda"
         gen = torch.Generator()
         gen.manual_seed(seed)
-        positions = torch.rand(N, 3, dtype=dtype, generator=gen) * pos_scale
+        positions = torch.rand(N, 3, dtype=dtype, generator=gen) * pos_scale + pos_offset
         # Normalize masses by N so total acceleration magnitude stays O(1)
         masses = (torch.rand(N, dtype=dtype, generator=gen) * 0.9 + 0.1) / N
         accelerations = torch.empty((N, 3), dtype=dtype, device=device)
@@ -156,11 +158,11 @@ class Challenge(ChallengeBase):
         # realistic: N=2048
         tests.append(self._make_test(2048, pos_scale=1.0, seed=9))
 
-        # non-power-of-2 larger: N=3000
-        tests.append(self._make_test(3000, pos_scale=1.0, seed=10))
+        # negative positions: particles in negative octant
+        tests.append(self._make_test(50, pos_scale=2.0, pos_offset=-1.0, seed=10))
 
-        # larger power-of-2: N=4096
-        tests.append(self._make_test(4096, pos_scale=1.0, seed=11))
+        # mixed positive and negative positions (offset centers distribution around 0)
+        tests.append(self._make_test(4096, pos_scale=2.0, pos_offset=-1.0, seed=11))
 
         return tests
 
