@@ -1,0 +1,56 @@
+<p>
+  Given <code>N</code> particles in three-dimensional space, compute the gravitational acceleration
+  on each particle due to all other particles. Each particle <code>i</code> has a 3D position
+  <code>(x, y, z)</code> and a scalar mass <code>m</code>. All inputs and outputs are 32-bit
+  floating point numbers.
+</p>
+<p>
+  The gravitational acceleration on particle <code>i</code> is the vector sum of contributions
+  from every other particle <code>j &ne; i</code>:
+</p>
+<pre>
+acceleration[i] = &sum;<sub>j &ne; i</sub>  m[j] &times; (pos[j] - pos[i]) / (||pos[j] - pos[i]||&sup2; + &epsilon;)<sup>3/2</sup>
+</pre>
+<p>
+  where <code>&epsilon; = 1e-9</code> is a softening constant that prevents division by zero when
+  two particles occupy the same position.
+  Positions are stored in row-major layout: <code>positions[i*3+0]</code>,
+  <code>positions[i*3+1]</code>, <code>positions[i*3+2]</code> are the x, y, z coordinates of
+  particle <code>i</code>. The output <code>accelerations</code> array uses the same layout.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>accelerations</code> array</li>
+</ul>
+
+<h2>Example</h2>
+<pre>
+Input:
+  N = 3
+  positions = [[0, 0, 0],
+               [1, 0, 0],
+               [0, 1, 0]]
+  masses    = [1.0, 1.0, 1.0]
+
+Output:
+  accelerations &asymp; [[ 1.0,     1.0,    0.0],
+                   [-1.354,  0.354,  0.0],
+                   [ 0.354, -1.354,  0.0]]
+
+Explanation:
+  Particle 0 is pulled toward particle 1 (delta=[1,0,0], r=1) and particle 2 (delta=[0,1,0], r=1).
+  Acceleration from particle 1: 1.0 * [1,0,0] / 1 = [1, 0, 0]
+  Acceleration from particle 2: 1.0 * [0,1,0] / 1 = [0, 1, 0]
+  Total: [1, 1, 0]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 65,536</li>
+  <li>Positions are 32-bit floats</li>
+  <li>Masses are non-negative 32-bit floats</li>
+  <li>Performance is measured with <code>N</code> = 16,384</li>
+</ul>
