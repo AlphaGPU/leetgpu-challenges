@@ -99,7 +99,7 @@ HTML fragment with four required sections:
 
 1. **Problem description** — 2-3 sentences: what the function does, data types, constraints
 2. **Implementation requirements** — Signature unchanged, no external libs, output location
-3. **Examples** — 1-3 examples with Input/Output, format depends on data shape:
+3. **Examples** — 1-3 examples with Input/Output. The first example must match `generate_example_test()`. Format depends on data shape:
    - 1D data (vectors, sequences): use `<pre>` blocks
    - 2D/3D data (matrices, grids): use LaTeX `\begin{bmatrix}` inside `<p>` blocks
    - Be consistent within a single challenge
@@ -177,6 +177,7 @@ Verify every item before submitting. This is the single source of truth — work
 ### challenge.html
 - [ ] Starts with `<p>` (problem description) — never `<h1>`
 - [ ] Has `<h2>` sections for: Implementation Requirements, Example(s), Constraints (not `<h1>` or `<h3>`)
+- [ ] First example matches `generate_example_test()` values
 - [ ] Examples use `<pre>` for 1D data, LaTeX `\begin{bmatrix}` for matrices — consistent, never mixed
 - [ ] Constraints includes `Performance is measured with <code>param</code> = value` bullet matching `generate_performance_test()`
 
