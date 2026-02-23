@@ -77,10 +77,10 @@ One small, human-readable test case for display. Use literal tensor values.
 
 | Category | Sizes | Count |
 |----------|-------|-------|
-| Edge cases | 1, 2, 3, 4 | 3-4 |
-| Power-of-2 | 16, 32, 64, 128, 256, 512, 1024 | 3-4 |
-| Non-power-of-2 | 30, 100, 255 | 3-4 |
-| Realistic | 1K-10K | 2-3 |
+| Edge cases | 1, 2, 3, 4 | 2-3 |
+| Power-of-2 | 16, 32, 64, 128, 256, 512, 1024 | 2-3 |
+| Non-power-of-2 | 30, 100, 255 | 2-3 |
+| Realistic | 1K-10K | 1-2 |
 
 Must also include: zero inputs, negative numbers, mixed values.
 
@@ -154,7 +154,7 @@ Each starter file must have exactly one comment describing the parameters, place
 1. Create directory: `mkdir -p challenges/<difficulty>/<number>_<name>/starter`
 2. Write `challenge.py` — inherit ChallengeBase, implement all 6 methods
 3. Write `challenge.html` — all 4 sections
-4. Write starter code for all 6 frameworks (or use `scripts/generate_starter_code.py`)
+4. Write starter code for all 6 frameworks
 5. Lint: `pre-commit run --all-files`
 
 ## Testing with `run_challenge.py`
