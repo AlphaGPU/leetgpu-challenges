@@ -145,7 +145,8 @@ Each starter file must have exactly one comment describing the parameters, place
 | JAX | `# <params> are tensors on GPU` (+ `# return output tensor directly` inside body) |
 
 **Rules:**
-- No parenthetical explanations (e.g., do NOT add `(i.e. pointers to memory on the GPU)`)
+- Easy challenges: include the parenthetical `(i.e. pointers to memory on the GPU)` for CUDA/Mojo (matches vector_add reference)
+- Medium/Hard challenges: omit the parenthetical — just `are device pointers`
 - No other comments anywhere in the starter file
 - List only input/output tensor parameter names, not size parameters
 
@@ -172,34 +173,29 @@ python scripts/run_challenge.py path/to/challenge_dir --language cuda --action r
 
 ## Checklist
 
-- [ ] Directory follows `<number>_<name>` convention
-- [ ] `challenge.py`: inherits ChallengeBase, has reference_impl with assertions, all test generators
-- [ ] `challenge.html`: description, requirements, examples, constraints with performance test size bullet
-- [ ] `starter/`: all 6 framework files present, compilable, non-functional
-- [ ] Functional tests: 12-15 cases covering edges, powers-of-2, non-powers, special values
-- [ ] Performance test: appropriately sized for 16GB VRAM
-- [ ] Linting passes: black, isort, flake8 (Python); clang-format (CUDA)
-
-## Common Mistakes
-
-Mistakes frequently made by automated challenge creation. Check for these before submitting.
+Verify every item before submitting. This is the single source of truth — workflow prompts reference this section.
 
 ### challenge.html
-- **Missing `<h2>` sections** — must have Implementation Requirements, Example(s), and Constraints as `<h2>` headings (not `<h1>` or `<h3>`)
-- **Missing performance bullet** — Constraints section must include `Performance is measured with <code>param</code> = value`
-- **Wrong example format** — use `<pre>` for 1D data, LaTeX `\begin{bmatrix}` for matrices. Do not mix formats within one challenge
-- **Using `<h1>` tags** — challenge.html is a fragment, never use `<h1>`
-- **Not starting with `<p>`** — the first element must be the problem description in a `<p>` tag
+- [ ] Starts with `<p>` (problem description) — never `<h1>`
+- [ ] Has `<h2>` sections for: Implementation Requirements, Example(s), Constraints (not `<h1>` or `<h3>`)
+- [ ] Examples use `<pre>` for 1D data, LaTeX `\begin{bmatrix}` for matrices — consistent, never mixed
+- [ ] Constraints includes `Performance is measured with <code>param</code> = value` bullet matching `generate_performance_test()`
 
 ### challenge.py
-- **Missing assertions in `reference_impl`** — must assert shape, dtype, and device
-- **Too few functional tests** — need 12-15 cases covering edge cases, powers-of-2, non-powers-of-2, and realistic sizes
-- **Missing `super().__init__()` call** — `__init__` must call `super().__init__()` with name, tolerances, etc.
-- **Performance test too large** — must fit 5x in 16GB VRAM (Tesla T4)
+- [ ] `class Challenge` inherits `ChallengeBase`
+- [ ] `__init__` calls `super().__init__()` with name, atol, rtol, num_gpus, access_tier
+- [ ] `reference_impl` has assertions on shape, dtype, and device
+- [ ] All 6 methods present: `__init__`, `reference_impl`, `get_solve_signature`, `generate_example_test`, `generate_functional_test`, `generate_performance_test`
+- [ ] `generate_functional_test` returns 12-15 cases: edge cases (1-4 elements), powers-of-2, non-powers-of-2, realistic sizes, zeros, negatives
+- [ ] `generate_performance_test` fits 5x in 16GB VRAM (Tesla T4)
 
 ### Starter files
-- **Extra comments** — only one parameter description comment per file, no other comments
-- **Wrong comment format** — CUDA/Mojo use "device pointers", Python frameworks use "tensors on the GPU"
-- **Adding parenthetical** — do NOT write `(i.e. pointers to memory on the GPU)` after "device pointers"
-- **Missing starter files** — all 6 frameworks required: `.cu`, `.pytorch.py`, `.triton.py`, `.jax.py`, `.cute.py`, `.mojo`
-- **Solving the problem** — starters must compile/run but NOT produce correct output
+- [ ] All 6 files present: `.cu`, `.pytorch.py`, `.triton.py`, `.jax.py`, `.cute.py`, `.mojo`
+- [ ] Exactly 1 parameter description comment per file, no other comments
+- [ ] CUDA/Mojo use "device pointers"; easy challenges include `(i.e. pointers to memory on the GPU)`, medium/hard omit it
+- [ ] Python frameworks use "tensors on the GPU"; JAX also has `# return output tensor directly`
+- [ ] Starters compile/run but do NOT produce correct output
+
+### General
+- [ ] Directory follows `<number>_<name>` convention
+- [ ] Linting passes: `pre-commit run --all-files`

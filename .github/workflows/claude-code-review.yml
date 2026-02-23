@@ -64,38 +64,12 @@ jobs:
             }
 
           prompt: |
-            Review this PR for the LeetGPU challenges repository. Read CLAUDE.md first, then follow these steps:
+            Review this PR for the LeetGPU challenges repository.
 
-            STEP 1 — Structural checklist:
-            Read every changed file and verify against CLAUDE.md. Check each item:
-            challenge.html:
-            - [ ] Starts with <p> (problem description), no <h1> tags
-            - [ ] Has <h2> sections: Implementation Requirements, Example(s), Constraints
-            - [ ] Examples use correct format (<pre> for 1D, LaTeX bmatrix for matrices — not mixed)
-            - [ ] Constraints has "Performance is measured with" bullet with exact values from generate_performance_test
-            challenge.py:
-            - [ ] Inherits ChallengeBase, __init__ calls super().__init__()
-            - [ ] reference_impl has assertions on shape, dtype, device
-            - [ ] 12-15 functional tests covering edges, powers-of-2, non-powers, realistic sizes, zeros, negatives
-            - [ ] Performance test fits 5x in 16GB VRAM
-            Starters:
-            - [ ] All 6 files present (.cu, .pytorch.py, .triton.py, .jax.py, .cute.py, .mojo)
-            - [ ] Exactly 1 parameter description comment per file, no other comments
-            - [ ] CUDA/Mojo: "device pointers", Python: "tensors on the GPU" (see CLAUDE.md "Parameter Description Comment")
+            Read CLAUDE.md first — the "Checklist" section is the source of truth for what to verify. Check every item against the changed files.
 
-            STEP 2 — Content review:
-            - Is the problem description clear and unambiguous?
-            - Is the difficulty rating appropriate?
-            - Are the test cases comprehensive (zeros, negatives, mixed values)?
-            - Are the examples correct and matching the reference implementation?
-            - Check the "Common Mistakes" section in CLAUDE.md — does this PR have any of them?
+            Then do a content review: is the problem clear, difficulty appropriate, test cases comprehensive, examples correct?
 
-            STEP 3 — Live validation:
-            Write a correct CUDA solution and run:
-            ```
-            python scripts/run_challenge.py <challenge_dir> --language cuda --action run
-            ```
-            Verify all functional tests pass and the performance test completes.
-            Do NOT commit the solution file.
+            Finally, write a correct CUDA solution and validate with `run_challenge.py` (see CLAUDE.md "Testing with run_challenge.py"). Do NOT commit the solution file.
 
             Be constructive and specific in feedback. Reference exact file paths and line numbers.
