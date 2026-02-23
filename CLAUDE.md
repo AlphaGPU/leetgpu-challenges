@@ -17,7 +17,6 @@ challenges/<difficulty>/<number>_<name>/
 
 - **Naming**: `<number>_<challenge_name>` — sequential integer, lowercase with underscores
 - **Linting & contribution process**: See [CONTRIBUTING.md](CONTRIBUTING.md)
-- **Starter code generation**: `python scripts/generate_starter_code.py path/to/challenge_dir`
 
 ## Difficulty Levels
 
@@ -186,7 +185,7 @@ Verify every item before submitting. This is the single source of truth — work
 - [ ] `__init__` calls `super().__init__()` with name, atol, rtol, num_gpus, access_tier
 - [ ] `reference_impl` has assertions on shape, dtype, and device
 - [ ] All 6 methods present: `__init__`, `reference_impl`, `get_solve_signature`, `generate_example_test`, `generate_functional_test`, `generate_performance_test`
-- [ ] `generate_functional_test` returns 12-15 cases: edge cases (1-4 elements), powers-of-2, non-powers-of-2, realistic sizes, zeros, negatives
+- [ ] `generate_functional_test` returns 7-10 cases: edge cases (1-4 elements), powers-of-2, non-powers-of-2, realistic sizes, zeros, negatives
 - [ ] `generate_performance_test` fits 5x in 16GB VRAM (Tesla T4)
 
 ### Starter files
