@@ -1,0 +1,33 @@
+<p>
+  Given a 1D array <code>A</code> of <code>N</code> 32-bit floating point numbers, compact all
+  positive elements (<code>A[i] &gt; 0</code>) to the front of the output array <code>out</code>,
+  preserving their original relative order. Fill any remaining positions with <code>0.0</code>.
+  Stream compaction is a fundamental GPU primitive used throughout rendering, sparse computation,
+  and collision detection.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native GPU features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>
+    The first <em>k</em> positions of <code>out</code> must contain the <em>k</em> elements of
+    <code>A</code> where <code>A[i] &gt; 0</code>, in their original order
+  </li>
+  <li>Positions <em>k</em> through <em>N&minus;1</em> of <code>out</code> must be <code>0.0</code></li>
+  <li>Elements where <code>A[i] = 0.0</code> are <strong>not</strong> selected</li>
+</ul>
+
+<h2>Example</h2>
+<pre>
+Input:  A = [1.0, -2.0, 3.0, 0.0, -1.0, 4.0]
+Output: out = [1.0, 3.0, 4.0, 0.0, 0.0, 0.0]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 100,000,000</li>
+  <li>&minus;1000.0 &le; <code>A[i]</code> &le; 1000.0</li>
+  <li><code>out</code> is pre-allocated with <code>N</code> elements, initialised to <code>0.0</code></li>
+  <li>Performance is measured with <code>N</code> = 50,000,000</li>
+</ul>
