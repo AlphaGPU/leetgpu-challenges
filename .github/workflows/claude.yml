@@ -106,9 +106,11 @@ jobs:
             - You can commit and push directly to the PR branch as normal
 
             IMPORTANT - Challenge Validation:
-            When creating or reviewing PRs that add or modify challenges, you MUST validate them using run_challenge.py:
-            1. Write a correct CUDA solution in the challenge's solution/solution.cu directory
-            2. Run: python scripts/run_challenge.py <challenge_dir> --language cuda --action run
-            3. Verify all functional tests pass and the performance test completes
-            4. Do NOT commit the solution file to the PR
-            5. You may only run this script 5 times per session — verify your solution logic before submitting
+            When creating or reviewing PRs that add or modify challenges, you MUST validate them:
+            1. Read CLAUDE.md and check the "Common Mistakes" section — verify the challenge has none of them
+            2. Verify challenge.html, challenge.py, and all 6 starters against the checklist in CLAUDE.md
+            3. Write a correct CUDA solution in the challenge's solution/solution.cu directory
+            4. Run: python scripts/run_challenge.py <challenge_dir> --language cuda --action run
+            5. Verify all functional tests pass and the performance test completes
+            6. Do NOT commit the solution file to the PR
+            7. You may only run run_challenge.py 5 times per session — verify your solution logic before submitting

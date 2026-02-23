@@ -1,4 +1,4 @@
-name: Daily Challenge Creation
+name: Challenge Creation Cron
 
 on:
   schedule:
@@ -60,3 +60,22 @@ jobs:
             - Do NOT duplicate existing challenges.
             - Prefer medium or hard difficulty. Only create easy if the topic involves a non-trivial GPU concept (not just a map operation).
             - The challenge should require the solver to think about memory access patterns, synchronization, work distribution, or algorithm design — not just write a one-line kernel.
+
+            STRUCTURAL REQUIREMENTS — verify each item before opening the PR:
+            1. challenge.html starts with <p>, uses <h2> for sections (never <h1>), has Implementation Requirements / Example(s) / Constraints sections
+            2. Constraints section includes "Performance is measured with <code>param</code> = value" bullet
+            3. Examples use <pre> for 1D data, LaTeX \begin{bmatrix} for matrices — never mix formats
+            4. challenge.py inherits ChallengeBase, has all 6 methods (__init__, reference_impl, get_solve_signature, generate_example_test, generate_functional_test, generate_performance_test)
+            5. __init__ calls super().__init__() with name, atol, rtol, num_gpus, access_tier
+            6. reference_impl has assertions on shape, dtype (torch.float32), and device (cuda)
+            7. generate_functional_test returns 12-15 test cases covering: edge cases (1-4 elements), powers-of-2, non-powers-of-2, realistic sizes, zeros, negatives
+            8. generate_performance_test fits 5x in 16GB VRAM
+            9. All 6 starter files present: .cu, .pytorch.py, .triton.py, .jax.py, .cute.py, .mojo
+            10. Each starter has exactly 1 parameter description comment, no other comments
+            11. CUDA/Mojo starters: "// <params> are device pointers" or "# <params> are device pointers" (no parenthetical)
+            12. Python starters: "# <params> are tensors on the GPU"; JAX also has "# return output tensor directly"
+
+            VALIDATION — run before opening the PR:
+            ```
+            pre-commit run --all-files
+            ```

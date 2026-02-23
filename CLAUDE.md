@@ -52,7 +52,7 @@ super().__init__(
 
 #### `reference_impl(self, ...)`
 - Same parameters as user's `solve` function
-- Must include assertions on shape, dtype (`torch.float32`), and device (`cuda`)
+- Must include assertions on shape, dtype, and device (`cuda`)
 - Use PyTorch operations (not Python loops) for performance
 
 #### `get_solve_signature(self) -> Dict[str, tuple]`
@@ -74,7 +74,7 @@ Maps parameter names to `(ctype, direction)` tuples.
 One small, human-readable test case for display. Use literal tensor values.
 
 #### `generate_functional_test(self) -> List[Dict[str, Any]]`
-12-15 test cases with this coverage:
+7-10 test cases with this coverage:
 
 | Category | Sizes | Count |
 |----------|-------|-------|
@@ -100,11 +100,14 @@ HTML fragment with four required sections:
 
 1. **Problem description** — 2-3 sentences: what the function does, data types, constraints
 2. **Implementation requirements** — Signature unchanged, no external libs, output location
-3. **Examples** — 1-3 examples in `<pre>` blocks with Input/Output
+3. **Examples** — 1-3 examples with Input/Output, format depends on data shape:
+   - 1D data (vectors, sequences): use `<pre>` blocks
+   - 2D/3D data (matrices, grids): use LaTeX `\begin{bmatrix}` inside `<p>` blocks
+   - Be consistent within a single challenge
 4. **Constraints** — Size bounds, data types, value ranges, **and performance test size**
 
 **Formatting rules:**
-- `<code>` for variables/functions, `<pre>` for examples
+- `<code>` for variables/functions; `<pre>` for 1D examples, LaTeX `\begin{bmatrix}` for matrices
 - `&le;`, `&ge;`, `&times;` for math symbols
 - **Performance test size bullet**: Must include a bullet documenting the exact parameters used in `generate_performance_test()`, formatted as:
   - `<li>Performance is measured with <code>param</code> = value</li>`
@@ -130,17 +133,29 @@ Must compile/run without errors but not solve the problem. No comments except th
 - CuTe: `challenges/easy/1_vector_add/starter/starter.cute.py`
 - Mojo: `challenges/easy/1_vector_add/starter/starter.mojo`
 
+### Parameter Description Comment
+
+Each starter file must have exactly one comment describing the parameters, placed directly before the `solve` function. Use these exact templates:
+
+| Framework | Comment template |
+|-----------|-----------------|
+| CUDA | `// <params> are device pointers` |
+| Mojo | `# <params> are device pointers` |
+| PyTorch, Triton, CuTe | `# <params> are tensors on the GPU` |
+| JAX | `# <params> are tensors on GPU` (+ `# return output tensor directly` inside body) |
+
+**Rules:**
+- No parenthetical explanations (e.g., do NOT add `(i.e. pointers to memory on the GPU)`)
+- No other comments anywhere in the starter file
+- List only input/output tensor parameter names, not size parameters
+
 ## Creation Workflow
 
 1. Create directory: `mkdir -p challenges/<difficulty>/<number>_<name>/starter`
-2. Write `challenge.py` — inherit ChallengeBase, implement all 5 methods
+2. Write `challenge.py` — inherit ChallengeBase, implement all 6 methods
 3. Write `challenge.html` — all 4 sections
 4. Write starter code for all 6 frameworks (or use `scripts/generate_starter_code.py`)
-5. Validate:
-   ```bash
-   python -c "from challenges.<difficulty>.<number>_<name>.challenge import Challenge; c = Challenge(); print('Tests:', len(c.generate_functional_test()))"
-   ```
-6. Lint: `pre-commit run --all-files`
+5. Lint: `pre-commit run --all-files`
 
 ## Testing with `run_challenge.py`
 
@@ -164,3 +179,27 @@ python scripts/run_challenge.py path/to/challenge_dir --language cuda --action r
 - [ ] Functional tests: 12-15 cases covering edges, powers-of-2, non-powers, special values
 - [ ] Performance test: appropriately sized for 16GB VRAM
 - [ ] Linting passes: black, isort, flake8 (Python); clang-format (CUDA)
+
+## Common Mistakes
+
+Mistakes frequently made by automated challenge creation. Check for these before submitting.
+
+### challenge.html
+- **Missing `<h2>` sections** — must have Implementation Requirements, Example(s), and Constraints as `<h2>` headings (not `<h1>` or `<h3>`)
+- **Missing performance bullet** — Constraints section must include `Performance is measured with <code>param</code> = value`
+- **Wrong example format** — use `<pre>` for 1D data, LaTeX `\begin{bmatrix}` for matrices. Do not mix formats within one challenge
+- **Using `<h1>` tags** — challenge.html is a fragment, never use `<h1>`
+- **Not starting with `<p>`** — the first element must be the problem description in a `<p>` tag
+
+### challenge.py
+- **Missing assertions in `reference_impl`** — must assert shape, dtype, and device
+- **Too few functional tests** — need 12-15 cases covering edge cases, powers-of-2, non-powers-of-2, and realistic sizes
+- **Missing `super().__init__()` call** — `__init__` must call `super().__init__()` with name, tolerances, etc.
+- **Performance test too large** — must fit 5x in 16GB VRAM (Tesla T4)
+
+### Starter files
+- **Extra comments** — only one parameter description comment per file, no other comments
+- **Wrong comment format** — CUDA/Mojo use "device pointers", Python frameworks use "tensors on the GPU"
+- **Adding parenthetical** — do NOT write `(i.e. pointers to memory on the GPU)` after "device pointers"
+- **Missing starter files** — all 6 frameworks required: `.cu`, `.pytorch.py`, `.triton.py`, `.jax.py`, `.cute.py`, `.mojo`
+- **Solving the problem** — starters must compile/run but NOT produce correct output
