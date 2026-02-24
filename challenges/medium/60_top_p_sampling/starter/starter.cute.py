@@ -6,8 +6,7 @@ import cutlass.cute as cute
 def solve(
     logits: cute.Tensor,
     p: cute.Tensor,
-    seed: cute.Tensor,
-    sampled_token: cute.Tensor,
+    top_p_probs: cute.Tensor,
     vocab_size: cute.Int32,
 ):
     pass

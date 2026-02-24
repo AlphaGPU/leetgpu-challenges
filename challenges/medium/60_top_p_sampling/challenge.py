@@ -15,19 +15,17 @@ class Challenge(ChallengeBase):
         self,
         logits: torch.Tensor,
         p: torch.Tensor,
-        seed: torch.Tensor,
-        sampled_token: torch.Tensor,
+        top_p_probs: torch.Tensor,
         vocab_size: int,
     ):
         assert logits.shape == (vocab_size,)
         assert p.shape == (1,)
-        assert seed.shape == (1,)
-        assert sampled_token.shape == (1,)
+        assert top_p_probs.shape == (vocab_size,)
         assert logits.dtype == torch.float32
         assert p.dtype == torch.float32
+        assert top_p_probs.dtype == torch.float32
 
         p_value = p.item()
-        seed_value = seed.item()
 
         max_logit = torch.max(logits)
         exp_logits = torch.exp(logits - max_logit)
@@ -41,33 +39,28 @@ class Challenge(ChallengeBase):
 
         nucleus_probs = sorted_probs[:cutoff_idx]
         nucleus_indices = sorted_indices[:cutoff_idx]
-
         nucleus_probs = nucleus_probs / torch.sum(nucleus_probs)
 
-        torch.manual_seed(seed_value)
-        sampled_idx = torch.multinomial(nucleus_probs, 1).item()
-        sampled_token[0] = nucleus_indices[sampled_idx]
+        top_p_probs.zero_()
+        top_p_probs[nucleus_indices] = nucleus_probs
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "logits": (ctypes.POINTER(ctypes.c_float), "in"),
             "p": (ctypes.POINTER(ctypes.c_float), "in"),
-            "seed": (ctypes.POINTER(ctypes.c_int32), "in"),
-            "sampled_token": (ctypes.POINTER(ctypes.c_int32), "out"),
+            "top_p_probs": (ctypes.POINTER(ctypes.c_float), "out"),
             "vocab_size": (ctypes.c_int, "in"),
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
         logits = torch.tensor([1.0, 2.0, 3.0, 0.5], device="cuda", dtype=torch.float32)
         p = torch.tensor([0.9], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([42], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        top_p_probs = torch.zeros(4, device="cuda", dtype=torch.float32)
 
         return {
             "logits": logits,
             "p": p,
-            "seed": seed,
-            "sampled_token": sampled_token,
+            "top_p_probs": top_p_probs,
             "vocab_size": 4,
         }
 
@@ -76,42 +69,36 @@ class Challenge(ChallengeBase):
 
         logits = torch.tensor([1.0, 2.0, 3.0], device="cuda", dtype=torch.float32)
         p = torch.tensor([0.95], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([123], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        top_p_probs = torch.zeros(3, device="cuda", dtype=torch.float32)
         tests.append(
             {
                 "logits": logits,
                 "p": p,
-                "seed": seed,
-                "sampled_token": sampled_token,
+                "top_p_probs": top_p_probs,
                 "vocab_size": 3,
             }
         )
 
         logits = torch.randn(10, device="cuda", dtype=torch.float32)
         p = torch.tensor([0.9], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([456], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        top_p_probs = torch.zeros(10, device="cuda", dtype=torch.float32)
         tests.append(
             {
                 "logits": logits,
                 "p": p,
-                "seed": seed,
-                "sampled_token": sampled_token,
+                "top_p_probs": top_p_probs,
                 "vocab_size": 10,
             }
         )
 
         logits = torch.randn(100, device="cuda", dtype=torch.float32) * 5.0
         p = torch.tensor([0.85], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([789], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        top_p_probs = torch.zeros(100, device="cuda", dtype=torch.float32)
         tests.append(
             {
                 "logits": logits,
                 "p": p,
-                "seed": seed,
-                "sampled_token": sampled_token,
+                "top_p_probs": top_p_probs,
                 "vocab_size": 100,
             }
         )
@@ -119,70 +106,60 @@ class Challenge(ChallengeBase):
         logits = torch.zeros(50, device="cuda", dtype=torch.float32)
         logits[0] = 10.0
         p = torch.tensor([0.5], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([111], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        top_p_probs = torch.zeros(50, device="cuda", dtype=torch.float32)
         tests.append(
             {
                 "logits": logits,
                 "p": p,
-                "seed": seed,
-                "sampled_token": sampled_token,
+                "top_p_probs": top_p_probs,
                 "vocab_size": 50,
             }
         )
 
         logits = torch.randn(500, device="cuda", dtype=torch.float32) * 3.0
         p = torch.tensor([0.92], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([222], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        top_p_probs = torch.zeros(500, device="cuda", dtype=torch.float32)
         tests.append(
             {
                 "logits": logits,
                 "p": p,
-                "seed": seed,
-                "sampled_token": sampled_token,
+                "top_p_probs": top_p_probs,
                 "vocab_size": 500,
             }
         )
 
         logits = torch.linspace(-5, 5, 200, device="cuda", dtype=torch.float32)
         p = torch.tensor([0.8], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([333], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        top_p_probs = torch.zeros(200, device="cuda", dtype=torch.float32)
         tests.append(
             {
                 "logits": logits,
                 "p": p,
-                "seed": seed,
-                "sampled_token": sampled_token,
+                "top_p_probs": top_p_probs,
                 "vocab_size": 200,
             }
         )
 
         logits = torch.randn(1000, device="cuda", dtype=torch.float32) * 2.0
         p = torch.tensor([0.95], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([444], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        top_p_probs = torch.zeros(1000, device="cuda", dtype=torch.float32)
         tests.append(
             {
                 "logits": logits,
                 "p": p,
-                "seed": seed,
-                "sampled_token": sampled_token,
+                "top_p_probs": top_p_probs,
                 "vocab_size": 1000,
             }
         )
 
         logits = torch.randn(5000, device="cuda", dtype=torch.float32)
         p = torch.tensor([0.9], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([555], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        top_p_probs = torch.zeros(5000, device="cuda", dtype=torch.float32)
         tests.append(
             {
                 "logits": logits,
                 "p": p,
-                "seed": seed,
-                "sampled_token": sampled_token,
+                "top_p_probs": top_p_probs,
                 "vocab_size": 5000,
             }
         )
@@ -193,13 +170,11 @@ class Challenge(ChallengeBase):
         vocab_size = 50000
         logits = torch.randn(vocab_size, device="cuda", dtype=torch.float32) * 3.0
         p = torch.tensor([0.9], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([999], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        top_p_probs = torch.zeros(vocab_size, device="cuda", dtype=torch.float32)
 
         return {
             "logits": logits,
             "p": p,
-            "seed": seed,
-            "sampled_token": sampled_token,
+            "top_p_probs": top_p_probs,
             "vocab_size": vocab_size,
         }

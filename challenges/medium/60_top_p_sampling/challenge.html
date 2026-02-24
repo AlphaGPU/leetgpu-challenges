@@ -1,9 +1,9 @@
 <p>
-  Write a GPU program that implements top-p (nucleus) sampling for LLM inference.
+  Write a GPU program that computes the top-p (nucleus) probability distribution for LLM inference.
 </p>
 
 <p>
-  Top-p sampling is a text generation technique where you sample from the smallest set of tokens whose cumulative probability exceeds threshold p.
+  Top-p sampling is a text generation technique where you identify the smallest set of tokens whose cumulative probability exceeds threshold p, then renormalize their probabilities.
   This balances randomness and quality better than pure top-k or greedy sampling.
 </p>
 
@@ -12,9 +12,9 @@
   <ol>
     <li>Convert logits to probabilities using softmax</li>
     <li>Sort tokens by probability (descending)</li>
-    <li>Find the smallest set where cumulative probability ≥ p (the "nucleus")</li>
+    <li>Find the smallest set where cumulative probability &ge; p (the "nucleus")</li>
     <li>Renormalize the nucleus probabilities to sum to 1</li>
-    <li>Sample a token from the nucleus using the provided random seed</li>
+    <li>Output <code>top_p_probs[i]</code> = renormalized probability if token <code>i</code> is in the nucleus, <code>0</code> otherwise</li>
   </ol>
 </p>
 
@@ -30,11 +30,10 @@
 Input:
   logits = [1.0, 2.0, 3.0, 0.5]
   p = 0.9
-  seed = 42
 
 Output:
-  sampled_token = 2 or 1
-  (tokens with highest probabilities, sampled randomly)
+  top_p_probs = [0.0, 0.2689, 0.7311, 0.0]
+  (tokens 1 and 2 form the nucleus; their probabilities are renormalized to sum to 1)
 </pre>
 
 <h2>Example 2:</h2>
@@ -42,11 +41,10 @@ Output:
 Input:
   logits = [10.0, 1.0, 1.0]
   p = 0.5
-  seed = 123
 
 Output:
-  sampled_token = 0
-  (single token dominates the probability mass)
+  top_p_probs = [1.0, 0.0, 0.0]
+  (token 0 alone exceeds p; renormalized probability is 1.0)
 </pre>
 
 <h2>Constraints</h2>
@@ -54,7 +52,7 @@ Output:
   <li>3 &le; <code>vocab_size</code> &le; 50,000</li>
   <li>-100.0 &le; <code>logits[i]</code> &le; 100.0</li>
   <li>0.0 &lt; <code>p</code> &le; 1.0</li>
-  <li>0 &le; <code>sampled_token</code> &lt; vocab_size</li>
+  <li><code>top_p_probs</code> values sum to 1.0 for tokens in the nucleus, 0.0 elsewhere</li>
 
   <li>Performance is measured with <code>vocab_size</code> = 50,000</li>
 </ul>
