@@ -1,0 +1,46 @@
+<p>
+  Implement a single GPT-2 transformer decoder block. Given an input tensor
+  \(x\) of shape <code>(seq_len, d_model)</code> and pre-trained weight matrices,
+  compute the output of one transformer block using pre-norm architecture with
+  multi-head self-attention and a feed-forward network with GELU activation.
+</p>
+
+<p>The computation follows this sequence:</p>
+<ol>
+  <li>\(x_{\text{norm}} = \text{LayerNorm}(x, \gamma_1, \beta_1)\)</li>
+  <li>\(QKV = x_{\text{norm}} \cdot W_{qkv} + b_{qkv}\), split into \(Q, K, V\) each of shape <code>(seq_len, d_model)</code></li>
+  <li>Reshape \(Q, K, V\) into \(h\) heads of dimension \(d_k = d_{\text{model}} / h\)</li>
+  <li>Per-head attention: \(\text{head}_i = \text{softmax}\!\left(\frac{Q_i K_i^T}{\sqrt{d_k}}\right) V_i\)</li>
+  <li>Concatenate heads and project: \(\text{attn} = \text{Concat}(\text{head}_1, \ldots, \text{head}_h) \cdot W_{\text{proj}} + b_{\text{proj}}\)</li>
+  <li>\(\text{hidden} = x + \text{attn}\) (residual connection)</li>
+  <li>\(h_{\text{norm}} = \text{LayerNorm}(\text{hidden}, \gamma_2, \beta_2)\)</li>
+  <li>FFN: \(h_{\text{norm}} \cdot W_{fc} + b_{fc} \xrightarrow{\text{GELU}} \cdot\; W_{\text{proj2}} + b_{\text{proj2}}\)</li>
+  <li>\(\text{output} = \text{hidden} + \text{FFN output}\) (residual connection)</li>
+</ol>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>output</code> tensor</li>
+  <li>LayerNorm uses \(\epsilon = 10^{-5}\)</li>
+  <li>Use the GELU tanh approximation: \(\text{GELU}(x) = 0.5\,x\!\left(1 + \tanh\!\left(\sqrt{\tfrac{2}{\pi}}\left(x + 0.044715\,x^3\right)\right)\right)\)</li>
+  <li>\(W_{qkv}\) is a combined projection of shape <code>(d_model, 3 &times; d_model)</code> where the output splits as \([Q \mid K \mid V]\)</li>
+</ul>
+
+<h2>Example:</h2>
+<p>
+With <code>seq_len</code> = 4, input \(x\) has shape <code>(4, 768)</code>.
+The block receives all weight matrices (LayerNorm parameters, QKV projection,
+attention output projection, and FFN weights/biases) and produces an output
+of the same shape <code>(4, 768)</code>. Residual connections ensure the output
+preserves the input signal while adding the attention and FFN contributions.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li><code>d_model</code> = 768, <code>n_heads</code> = 12, <code>ffn_dim</code> = 3,072 (GPT-2 124M architecture)</li>
+  <li>1 &le; <code>seq_len</code> &le; 4,096</li>
+  <li>All tensors use 32-bit floating point</li>
+  <li>Performance is measured with <code>seq_len</code> = 1,024</li>
+</ul>
