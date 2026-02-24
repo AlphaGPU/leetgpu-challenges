@@ -1,0 +1,64 @@
+<p>
+  Implement a bilateral filter on a 2D image of 32-bit floating point values.
+  The bilateral filter is an edge-preserving smoothing filter: for each pixel it computes a
+  weighted average of its neighbors, where the weight combines a spatial Gaussian (favoring
+  nearby pixels) and a range Gaussian (favoring pixels with similar intensity), so that sharp
+  edges are preserved while flat regions are smoothed.
+  The image is stored in row-major order and boundary pixels are handled by clamping to the
+  nearest valid index (border replication).
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>output</code></li>
+  <li>
+    For each output pixel at position \((i, j)\), compute:
+    \[
+      \text{output}[i,j] = \frac{\displaystyle\sum_{dy=-r}^{r}\sum_{dx=-r}^{r} w_s(dy,dx)\, w_r\bigl(\text{image}[i',j'] - \text{image}[i,j]\bigr)\, \text{image}[i',j']}
+                                 {\displaystyle\sum_{dy=-r}^{r}\sum_{dx=-r}^{r} w_s(dy,dx)\, w_r\bigl(\text{image}[i',j'] - \text{image}[i,j]\bigr)}
+    \]
+    where \(i' = \text{clamp}(i+dy, 0, H-1)\), \(j' = \text{clamp}(j+dx, 0, W-1)\),
+    \(w_s(dy,dx) = \exp\!\left(-\tfrac{dy^2+dx^2}{2\sigma_s^2}\right)\), and
+    \(w_r(\delta) = \exp\!\left(-\tfrac{\delta^2}{2\sigma_r^2}\right)\)
+  </li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input image (\(H=3, W=3\)), <code>spatial_sigma</code> = 1.0,
+  <code>range_sigma</code> = 0.5, <code>radius</code> = 1:
+  \[
+  \begin{bmatrix}
+  1.0 & 1.0 & 1.0 \\
+  1.0 & 0.0 & 1.0 \\
+  1.0 & 1.0 & 1.0
+  \end{bmatrix}
+  \]
+  Output:
+  \[
+  \begin{bmatrix}
+  0.9891 & 0.9812 & 0.9891 \\
+  0.9812 & 0.3453 & 0.9812 \\
+  0.9891 & 0.9812 & 0.9891
+  \end{bmatrix}
+  \]
+  The center pixel (value 0.0) is surrounded by neighbors all equal to 1.0. Because the
+  intensity difference of 1.0 is large relative to <code>range_sigma</code> = 0.5, the range
+  weights strongly suppress those neighbors, so the output at the center (0.3453) is far lower
+  than a plain Gaussian blur would produce (&approx; 0.75). The outer pixels remain close to
+  1.0 because their neighbors are mostly equal to themselves.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>H</code>, <code>W</code> &le; 8192</li>
+  <li>1 &le; <code>radius</code> &le; 16</li>
+  <li>Image values are 32-bit floats (arbitrary range)</li>
+  <li>0.1 &le; <code>spatial_sigma</code>, <code>range_sigma</code> &le; 10.0</li>
+  <li>
+    Performance is measured with <code>H</code> = 2,048, <code>W</code> = 2,048,
+    <code>radius</code> = 5, <code>spatial_sigma</code> = 3.0, <code>range_sigma</code> = 0.1
+  </li>
+</ul>
