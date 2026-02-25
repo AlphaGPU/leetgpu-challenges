@@ -125,36 +125,93 @@ x' &= x + \text{MHA}\!\left(\text{LN}_1(x)\right) \\[4pt]
   <li>The <code>solve</code> function signature must remain unchanged</li>
   <li>The final result must be stored in the <code>output</code> tensor</li>
   <li>LayerNorm uses \(\epsilon = 10^{-5}\)</li>
-  <li>Use the GELU tanh approximation: \(\text{GELU}(x) = 0.5\,x\!\left(1 + \tanh\!\left(\sqrt{\tfrac{2}{\pi}}\left(x + 0.044715\,x^3\right)\right)\right)\)</li>
+  <li>Use the <a href="https://docs.pytorch.org/docs/stable/generated/torch.nn.GELU.html" target="_blank">GELU tanh approximation</a>: \(\text{GELU}(x) = 0.5\,x\!\left(1 + \tanh\!\left(\sqrt{\tfrac{2}{\pi}}\left(x + 0.044715\,x^3\right)\right)\right)\)</li>
 </ul>
 
 <h2>Weight Layout</h2>
 <p>All block parameters are packed into a single contiguous <code>weights</code> buffer
 (7,087,872 floats) in the following order. All 2D matrices are stored in row-major order.</p>
 
-<table>
-  <tr><th>Parameter</th><th>Shape</th><th>Size</th><th>Offset</th></tr>
-  <tr><td>\(\gamma_1\) (LN1 weight)</td><td>(768,)</td><td>768</td><td>0</td></tr>
-  <tr><td>\(\beta_1\) (LN1 bias)</td><td>(768,)</td><td>768</td><td>768</td></tr>
-  <tr><td>\(W_{qkv}\)</td><td>(768, 2304)</td><td>1,769,472</td><td>1,536</td></tr>
-  <tr><td>\(b_{qkv}\)</td><td>(2304,)</td><td>2,304</td><td>1,771,008</td></tr>
-  <tr><td>\(W_{\text{attn}}\)</td><td>(768, 768)</td><td>589,824</td><td>1,773,312</td></tr>
-  <tr><td>\(b_{\text{attn}}\)</td><td>(768,)</td><td>768</td><td>2,363,136</td></tr>
-  <tr><td>\(\gamma_2\) (LN2 weight)</td><td>(768,)</td><td>768</td><td>2,363,904</td></tr>
-  <tr><td>\(\beta_2\) (LN2 bias)</td><td>(768,)</td><td>768</td><td>2,364,672</td></tr>
-  <tr><td>\(W_{fc}\)</td><td>(768, 3072)</td><td>2,359,296</td><td>2,365,440</td></tr>
-  <tr><td>\(b_{fc}\)</td><td>(3072,)</td><td>3,072</td><td>4,724,736</td></tr>
-  <tr><td>\(W_{\text{proj}}\)</td><td>(3072, 768)</td><td>2,359,296</td><td>4,727,808</td></tr>
-  <tr><td>\(b_{\text{proj}}\)</td><td>(768,)</td><td>768</td><td>7,087,104</td></tr>
+<table style="border-collapse:separate; border-spacing:16px 8px;">
+  <tr>
+    <th style="text-align:left;">Parameter</th>
+    <th style="text-align:left;">Shape</th>
+    <th style="text-align:right;">Size</th>
+    <th style="text-align:right;">Offset</th>
+  </tr>
+  <tr>
+    <td>\(\gamma_1\) (LN1 weight)</td>
+    <td>(768,)</td>
+    <td style="text-align:right;">768</td>
+    <td style="text-align:right;">0</td>
+  </tr>
+  <tr>
+    <td>\(\beta_1\) (LN1 bias)</td>
+    <td>(768,)</td>
+    <td style="text-align:right;">768</td>
+    <td style="text-align:right;">768</td>
+  </tr>
+  <tr>
+    <td>\(W_{qkv}\)</td>
+    <td>(768, 2304)</td>
+    <td style="text-align:right;">1,769,472</td>
+    <td style="text-align:right;">1,536</td>
+  </tr>
+  <tr>
+    <td>\(b_{qkv}\)</td>
+    <td>(2304,)</td>
+    <td style="text-align:right;">2,304</td>
+    <td style="text-align:right;">1,771,008</td>
+  </tr>
+  <tr>
+    <td>\(W_{\text{attn}}\)</td>
+    <td>(768, 768)</td>
+    <td style="text-align:right;">589,824</td>
+    <td style="text-align:right;">1,773,312</td>
+  </tr>
+  <tr>
+    <td>\(b_{\text{attn}}\)</td>
+    <td>(768,)</td>
+    <td style="text-align:right;">768</td>
+    <td style="text-align:right;">2,363,136</td>
+  </tr>
+  <tr>
+    <td>\(\gamma_2\) (LN2 weight)</td>
+    <td>(768,)</td>
+    <td style="text-align:right;">768</td>
+    <td style="text-align:right;">2,363,904</td>
+  </tr>
+  <tr>
+    <td>\(\beta_2\) (LN2 bias)</td>
+    <td>(768,)</td>
+    <td style="text-align:right;">768</td>
+    <td style="text-align:right;">2,364,672</td>
+  </tr>
+  <tr>
+    <td>\(W_{fc}\)</td>
+    <td>(768, 3072)</td>
+    <td style="text-align:right;">2,359,296</td>
+    <td style="text-align:right;">2,365,440</td>
+  </tr>
+  <tr>
+    <td>\(b_{fc}\)</td>
+    <td>(3072,)</td>
+    <td style="text-align:right;">3,072</td>
+    <td style="text-align:right;">4,724,736</td>
+  </tr>
+  <tr>
+    <td>\(W_{\text{proj}}\)</td>
+    <td>(3072, 768)</td>
+    <td style="text-align:right;">2,359,296</td>
+    <td style="text-align:right;">4,727,808</td>
+  </tr>
+  <tr>
+    <td>\(b_{\text{proj}}\)</td>
+    <td>(768,)</td>
+    <td style="text-align:right;">768</td>
+    <td style="text-align:right;">7,087,104</td>
+  </tr>
 </table>
-
-<h2>Example:</h2>
-<p>
-With <code>seq_len</code> = 4, input \(x\) has shape <code>(4, 768)</code> and the
-<code>weights</code> buffer contains 7,087,872 floats. The output has the same shape
-<code>(4, 768)</code>. Residual connections ensure the output preserves the input
-signal while adding the attention and FFN contributions.
-</p>
 
 <h2>Constraints</h2>
 <ul>
