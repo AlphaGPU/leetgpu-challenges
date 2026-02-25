@@ -108,11 +108,8 @@ class Challenge(ChallengeBase):
             "seq_len": (ctypes.c_int, "in"),
         }
 
-    def _make_test_case(self, seq_len):
-        dtype = torch.float32
-        device = "cuda"
+    def _make_weights(self, device, dtype):
         scale = 0.02
-
         ln1_w = torch.empty(D, device=device, dtype=dtype).uniform_(0.8, 1.2)
         ln1_b = torch.empty(D, device=device, dtype=dtype).uniform_(-0.1, 0.1)
         W_qkv = torch.empty(D, 3 * D, device=device, dtype=dtype).normal_(0, scale)
@@ -125,8 +122,7 @@ class Challenge(ChallengeBase):
         b_fc = torch.zeros(FFN, device=device, dtype=dtype)
         W_proj = torch.empty(FFN, D, device=device, dtype=dtype).normal_(0, scale)
         b_proj = torch.zeros(D, device=device, dtype=dtype)
-
-        weights = torch.cat(
+        return torch.cat(
             [
                 ln1_w,
                 ln1_b,
@@ -143,10 +139,16 @@ class Challenge(ChallengeBase):
             ]
         )
 
+    def _make_test_case(self, seq_len, zero_x=False):
+        dtype = torch.float32
+        device = "cuda"
+        weights = self._make_weights(device, dtype)
+        if zero_x:
+            x = torch.zeros(seq_len, D, device=device, dtype=dtype)
+        else:
+            x = torch.empty(seq_len, D, device=device, dtype=dtype).uniform_(-1.0, 1.0)
         return {
-            "x": torch.empty(
-                seq_len, D, device=device, dtype=dtype
-            ).uniform_(-1.0, 1.0),
+            "x": x,
             "output": torch.empty(seq_len, D, device=device, dtype=dtype),
             "weights": weights,
             "seq_len": seq_len,
@@ -159,9 +161,10 @@ class Challenge(ChallengeBase):
         tests = []
         # single token
         tests.append(self._make_test_case(1))
+        # zero input
+        tests.append(self._make_test_case(4, zero_x=True))
         # small edge cases
         tests.append(self._make_test_case(2))
-        tests.append(self._make_test_case(3))
         tests.append(self._make_test_case(4))
         # power-of-2
         tests.append(self._make_test_case(16))
