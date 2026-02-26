@@ -1,0 +1,65 @@
+<p>
+  Implement the forward pass of layer normalization for a 2D input tensor. Given an input tensor of shape [N, C] where N is the batch size and C is the number of features, normalize each sample independently across its C features, then apply learnable scale (<code>weight</code>) and shift (<code>bias</code>) parameters. Layer normalization is a core building block of transformer architectures.
+</p>
+
+<p>
+  For each sample \(i\), layer normalization computes:
+  \[
+  \begin{align}
+  \mu_i &= \frac{1}{C} \sum_{j=0}^{C-1} x_{i,j} \\
+  \sigma_i^2 &= \frac{1}{C} \sum_{j=0}^{C-1} (x_{i,j} - \mu_i)^2 \\
+  y_{i,j} &= \text{weight}_j \cdot \frac{x_{i,j} - \mu_i}{\sqrt{\sigma_i^2 + \varepsilon}} + \text{bias}_j
+  \end{align}
+  \]
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>output</code> tensor</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+Input:<br>
+\(\text{input}\) (N=2, C=4):
+\[
+\begin{bmatrix}
+1.0 & 2.0 & 3.0 & 4.0 \\
+-1.0 & 0.0 & 0.0 & 1.0
+\end{bmatrix}
+\]
+\(\text{weight}\):
+\[
+\begin{bmatrix}
+1.0 & 1.0 & 1.0 & 1.0
+\end{bmatrix}
+\]
+\(\text{bias}\):
+\[
+\begin{bmatrix}
+0.0 & 0.0 & 0.0 & 0.0
+\end{bmatrix}
+\]
+\(\varepsilon\) = 1e-5<br><br>
+Output:<br>
+\(\text{output}\) (N=2, C=4):
+\[
+\begin{bmatrix}
+-1.3416 & -0.4472 & 0.4472 & 1.3416 \\
+-1.4142 & 0.0 & 0.0 & 1.4142
+\end{bmatrix}
+\]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 65,536</li>
+  <li>1 &le; <code>C</code> &le; 4,096</li>
+  <li><code>eps</code> = 1e-5</li>
+  <li>Input values are in the range [-100.0, 100.0]</li>
+  <li>Weight values are in the range [0.1, 10.0]</li>
+  <li>Bias values are in the range [-10.0, 10.0]</li>
+  <li>Performance is measured with <code>N</code> = 65,536, <code>C</code> = 512</li>
+</ul>
