@@ -49,7 +49,9 @@ class Challenge(ChallengeBase):
         assert output.shape == (seq_len, D)
         assert weights.shape == (TOTAL_WEIGHTS,)
         assert x.dtype == output.dtype == weights.dtype
-        assert x.device == output.device == weights.device
+        assert x.device.type == "cuda"
+        assert output.device.type == "cuda"
+        assert weights.device.type == "cuda"
 
         # unpack weights
         ln1_w = weights[O_LN1_W:O_LN1_B]
