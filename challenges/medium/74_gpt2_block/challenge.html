@@ -119,13 +119,6 @@ x' &= x + \text{MultiHeadAttn}\!\left(\text{LN}_1(x)\right) \\[4pt]
   <li><strong>Residual 2:</strong> \(\text{output} = x' + F\)</li>
 </ol>
 
-<h2>Example</h2>
-<p>With <code>seq_len</code> = 4, <code>x</code> has shape (4, 768) and <code>output</code> has shape (4, 768).
-The <code>weights</code> buffer packs all 7,087,872 block parameters in the order described in the
-Weight Layout section below. Applying the transformer block transforms each token embedding through
-layer norm, multi-head self-attention with residual, layer norm, feed-forward network with residual,
-producing a new (4, 768) embedding tensor.</p>
-
 <h2>Implementation Requirements</h2>
 <ul>
   <li>Use only native features (external libraries are not permitted)</li>
@@ -134,14 +127,6 @@ producing a new (4, 768) embedding tensor.</p>
   <li>LayerNorm uses \(\epsilon = 10^{-5}\)</li>
   <li>Use the <a href="https://docs.pytorch.org/docs/stable/generated/torch.nn.GELU.html" target="_blank">GELU tanh approximation</a>: \(\text{GELU}(x) = 0.5\,x\!\left(1 + \tanh\!\left(\sqrt{\tfrac{2}{\pi}}\left(x + 0.044715\,x^3\right)\right)\right)\)</li>
 </ul>
-
-<h2>Example</h2>
-<p>For <code>seq_len</code> = 4 with randomly initialized inputs:</p>
-<ul>
-  <li><strong>Input</strong> <code>x</code>: shape <code>(4, 768)</code>, values in \([-1, 1]\)</li>
-  <li><strong>Input</strong> <code>weights</code>: shape <code>(7,087,872,)</code>, packed weight buffer (see layout below)</li>
-</ul>
-<p><strong>Output</strong> <code>output</code>: shape <code>(4, 768)</code>, the transformer block activations after both residual connections.</p>
 
 <h2>Weight Layout</h2>
 <p>All block parameters are packed into a single contiguous <code>weights</code> buffer
