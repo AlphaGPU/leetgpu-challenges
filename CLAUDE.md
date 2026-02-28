@@ -108,6 +108,7 @@ HTML fragment with four required sections:
 **Formatting rules:**
 - `<code>` for variables/functions; `<pre>` for 1D examples, LaTeX `\begin{bmatrix}` for matrices
 - `&le;`, `&ge;`, `&times;` for math symbols
+- **LaTeX underscores**: Inside `\text{}`, use plain `_` (not `\_`). The backslash-escaped form renders literally as `\_` in MathJax/KaTeX.
 - **Performance test size bullet**: Must include a bullet documenting the exact parameters used in `generate_performance_test()`, formatted as:
   - `<li>Performance is measured with <code>param</code> = value</li>`
   - Use commas for numbers ≥ 1,000 (e.g., `25,000,000`)

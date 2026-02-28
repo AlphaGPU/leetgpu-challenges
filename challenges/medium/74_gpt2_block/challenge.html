@@ -85,12 +85,12 @@
 </svg>
 
 <p>The block uses GPT-2's <strong>pre-norm</strong> architecture: LayerNorm is applied
-<em>before</em> each sub-layer (attention and FFN), not after. At a high level:</p>
+<em>before</em> each sub-layer (attention and feed-forward), not after. At a high level:</p>
 
 \[
 \begin{aligned}
-x' &= x + \text{MHA}\!\left(\text{LN}_1(x)\right) \\[4pt]
-\text{output} &= x' + \text{FFN}\!\left(\text{LN}_2(x')\right)
+x' &= x + \text{MultiHeadAttn}\!\left(\text{LN}_1(x)\right) \\[4pt]
+\text{output} &= x' + \text{FeedForward}\!\left(\text{LN}_2(x')\right)
 \end{aligned}
 \]
 
@@ -101,8 +101,8 @@ x' &= x + \text{MHA}\!\left(\text{LN}_1(x)\right) \\[4pt]
 \text{LN}(z) &= \frac{z - \mu}{\sqrt{\sigma^2 + \epsilon}} \odot \gamma + \beta, \quad \mu = \frac{1}{d}\sum_i z_i, \quad \sigma^2 = \frac{1}{d}\sum_i (z_i - \mu)^2 \\[8pt]
 [Q \mid K \mid V] &= \text{LN}_1(x) \cdot W_{qkv} + b_{qkv} \\[4pt]
 \text{head}_i &= \text{softmax}\!\left(\frac{Q_i K_i^\top}{\sqrt{d_k}}\right) V_i, \quad d_k = 64 \\[4pt]
-\text{MHA}(z) &= \text{Concat}(\text{head}_1, \ldots, \text{head}_{12}) \cdot W_{\text{attn}} + b_{\text{attn}} \\[8pt]
-\text{FFN}(z) &= \text{GELU}\!\left(z \cdot W_{fc} + b_{fc}\right) \cdot W_{\text{proj}} + b_{\text{proj}}
+\text{MultiHeadAttn}(z) &= \text{Concat}(\text{head}_1, \ldots, \text{head}_{12}) \cdot W_{\text{attn}} + b_{\text{attn}} \\[8pt]
+\text{FeedForward}(z) &= \text{GELU}\!\left(z \cdot W_{fc} + b_{fc}\right) \cdot W_{\text{proj}} + b_{\text{proj}}
 \end{aligned}
 \]
 
@@ -111,12 +111,12 @@ x' &= x + \text{MHA}\!\left(\text{LN}_1(x)\right) \\[4pt]
 <ol>
   <li><strong>Layer Norm 1:</strong> \(x_{\text{norm}} = \text{LN}_1(x)\) with parameters \(\gamma_1, \beta_1\)</li>
   <li><strong>QKV Projection:</strong> \(QKV = x_{\text{norm}} \cdot W_{qkv} + b_{qkv}\), split into \(Q, K, V\) each of shape <code>(seq_len, 768)</code></li>
-  <li><strong>Multi-Head Attention:</strong> Reshape \(Q, K, V\) into 12 heads of dimension 64, compute per-head scaled dot-product attention, then concatenate heads</li>
-  <li><strong>Output Projection:</strong> \(\text{attn\_out} \cdot W_{\text{attn}} + b_{\text{attn}}\)</li>
-  <li><strong>Residual 1:</strong> \(x' = x + \text{attn\_out}\)</li>
+  <li><strong>Multi-Head Attention:</strong> Reshape \(Q, K, V\) into 12 heads of dimension 64, compute per-head scaled dot-product attention (no causal mask), then concatenate heads into \(A\)</li>
+  <li><strong>Output Projection:</strong> \(P = A \cdot W_{\text{attn}} + b_{\text{attn}}\)</li>
+  <li><strong>Residual 1:</strong> \(x' = x + P\)</li>
   <li><strong>Layer Norm 2:</strong> \(h_{\text{norm}} = \text{LN}_2(x')\) with parameters \(\gamma_2, \beta_2\)</li>
-  <li><strong>FFN:</strong> \(\text{GELU}(h_{\text{norm}} \cdot W_{fc} + b_{fc}) \cdot W_{\text{proj}} + b_{\text{proj}}\)</li>
-  <li><strong>Residual 2:</strong> \(\text{output} = x' + \text{FFN output}\)</li>
+  <li><strong>Feed-Forward:</strong> \(F = \text{GELU}(h_{\text{norm}} \cdot W_{fc} + b_{fc}) \cdot W_{\text{proj}} + b_{\text{proj}}\)</li>
+  <li><strong>Residual 2:</strong> \(\text{output} = x' + F\)</li>
 </ol>
 
 <h2>Implementation Requirements</h2>
@@ -130,7 +130,9 @@ x' &= x + \text{MHA}\!\left(\text{LN}_1(x)\right) \\[4pt]
 
 <h2>Weight Layout</h2>
 <p>All block parameters are packed into a single contiguous <code>weights</code> buffer
-(7,087,872 floats) in the following order. All 2D matrices are stored in row-major order.</p>
+(7,087,872 floats) in the following order. Index into the buffer using the offsets below
+(e.g. \(W_{qkv}[i][j]\) is at <code>weights[1536 + i * 2304 + j]</code>).
+All 2D matrices are stored in row-major order.</p>
 
 <table style="border-collapse:separate; border-spacing:16px 8px;">
   <tr>
