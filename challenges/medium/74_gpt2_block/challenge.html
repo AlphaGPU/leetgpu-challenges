@@ -119,6 +119,13 @@ x' &= x + \text{MultiHeadAttn}\!\left(\text{LN}_1(x)\right) \\[4pt]
   <li><strong>Residual 2:</strong> \(\text{output} = x' + F\)</li>
 </ol>
 
+<h2>Example</h2>
+<p>With <code>seq_len</code> = 4, <code>x</code> has shape (4, 768) and <code>output</code> has shape (4, 768).
+The <code>weights</code> buffer packs all 7,087,872 block parameters in the order described in the
+Weight Layout section below. Applying the transformer block transforms each token embedding through
+layer norm, multi-head self-attention with residual, layer norm, feed-forward network with residual,
+producing a new (4, 768) embedding tensor.</p>
+
 <h2>Implementation Requirements</h2>
 <ul>
   <li>Use only native features (external libraries are not permitted)</li>
