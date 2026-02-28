@@ -155,6 +155,7 @@ class Challenge(ChallengeBase):
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
+        torch.manual_seed(0)
         return self._make_test_case(4)
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:

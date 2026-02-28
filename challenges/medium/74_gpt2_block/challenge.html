@@ -222,6 +222,16 @@ All 2D matrices are stored in row-major order.</p>
   </tr>
 </table>
 
+<h2>Example</h2>
+<p>With <code>seq_len</code> = 4, <code>x</code> uniformly drawn from [−1, 1], and weights randomly initialized
+(see Weight Layout for the packing structure):</p>
+<pre>
+Input:  x.shape       = (4, 768)       # 4 token embeddings
+        weights.shape = (7,087,872,)   # packed weight buffer
+        seq_len       = 4
+Output: output.shape  = (4, 768)       # transformed token embeddings
+</pre>
+
 <h2>Constraints</h2>
 <ul>
   <li><code>d_model</code> = 768, <code>n_heads</code> = 12, <code>ffn_dim</code> = 3,072 (GPT-2 124M architecture)</li>
