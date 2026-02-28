@@ -1,0 +1,61 @@
+<p>
+  Implement a GPU program that multiplies a sparse matrix <code>A</code> of dimensions <code>M</code> &times; <code>N</code>
+  by a dense matrix <code>B</code> of dimensions <code>N</code> &times; <code>K</code>, producing a dense output matrix
+  <code>C</code> of dimensions <code>M</code> &times; <code>K</code>.
+  All matrices are stored in row-major order using 32-bit floats.
+  The matrix <code>A</code> is approximately 60&ndash;70% sparse (i.e., 60&ndash;70% of elements are zero),
+  and <code>nnz</code> gives the number of non-zero elements in <code>A</code>.
+</p>
+
+<p>
+  Mathematically, the operation is defined as:
+  \[
+  C_{ij} = \sum_{k=0}^{N-1} A_{ik} \cdot B_{kj} \quad \text{for} \quad i = 0, \ldots, M-1,\; j = 0, \ldots, K-1
+  \]
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only GPU native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in matrix <code>C</code></li>
+</ul>
+
+<h2>Example</h2>
+<p>
+Input:<br>
+Matrix \(A\) (\(3 \times 4\)):
+\[
+\begin{bmatrix}
+2.0 & 0.0 & 0.0 & 1.0 \\
+0.0 & 3.0 & 0.0 & 0.0 \\
+0.0 & 0.0 & 4.0 & 0.0
+\end{bmatrix}
+\]
+Matrix \(B\) (\(4 \times 2\)):
+\[
+\begin{bmatrix}
+1.0 & 2.0 \\
+3.0 & 4.0 \\
+5.0 & 6.0 \\
+7.0 & 8.0
+\end{bmatrix}
+\]
+Output:<br>
+Matrix \(C\) (\(3 \times 2\)):
+\[
+\begin{bmatrix}
+9.0 & 12.0 \\
+9.0 & 12.0 \\
+20.0 & 24.0
+\end{bmatrix}
+\]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code>, <code>N</code>, <code>K</code> &le; 8,192</li>
+  <li>All values in <code>A</code> and <code>B</code> are 32-bit floats in the range [&minus;10, 10]</li>
+  <li>The matrix <code>A</code> is approximately 60&ndash;70% sparse</li>
+  <li>Performance is measured with <code>M</code> = 4,096, <code>N</code> = 2,048, <code>K</code> = 512</li>
+</ul>
