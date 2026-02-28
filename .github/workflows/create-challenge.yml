@@ -32,6 +32,17 @@ jobs:
           pip install pre-commit requests websocket-client
           pre-commit install
 
+      - name: Fetch open PRs
+        id: open-prs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "open_prs<<OPEN_PRS_EOF"
+            gh pr list --state open --json number,title,headRefName --template '{{range .}}PR #{{.number}}: {{.title}} (branch: {{.headRefName}}){{"\n"}}{{end}}'
+            echo "OPEN_PRS_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
@@ -55,9 +66,17 @@ jobs:
 
             Before writing any code, think hard about what would make a genuinely interesting GPU programming challenge. List existing challenges (ls challenges/*/), study what's already covered, and brainstorm problems that would teach people something new about GPU programming.
 
+            IMPORTANT — CHECK FOR CONFLICTS WITH OPEN PRs:
+            The following open PRs already exist. You MUST avoid picking a challenge number or topic that conflicts with any of these:
+
+            ${{ steps.open-prs.outputs.open_prs }}
+
+            Pick the next available challenge number that is NOT already taken by a merged challenge or an open PR. Also avoid creating a challenge on the same topic as any pending PR, even if the number differs.
+
             HARD RULES:
             - Do NOT create trivial element-wise challenges. We have way too many (sigmoid, relu, silu, clipping, etc). If your idea is just "apply f(x) to every element", pick something else.
-            - Do NOT duplicate existing challenges.
+            - Do NOT duplicate existing challenges — check both the merged challenges in the repo AND the open PRs listed above.
+            - Do NOT use a challenge number that is already claimed by an open PR.
             - Prefer medium or hard difficulty. Only create easy if the topic involves a non-trivial GPU concept (not just a map operation).
             - The challenge should require the solver to think about memory access patterns, synchronization, work distribution, or algorithm design — not just write a one-line kernel.
 
