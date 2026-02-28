@@ -128,18 +128,6 @@ x' &= x + \text{MultiHeadAttn}\!\left(\text{LN}_1(x)\right) \\[4pt]
   <li>Use the <a href="https://docs.pytorch.org/docs/stable/generated/torch.nn.GELU.html" target="_blank">GELU tanh approximation</a>: \(\text{GELU}(x) = 0.5\,x\!\left(1 + \tanh\!\left(\sqrt{\tfrac{2}{\pi}}\left(x + 0.044715\,x^3\right)\right)\right)\)</li>
 </ul>
 
-<h2>Example</h2>
-<p>
-  <strong>Input:</strong>
-</p>
-<pre>x       : shape (4, 768), float32 — randomly initialized input tokens
-weights : shape (7,087,872,), float32 — packed weight buffer (see layout below)
-seq_len : 4</pre>
-<p>
-  <strong>Output:</strong>
-</p>
-<pre>output  : shape (4, 768), float32 — transformer block result written in-place</pre>
-
 <h2>Weight Layout</h2>
 <p>All block parameters are packed into a single contiguous <code>weights</code> buffer
 (7,087,872 floats) in the following order. Index into the buffer using the offsets below
