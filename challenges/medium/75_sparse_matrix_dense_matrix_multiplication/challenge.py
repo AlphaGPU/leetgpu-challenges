@@ -8,7 +8,7 @@ from core.challenge_base import ChallengeBase
 class Challenge(ChallengeBase):
     def __init__(self):
         super().__init__(
-            name="Sparse Matrix-Dense Matrix Multiplication (SpMM)",
+            name="Sparse Matrix-Dense Matrix Multiplication",
             atol=1e-03,
             rtol=1e-03,
             num_gpus=1,
