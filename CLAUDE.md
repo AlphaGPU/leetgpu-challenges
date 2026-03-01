@@ -41,7 +41,7 @@ Must inherit from `ChallengeBase` and follow Black formatting (line length 100).
 #### `__init__`
 ```python
 super().__init__(
-    name="Challenge Display Name",
+    name="Challenge Display Name",  # Used to generate URLs — use URL-friendly characters only (no parentheses, special symbols, etc.)
     atol=1e-05,           # Absolute tolerance (float32 default)
     rtol=1e-05,           # Relative tolerance (float32 default)
     num_gpus=1,
