@@ -2,7 +2,7 @@ name: Challenge Creation Cron
 
 on:
   schedule:
-    - cron: "0 9 * * *" # Every day at 9 AM UTC
+    - cron: "0 2 * * 2,4,6" # Monday, Wednesday, Friday at 6 PM PST
   workflow_dispatch: {} # Allow manual trigger
 
 jobs:
