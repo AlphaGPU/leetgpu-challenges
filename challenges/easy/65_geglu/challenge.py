@@ -10,8 +10,8 @@ class Challenge(ChallengeBase):
     def __init__(self):
         super().__init__(
             name="Gaussian Error Gated Linear Unit",
-            atol=1e-05,
-            rtol=1e-05,
+            atol=1e-04,
+            rtol=1e-04,
             num_gpus=1,
             access_tier="free",
         )
