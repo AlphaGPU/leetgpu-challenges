@@ -2,6 +2,65 @@
   Implement a program that finds the shortest path in an unweighted 2D grid using Breadth-First Search (BFS). Given a grid with obstacles and start/end positions, return the minimum number of steps needed to reach the destination.
 </p>
 
+<svg width="280" height="280" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;" font-family="monospace">
+  <rect width="280" height="280" rx="8" fill="#1a1a1a"/>
+  <g transform="translate(15, 15)">
+    <!-- Row 0: S . . # . -->
+    <rect x="0"   y="0" width="46" height="46" rx="4" fill="#1e3d2d" stroke="#44aa66" stroke-width="2"/>
+    <rect x="50"  y="0" width="46" height="46" rx="4" fill="#554400" stroke="#665500" stroke-width="1"/>
+    <rect x="100" y="0" width="46" height="46" rx="4" fill="#554400" stroke="#665500" stroke-width="1"/>
+    <rect x="150" y="0" width="46" height="46" rx="4" fill="#3d1e1e" stroke="#552222" stroke-width="1"/>
+    <rect x="200" y="0" width="46" height="46" rx="4" fill="#333" stroke="#444" stroke-width="1"/>
+    <!-- Row 1: # # . # . -->
+    <rect x="0"   y="50" width="46" height="46" rx="4" fill="#3d1e1e" stroke="#552222" stroke-width="1"/>
+    <rect x="50"  y="50" width="46" height="46" rx="4" fill="#3d1e1e" stroke="#552222" stroke-width="1"/>
+    <rect x="100" y="50" width="46" height="46" rx="4" fill="#554400" stroke="#665500" stroke-width="1"/>
+    <rect x="150" y="50" width="46" height="46" rx="4" fill="#3d1e1e" stroke="#552222" stroke-width="1"/>
+    <rect x="200" y="50" width="46" height="46" rx="4" fill="#333" stroke="#444" stroke-width="1"/>
+    <!-- Row 2: . . . . . -->
+    <rect x="0"   y="100" width="46" height="46" rx="4" fill="#333" stroke="#444" stroke-width="1"/>
+    <rect x="50"  y="100" width="46" height="46" rx="4" fill="#333" stroke="#444" stroke-width="1"/>
+    <rect x="100" y="100" width="46" height="46" rx="4" fill="#554400" stroke="#665500" stroke-width="1"/>
+    <rect x="150" y="100" width="46" height="46" rx="4" fill="#554400" stroke="#665500" stroke-width="1"/>
+    <rect x="200" y="100" width="46" height="46" rx="4" fill="#333" stroke="#444" stroke-width="1"/>
+    <!-- Row 3: . # # . # -->
+    <rect x="0"   y="150" width="46" height="46" rx="4" fill="#333" stroke="#444" stroke-width="1"/>
+    <rect x="50"  y="150" width="46" height="46" rx="4" fill="#3d1e1e" stroke="#552222" stroke-width="1"/>
+    <rect x="100" y="150" width="46" height="46" rx="4" fill="#3d1e1e" stroke="#552222" stroke-width="1"/>
+    <rect x="150" y="150" width="46" height="46" rx="4" fill="#554400" stroke="#665500" stroke-width="1"/>
+    <rect x="200" y="150" width="46" height="46" rx="4" fill="#3d1e1e" stroke="#552222" stroke-width="1"/>
+    <!-- Row 4: . . . . E -->
+    <rect x="0"   y="200" width="46" height="46" rx="4" fill="#333" stroke="#444" stroke-width="1"/>
+    <rect x="50"  y="200" width="46" height="46" rx="4" fill="#333" stroke="#444" stroke-width="1"/>
+    <rect x="100" y="200" width="46" height="46" rx="4" fill="#333" stroke="#444" stroke-width="1"/>
+    <rect x="150" y="200" width="46" height="46" rx="4" fill="#554400" stroke="#665500" stroke-width="1"/>
+    <rect x="200" y="200" width="46" height="46" rx="4" fill="#1e2d4d" stroke="#4477bb" stroke-width="2"/>
+    <!-- Obstacle # marks -->
+    <text x="173" y="29" font-size="16" fill="#884444" text-anchor="middle">#</text>
+    <text x="23"  y="79" font-size="16" fill="#884444" text-anchor="middle">#</text>
+    <text x="73"  y="79" font-size="16" fill="#884444" text-anchor="middle">#</text>
+    <text x="173" y="79" font-size="16" fill="#884444" text-anchor="middle">#</text>
+    <text x="73"  y="179" font-size="16" fill="#884444" text-anchor="middle">#</text>
+    <text x="123" y="179" font-size="16" fill="#884444" text-anchor="middle">#</text>
+    <text x="223" y="179" font-size="16" fill="#884444" text-anchor="middle">#</text>
+    <!-- Start cell -->
+    <text x="23" y="22" font-size="18" font-weight="bold" fill="#44aa66" text-anchor="middle">S</text>
+    <text x="23" y="38" font-size="8" fill="#66cc88" text-anchor="middle">Start</text>
+    <!-- End cell -->
+    <text x="223" y="222" font-size="18" font-weight="bold" fill="#4477bb" text-anchor="middle">E</text>
+    <text x="223" y="238" font-size="8" fill="#6699cc" text-anchor="middle">End</text>
+    <!-- Path step numbers -->
+    <text x="73"  y="28" font-size="13" fill="#aa9933" text-anchor="middle">1</text>
+    <text x="123" y="28" font-size="13" fill="#aa9933" text-anchor="middle">2</text>
+    <text x="123" y="78" font-size="13" fill="#aa9933" text-anchor="middle">3</text>
+    <text x="123" y="128" font-size="13" fill="#aa9933" text-anchor="middle">4</text>
+    <text x="173" y="128" font-size="13" fill="#aa9933" text-anchor="middle">5</text>
+    <text x="173" y="178" font-size="13" fill="#aa9933" text-anchor="middle">6</text>
+    <text x="173" y="228" font-size="13" fill="#aa9933" text-anchor="middle">7</text>
+  </g>
+</svg>
+
 <h2>Implementation Requirements</h2>
 <ul>
   <li>Use only native features (external libraries are not permitted)</li>

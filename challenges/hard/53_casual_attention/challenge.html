@@ -20,6 +20,143 @@
   <code>M</code>, and <code>d</code> are of data type <code>int32</code>.
 </p>
 
+<svg width="310" height="310" viewBox="0 0 310 310" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;" font-family="monospace" font-size="10">
+  <rect width="310" height="310" rx="8" fill="#222"/>
+
+  <!-- Axis labels -->
+  <text x="175" y="16" text-anchor="middle" fill="#999" font-size="10">key position &#x2192;</text>
+  <text x="14" y="170" fill="#999" font-size="10" transform="rotate(-90,14,170)">query &#x2192;</text>
+
+  <!-- Column headers -->
+  <text x="62"  y="34" text-anchor="middle" fill="#777">0</text>
+  <text x="100" y="34" text-anchor="middle" fill="#777">1</text>
+  <text x="138" y="34" text-anchor="middle" fill="#777">2</text>
+  <text x="176" y="34" text-anchor="middle" fill="#777">3</text>
+  <text x="214" y="34" text-anchor="middle" fill="#777">4</text>
+  <text x="252" y="34" text-anchor="middle" fill="#777">5</text>
+
+  <!-- Row headers -->
+  <text x="32" y="58"  text-anchor="middle" fill="#777">0</text>
+  <text x="32" y="96"  text-anchor="middle" fill="#777">1</text>
+  <text x="32" y="134" text-anchor="middle" fill="#777">2</text>
+  <text x="32" y="172" text-anchor="middle" fill="#777">3</text>
+  <text x="32" y="210" text-anchor="middle" fill="#777">4</text>
+  <text x="32" y="248" text-anchor="middle" fill="#777">5</text>
+
+  <!-- 6x6 grid: lower triangle = attend (blue), upper = masked (dark red) -->
+  <!-- Row 0 -->
+  <rect x="44"  y="42" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="82"  y="42" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <rect x="120" y="42" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <rect x="158" y="42" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <rect x="196" y="42" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <rect x="234" y="42" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <!-- Row 1 -->
+  <rect x="44"  y="80" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="82"  y="80" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="120" y="80" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <rect x="158" y="80" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <rect x="196" y="80" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <rect x="234" y="80" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <!-- Row 2 -->
+  <rect x="44"  y="118" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="82"  y="118" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="120" y="118" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="158" y="118" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <rect x="196" y="118" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <rect x="234" y="118" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <!-- Row 3 -->
+  <rect x="44"  y="156" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="82"  y="156" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="120" y="156" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="158" y="156" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="196" y="156" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <rect x="234" y="156" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <!-- Row 4 -->
+  <rect x="44"  y="194" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="82"  y="194" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="120" y="194" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="158" y="194" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="196" y="194" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="234" y="194" width="36" height="28" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <!-- Row 5 -->
+  <rect x="44"  y="232" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="82"  y="232" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="120" y="232" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="158" y="232" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="196" y="232" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <rect x="234" y="232" width="36" height="28" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+
+  <!-- Checkmarks in attend cells -->
+  <!-- Row 0 -->
+  <text x="62"  y="60" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <!-- Row 1 -->
+  <text x="62"  y="98" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="100" y="98" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <!-- Row 2 -->
+  <text x="62"  y="136" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="100" y="136" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="138" y="136" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <!-- Row 3 -->
+  <text x="62"  y="174" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="100" y="174" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="138" y="174" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="176" y="174" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <!-- Row 4 -->
+  <text x="62"  y="212" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="100" y="212" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="138" y="212" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="176" y="212" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="214" y="212" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <!-- Row 5 -->
+  <text x="62"  y="250" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="100" y="250" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="138" y="250" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="176" y="250" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="214" y="250" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+  <text x="252" y="250" text-anchor="middle" fill="#66cc66" font-size="12">&#x2713;</text>
+
+  <!-- Text in masked cells: -∞ -->
+  <!-- Row 0 -->
+  <text x="100" y="60" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+  <text x="138" y="60" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+  <text x="176" y="60" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+  <text x="214" y="60" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+  <text x="252" y="60" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+  <!-- Row 1 -->
+  <text x="138" y="98" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+  <text x="176" y="98" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+  <text x="214" y="98" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+  <text x="252" y="98" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+  <!-- Row 2 -->
+  <text x="176" y="136" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+  <text x="214" y="136" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+  <text x="252" y="136" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+  <!-- Row 3 -->
+  <text x="214" y="174" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+  <text x="252" y="174" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+  <!-- Row 4 -->
+  <text x="252" y="212" text-anchor="middle" fill="#cc6666" font-size="9">-&#x221e;</text>
+
+  <!-- Diagonal boundary highlight -->
+  <line x1="82"  y1="42" x2="82"  y2="70" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3"/>
+  <line x1="82"  y1="70" x2="118" y2="70" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3"/>
+  <line x1="118" y1="70" x2="118" y2="108" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3"/>
+  <line x1="118" y1="108" x2="156" y2="108" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3"/>
+  <line x1="156" y1="108" x2="156" y2="146" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3"/>
+  <line x1="156" y1="146" x2="194" y2="146" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3"/>
+  <line x1="194" y1="146" x2="194" y2="184" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3"/>
+  <line x1="194" y1="184" x2="232" y2="184" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3"/>
+  <line x1="232" y1="184" x2="232" y2="222" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3"/>
+  <line x1="232" y1="222" x2="270" y2="222" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3"/>
+
+  <!-- Legend -->
+  <rect x="44" y="275" width="14" height="14" rx="2" fill="#2a4a7a" stroke="#3a5a8a"/>
+  <text x="64" y="287" fill="#999" font-size="10">attend</text>
+  <rect x="160" y="275" width="14" height="14" rx="2" fill="#3d1e1e" stroke="#4d2e2e"/>
+  <text x="180" y="287" fill="#999" font-size="10">masked</text>
+</svg>
 
 <h2>Implementation Requirements</h2>
 <ul>

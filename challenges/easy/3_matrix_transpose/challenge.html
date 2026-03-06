@@ -3,6 +3,62 @@
   transpose of a matrix switches its rows and columns. Given a matrix \(A\) of dimensions \(rows \times cols\), the transpose \(A^T\) will have dimensions \(cols \times rows\). All matrices are stored in row-major format.
 </p>
 
+<svg width="420" height="180" viewBox="0 0 420 180" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <rect width="420" height="180" rx="8" fill="#222"/>
+  <defs>
+    <marker id="arrt" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6" fill="none" stroke="#ccc" stroke-width="1"/>
+    </marker>
+  </defs>
+
+  <!-- Input matrix A (3x2) -->
+  <text x="60" y="18" text-anchor="middle" fill="#ccc" font-family="sans-serif" font-size="13" font-weight="bold">A</text>
+  <rect x="10" y="24" width="100" height="140" rx="4" fill="#333" stroke="#555" stroke-width="1"/>
+  <!-- Row 0 - blue -->
+  <rect x="16" y="30" width="40" height="24" rx="3" fill="#4477bb"/>
+  <text x="36" y="47" text-anchor="middle" fill="#fff" font-family="monospace" font-size="12">1</text>
+  <rect x="62" y="30" width="40" height="24" rx="3" fill="#4477bb"/>
+  <text x="82" y="47" text-anchor="middle" fill="#fff" font-family="monospace" font-size="12">2</text>
+  <!-- Row 1 - green -->
+  <rect x="16" y="60" width="40" height="24" rx="3" fill="#44aa66"/>
+  <text x="36" y="77" text-anchor="middle" fill="#fff" font-family="monospace" font-size="12">3</text>
+  <rect x="62" y="60" width="40" height="24" rx="3" fill="#44aa66"/>
+  <text x="82" y="77" text-anchor="middle" fill="#fff" font-family="monospace" font-size="12">4</text>
+  <!-- Row 2 - orange -->
+  <rect x="16" y="90" width="40" height="24" rx="3" fill="#cc7744"/>
+  <text x="36" y="107" text-anchor="middle" fill="#fff" font-family="monospace" font-size="12">5</text>
+  <rect x="62" y="90" width="40" height="24" rx="3" fill="#cc7744"/>
+  <text x="82" y="107" text-anchor="middle" fill="#fff" font-family="monospace" font-size="12">6</text>
+  <text x="60" y="145" text-anchor="middle" fill="#999" font-family="sans-serif" font-size="10">3 &#xd7; 2</text>
+
+  <!-- Middle label -->
+  <text x="210" y="95" text-anchor="middle" fill="#aaa" font-family="sans-serif" font-size="11" font-style="italic">rows &#x2192; cols</text>
+
+  <!-- Output matrix A^T (2x3) -->
+  <text x="330" y="18" text-anchor="middle" fill="#ccc" font-family="sans-serif" font-size="13" font-weight="bold">A&#x1d40;</text>
+  <rect x="270" y="24" width="140" height="110" rx="4" fill="#333" stroke="#555" stroke-width="1"/>
+  <!-- Row 0 of A^T: col 0 of A -->
+  <rect x="276" y="30" width="40" height="24" rx="3" fill="#4477bb"/>
+  <text x="296" y="47" text-anchor="middle" fill="#fff" font-family="monospace" font-size="12">1</text>
+  <rect x="320" y="30" width="40" height="24" rx="3" fill="#44aa66"/>
+  <text x="340" y="47" text-anchor="middle" fill="#fff" font-family="monospace" font-size="12">3</text>
+  <rect x="364" y="30" width="40" height="24" rx="3" fill="#cc7744"/>
+  <text x="384" y="47" text-anchor="middle" fill="#fff" font-family="monospace" font-size="12">5</text>
+  <!-- Row 1 of A^T: col 1 of A -->
+  <rect x="276" y="60" width="40" height="24" rx="3" fill="#4477bb"/>
+  <text x="296" y="77" text-anchor="middle" fill="#fff" font-family="monospace" font-size="12">2</text>
+  <rect x="320" y="60" width="40" height="24" rx="3" fill="#44aa66"/>
+  <text x="340" y="77" text-anchor="middle" fill="#fff" font-family="monospace" font-size="12">4</text>
+  <rect x="364" y="60" width="40" height="24" rx="3" fill="#cc7744"/>
+  <text x="384" y="77" text-anchor="middle" fill="#fff" font-family="monospace" font-size="12">6</text>
+  <text x="340" y="115" text-anchor="middle" fill="#999" font-family="sans-serif" font-size="10">2 &#xd7; 3</text>
+
+  <!-- Curved dashed arrows showing element movement -->
+  <path d="M 56,72 C 140,30 220,20 320,42" fill="none" stroke="#44aa66" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrt)"/>
+  <path d="M 56,102 C 150,55 230,35 364,42" fill="none" stroke="#cc7744" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrt)"/>
+  <path d="M 102,72 C 170,120 240,110 320,72" fill="none" stroke="#44aa66" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrt)"/>
+</svg>
+
 <h2>Implementation Requirements</h2>
 <ul>
   <li>Use only native features (external libraries are not permitted)</li>

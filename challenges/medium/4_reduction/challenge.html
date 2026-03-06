@@ -3,6 +3,82 @@
   The program should take an input array and produce a single output value containing the sum of all elements.
 </p>
 
+<svg width="420" height="240" viewBox="0 0 420 240" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;" font-family="monospace" font-size="13">
+  <rect width="420" height="240" rx="8" fill="#222"/>
+
+  <!-- Level 0: 8 input values -->
+  <rect x="14"  y="16" width="38" height="26" rx="3" fill="#333" stroke="#777" stroke-width="1"/>
+  <rect x="62"  y="16" width="38" height="26" rx="3" fill="#333" stroke="#777" stroke-width="1"/>
+  <rect x="114" y="16" width="38" height="26" rx="3" fill="#333" stroke="#777" stroke-width="1"/>
+  <rect x="162" y="16" width="38" height="26" rx="3" fill="#333" stroke="#777" stroke-width="1"/>
+  <rect x="218" y="16" width="38" height="26" rx="3" fill="#333" stroke="#777" stroke-width="1"/>
+  <rect x="266" y="16" width="38" height="26" rx="3" fill="#333" stroke="#777" stroke-width="1"/>
+  <rect x="318" y="16" width="38" height="26" rx="3" fill="#333" stroke="#777" stroke-width="1"/>
+  <rect x="366" y="16" width="38" height="26" rx="3" fill="#333" stroke="#777" stroke-width="1"/>
+  <text x="33"  y="34" text-anchor="middle" fill="#ccc">1</text>
+  <text x="81"  y="34" text-anchor="middle" fill="#ccc">2</text>
+  <text x="133" y="34" text-anchor="middle" fill="#ccc">3</text>
+  <text x="181" y="34" text-anchor="middle" fill="#ccc">4</text>
+  <text x="237" y="34" text-anchor="middle" fill="#ccc">5</text>
+  <text x="285" y="34" text-anchor="middle" fill="#ccc">6</text>
+  <text x="337" y="34" text-anchor="middle" fill="#ccc">7</text>
+  <text x="385" y="34" text-anchor="middle" fill="#ccc">8</text>
+
+  <!-- Lines: Level 0 -> Level 1 -->
+  <line x1="33"  y1="42" x2="57"  y2="74" stroke="#555" stroke-width="1"/>
+  <line x1="81"  y1="42" x2="57"  y2="74" stroke="#555" stroke-width="1"/>
+  <line x1="133" y1="42" x2="157" y2="74" stroke="#555" stroke-width="1"/>
+  <line x1="181" y1="42" x2="157" y2="74" stroke="#555" stroke-width="1"/>
+  <line x1="237" y1="42" x2="261" y2="74" stroke="#555" stroke-width="1"/>
+  <line x1="285" y1="42" x2="261" y2="74" stroke="#555" stroke-width="1"/>
+  <line x1="337" y1="42" x2="361" y2="74" stroke="#555" stroke-width="1"/>
+  <line x1="385" y1="42" x2="361" y2="74" stroke="#555" stroke-width="1"/>
+
+  <!-- Plus symbols: Level 0->1 -->
+  <text x="57"  y="64" text-anchor="middle" fill="#888" font-size="11">+</text>
+  <text x="157" y="64" text-anchor="middle" fill="#888" font-size="11">+</text>
+  <text x="261" y="64" text-anchor="middle" fill="#888" font-size="11">+</text>
+  <text x="361" y="64" text-anchor="middle" fill="#888" font-size="11">+</text>
+
+  <!-- Level 1: 4 values -->
+  <rect x="38"  y="74" width="38" height="26" rx="3" fill="#333" stroke="#777" stroke-width="1"/>
+  <rect x="138" y="74" width="38" height="26" rx="3" fill="#333" stroke="#777" stroke-width="1"/>
+  <rect x="242" y="74" width="38" height="26" rx="3" fill="#333" stroke="#777" stroke-width="1"/>
+  <rect x="342" y="74" width="38" height="26" rx="3" fill="#333" stroke="#777" stroke-width="1"/>
+  <text x="57"  y="92" text-anchor="middle" fill="#ccc">3</text>
+  <text x="157" y="92" text-anchor="middle" fill="#ccc">7</text>
+  <text x="261" y="92" text-anchor="middle" fill="#ccc">11</text>
+  <text x="361" y="92" text-anchor="middle" fill="#ccc">15</text>
+
+  <!-- Lines: Level 1 -> Level 2 -->
+  <line x1="57"  y1="100" x2="107" y2="134" stroke="#555" stroke-width="1"/>
+  <line x1="157" y1="100" x2="107" y2="134" stroke="#555" stroke-width="1"/>
+  <line x1="261" y1="100" x2="311" y2="134" stroke="#555" stroke-width="1"/>
+  <line x1="361" y1="100" x2="311" y2="134" stroke="#555" stroke-width="1"/>
+
+  <!-- Plus symbols: Level 1->2 -->
+  <text x="107" y="124" text-anchor="middle" fill="#888" font-size="11">+</text>
+  <text x="311" y="124" text-anchor="middle" fill="#888" font-size="11">+</text>
+
+  <!-- Level 2: 2 values -->
+  <rect x="88"  y="134" width="38" height="26" rx="3" fill="#333" stroke="#777" stroke-width="1"/>
+  <rect x="292" y="134" width="38" height="26" rx="3" fill="#333" stroke="#777" stroke-width="1"/>
+  <text x="107" y="152" text-anchor="middle" fill="#ccc">10</text>
+  <text x="311" y="152" text-anchor="middle" fill="#ccc">26</text>
+
+  <!-- Lines: Level 2 -> Level 3 -->
+  <line x1="107" y1="160" x2="209" y2="194" stroke="#555" stroke-width="1"/>
+  <line x1="311" y1="160" x2="209" y2="194" stroke="#555" stroke-width="1"/>
+
+  <!-- Plus symbol: Level 2->3 -->
+  <text x="209" y="186" text-anchor="middle" fill="#888" font-size="11">+</text>
+
+  <!-- Level 3: Final sum -->
+  <rect x="184" y="194" width="50" height="30" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="209" y="214" text-anchor="middle" fill="#ccc" font-weight="bold" font-size="14">36</text>
+</svg>
+
 <h2>Implementation Requirements</h2>
 <ul>
   <li>Use only GPU native features (external libraries are not permitted)</li>
