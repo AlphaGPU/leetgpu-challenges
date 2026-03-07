@@ -105,6 +105,8 @@ HTML fragment with four required sections:
    - Be consistent within a single challenge
 4. **Constraints** — Size bounds, data types, value ranges, **and performance test size**
 
+**SVG visualization** (optional): If the challenge involves a spatial or structural concept that is hard to understand from text alone, add an inline SVG diagram after the problem description paragraph. Good candidates include convolutions, pooling, attention masks, tree reductions, grid algorithms, and data movement patterns. Use a consistent dark theme (`#222` background, `#ccc` text, blue/green accents) and `style="display:block; margin:20px auto;"`. See existing examples in `challenges/easy/9_1d_convolution/challenge.html` or `challenges/medium/74_gpt2_block/challenge.html`.
+
 **Formatting rules:**
 - `<code>` for variables/functions; `<pre>` for 1D examples, LaTeX `\begin{bmatrix}` for matrices
 - `&le;`, `&ge;`, `&times;` for math symbols
@@ -181,6 +183,7 @@ Verify every item before submitting. This is the single source of truth — work
 - [ ] First example matches `generate_example_test()` values
 - [ ] Examples use `<pre>` for 1D data, LaTeX `\begin{bmatrix}` for matrices — consistent, never mixed
 - [ ] Constraints includes `Performance is measured with <code>param</code> = value` bullet matching `generate_performance_test()`
+- [ ] If the concept is spatial/structural, includes an SVG visualization after the problem description (dark theme, `#222` background)
 
 ### challenge.py
 - [ ] `class Challenge` inherits `ChallengeBase`
