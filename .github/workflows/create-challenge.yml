@@ -75,12 +75,10 @@ jobs:
 
             THEME — REAL-WORLD INFERENCE KERNELS:
             Focus on challenges inspired by real-world ML inference workloads. Think about the building blocks of modern neural networks (transformers, diffusion models, LLMs, vision models) and the GPU kernels that make them fast. Good examples:
-            - Transformer components: multi-head attention, KV-cache updates, rotary positional embeddings (RoPE), RMS normalization, grouped-query attention
-            - Inference optimizations: flash attention, paged attention, speculative decoding verification, quantized matmul (INT8/INT4), fused MLP blocks
-            - Diffusion model ops: denoising steps, classifier-free guidance fusion, cross-attention
+            - Fused inference kernels: fused SwiGLU/GeGLU MLP blocks, flash attention, paged attention, speculative decoding verification, quantized matmul (INT8/INT4), fused QKV projection, KV-cache updates
             - Sequence/token operations: top-k/top-p sampling, beam search step, KV-cache rotation, causal masking
-            - Model architecture blocks: full transformer decoder block (like the existing GPT-2 challenge), mixture-of-experts routing, SwiGLU/GeGLU activations, LoRA forward pass
-            - Serving primitives: batched inference with variable sequence lengths, continuous batching, prefix caching
+            - Model architecture blocks: full transformer decoder block (like the existing GPT-2 challenge), mixture-of-experts routing, LoRA forward pass
+            - Online/streaming algorithms: online softmax, streaming attention (process new queries without storing entire rows), continuous batching, prefix caching
 
             Look at `challenges/medium/74_gpt2_block/` as the gold standard for this style of challenge. The solver should implement a meaningful, self-contained inference building block — not a toy operation.
 
