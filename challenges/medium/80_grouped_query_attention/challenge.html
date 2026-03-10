@@ -69,23 +69,112 @@ the same key and value head. All tensors use <code>float32</code>.
 
 <h2>Example</h2>
 <p>
-  With <code>num_q_heads</code> = 4, <code>num_kv_heads</code> = 2, <code>seq_len</code> = 3,
+  With <code>num_q_heads</code> = 4, <code>num_kv_heads</code> = 2 (groups of 2), <code>seq_len</code> = 3,
   <code>head_dim</code> = 4:
 </p>
-<pre>
-Q[0] = [[1, 0, 0, 1], [0, 1, 1, 0], [1, 1, 0, 0]]
-Q[1] = [[0, 1, 0, 1], [1, 0, 1, 0], [0, 0, 1, 1]]
-Q[2] = [[-1, 0, 0.5, 0], [0, -1, 0, 0.5], [0.5, 0, -1, 0]]
-Q[3] = [[0, 0.5, 0, -1], [0.5, 0, 0, -1], [0, 0, 0.5, 0.5]]
-
-K[0] = [[1, 0, 1, 0], [0, 1, 0, 1], [1, 1, 1, 1]]
-K[1] = [[0, 1, 0, -1], [-1, 0, 1, 0], [0, -1, 0, 1]]
-
-V[0] = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
-V[1] = [[-1, -2, -3, -4], [2, 3, 4, 5], [6, 7, 8, 9]]
-
-Groups: Q[0],Q[1] -> K[0],V[0]   Q[2],Q[3] -> K[1],V[1]
-</pre>
+<p>
+  <strong>Input:</strong><br>
+  \(Q_0\) (3&times;4):
+  \[
+  \begin{bmatrix}
+  1 & 0 & 0 & 1 \\
+  0 & 1 & 1 & 0 \\
+  1 & 1 & 0 & 0
+  \end{bmatrix}
+  \]
+  \(Q_1\) (3&times;4):
+  \[
+  \begin{bmatrix}
+  0 & 1 & 0 & 1 \\
+  1 & 0 & 1 & 0 \\
+  0 & 0 & 1 & 1
+  \end{bmatrix}
+  \]
+  \(Q_2\) (3&times;4):
+  \[
+  \begin{bmatrix}
+  -1 & 0 & 0.5 & 0 \\
+  0 & -1 & 0 & 0.5 \\
+  0.5 & 0 & -1 & 0
+  \end{bmatrix}
+  \]
+  \(Q_3\) (3&times;4):
+  \[
+  \begin{bmatrix}
+  0 & 0.5 & 0 & -1 \\
+  0.5 & 0 & 0 & -1 \\
+  0 & 0 & 0.5 & 0.5
+  \end{bmatrix}
+  \]
+  \(K_0\) (3&times;4):
+  \[
+  \begin{bmatrix}
+  1 & 0 & 1 & 0 \\
+  0 & 1 & 0 & 1 \\
+  1 & 1 & 1 & 1
+  \end{bmatrix}
+  \]
+  \(K_1\) (3&times;4):
+  \[
+  \begin{bmatrix}
+  0 & 1 & 0 & -1 \\
+  -1 & 0 & 1 & 0 \\
+  0 & -1 & 0 & 1
+  \end{bmatrix}
+  \]
+  \(V_0\) (3&times;4):
+  \[
+  \begin{bmatrix}
+  1 & 2 & 3 & 4 \\
+  5 & 6 & 7 & 8 \\
+  9 & 10 & 11 & 12
+  \end{bmatrix}
+  \]
+  \(V_1\) (3&times;4):
+  \[
+  \begin{bmatrix}
+  -1 & -2 & -3 & -4 \\
+  2 & 3 & 4 & 5 \\
+  6 & 7 & 8 & 9
+  \end{bmatrix}
+  \]
+  Groups: \(Q_0, Q_1 \to K_0, V_0\); \quad \(Q_2, Q_3 \to K_1, V_1\)
+</p>
+<p>
+  <strong>Output</strong> (values rounded to 2 decimal places):<br>
+  \(\text{output}_0\) (3&times;4):
+  \[
+  \begin{bmatrix}
+  5.71 & 6.71 & 7.71 & 8.71 \\
+  5.71 & 6.71 & 7.71 & 8.71 \\
+  5.71 & 6.71 & 7.71 & 8.71
+  \end{bmatrix}
+  \]
+  \(\text{output}_1\) (3&times;4):
+  \[
+  \begin{bmatrix}
+  6.07 & 7.07 & 8.07 & 9.07 \\
+  5.00 & 6.00 & 7.00 & 8.00 \\
+  5.71 & 6.71 & 7.71 & 8.71
+  \end{bmatrix}
+  \]
+  \(\text{output}_2\) (3&times;4):
+  \[
+  \begin{bmatrix}
+  2.24 & 2.76 & 3.27 & 3.79 \\
+  3.96 & 4.70 & 5.44 & 6.17 \\
+  2.40 & 2.60 & 2.79 & 2.98
+  \end{bmatrix}
+  \]
+  \(\text{output}_3\) (3&times;4):
+  \[
+  \begin{bmatrix}
+  0.76 & 0.58 & 0.40 & 0.22 \\
+  1.17 & 1.08 & 1.00 & 0.91 \\
+  2.84 & 3.37 & 3.91 & 4.44
+  \end{bmatrix}
+  \]
+</p>
 
 <h2>Constraints</h2>
 <ul>
