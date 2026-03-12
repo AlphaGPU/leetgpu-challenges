@@ -1,0 +1,173 @@
+<p>
+  Implement a weight-only INT4 quantized matrix multiplication (W4A16), a core kernel used in
+  modern LLM inference. Given a float16 activation matrix <code>x</code> of shape
+  <code>M &times; K</code> and a weight matrix stored in packed INT4 format, compute the output
+  matrix <code>y = x &times; W<sup>T</sup></code> of shape <code>M &times; N</code>, where
+  <code>W</code> is the dequantized float16 weight matrix of shape <code>N &times; K</code>.
+</p>
+
+<svg width="700" height="260" viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto; font-family:monospace;">
+  <rect width="700" height="260" fill="#222" rx="10"/>
+
+  <!-- Packed byte -->
+  <text x="60" y="34" fill="#ccc" font-size="13" text-anchor="middle">packed byte</text>
+  <rect x="10" y="42" width="100" height="36" fill="#1a3a5c" rx="4" stroke="#4a9edd" stroke-width="1.5"/>
+  <line x1="60" y1="42" x2="60" y2="78" stroke="#4a9edd" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="35" y="65" fill="#4a9edd" font-size="12" text-anchor="middle">bits 7:4</text>
+  <text x="85" y="65" fill="#7ec87e" font-size="12" text-anchor="middle">bits 3:0</text>
+
+  <!-- Arrows down -->
+  <line x1="35" y1="78" x2="35" y2="108" stroke="#4a9edd" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="85" y1="78" x2="85" y2="108" stroke="#7ec87e" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Nibble boxes -->
+  <rect x="10" y="108" width="50" height="30" fill="#1a3a5c" rx="4" stroke="#4a9edd" stroke-width="1.5"/>
+  <text x="35" y="128" fill="#4a9edd" font-size="12" text-anchor="middle">w[2i]</text>
+  <rect x="60" y="108" width="50" height="30" fill="#1a4a1a" rx="4" stroke="#7ec87e" stroke-width="1.5"/>
+  <text x="85" y="128" fill="#7ec87e" font-size="12" text-anchor="middle">w[2i+1]</text>
+
+  <!-- Subtract 8 labels -->
+  <text x="35" y="157" fill="#ccc" font-size="11" text-anchor="middle">&#x2212; 8</text>
+  <text x="85" y="157" fill="#ccc" font-size="11" text-anchor="middle">&#x2212; 8</text>
+  <line x1="35" y1="138" x2="35" y2="162" stroke="#aaa" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="85" y1="138" x2="85" y2="162" stroke="#aaa" stroke-width="1" stroke-dasharray="3,2"/>
+
+  <!-- Signed weight -->
+  <rect x="10" y="162" width="100" height="30" fill="#3a2a1a" rx="4" stroke="#e0a040" stroke-width="1.5"/>
+  <text x="60" y="182" fill="#e0a040" font-size="12" text-anchor="middle">int4 &#x2208; [&#x2212;8, 7]</text>
+
+  <!-- Times scale -->
+  <text x="160" y="182" fill="#ccc" font-size="18" text-anchor="middle">&#xd7;</text>
+
+  <!-- Scale box -->
+  <rect x="185" y="108" width="90" height="30" fill="#2a1a3a" rx="4" stroke="#c060e0" stroke-width="1.5"/>
+  <text x="230" y="128" fill="#c060e0" font-size="12" text-anchor="middle">scales[n, k/gs]</text>
+  <line x1="230" y1="138" x2="230" y2="162" stroke="#c060e0" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="230" y="182" fill="#c060e0" font-size="12" text-anchor="middle">float16 scale</text>
+
+  <!-- = dequantized weight -->
+  <text x="320" y="182" fill="#ccc" font-size="18" text-anchor="middle">=</text>
+  <rect x="340" y="162" width="110" height="30" fill="#1a3a2a" rx="4" stroke="#40c080" stroke-width="1.5"/>
+  <text x="395" y="182" fill="#40c080" font-size="12" text-anchor="middle">W[n, k] float16</text>
+
+  <!-- Arrow to matmul -->
+  <line x1="460" y1="177" x2="492" y2="177" stroke="#aaa" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- MatMul diagram -->
+  <text x="540" y="50" fill="#ccc" font-size="12" text-anchor="middle">x [M&#xd7;K]</text>
+  <rect x="500" y="58" width="80" height="50" fill="#1a3a5c" rx="4" stroke="#4a9edd" stroke-width="1.5"/>
+  <text x="540" y="88" fill="#4a9edd" font-size="11" text-anchor="middle">float16</text>
+
+  <text x="600" y="50" fill="#ccc" font-size="12" text-anchor="middle">W&#x1d40; [K&#xd7;N]</text>
+  <rect x="590" y="58" width="80" height="50" fill="#1a3a2a" rx="4" stroke="#40c080" stroke-width="1.5"/>
+  <text x="630" y="88" fill="#40c080" font-size="11" text-anchor="middle">float16</text>
+
+  <text x="565" y="140" fill="#ccc" font-size="18" text-anchor="middle">&#xd7;</text>
+  <line x1="540" y1="108" x2="540" y2="155" stroke="#aaa" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="630" y1="108" x2="630" y2="155" stroke="#aaa" stroke-width="1" stroke-dasharray="3,2"/>
+
+  <text x="565" y="195" fill="#ccc" font-size="12" text-anchor="middle">y [M&#xd7;N]</text>
+  <rect x="510" y="200" width="110" height="38" fill="#3a1a1a" rx="4" stroke="#e05050" stroke-width="1.5"/>
+  <text x="565" y="224" fill="#e05050" font-size="11" text-anchor="middle">float16 output</text>
+
+  <!-- Group size label -->
+  <text x="230" y="92" fill="#c060e0" font-size="11" text-anchor="middle">group_size = gs</text>
+
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#aaa"/>
+    </marker>
+  </defs>
+</svg>
+
+<p>
+  <strong>Packing format:</strong> Each byte of <code>w_q</code> stores two INT4 weights. The
+  high nibble (bits 7&ndash;4) holds weight <code>w[n, 2i]</code> and the low nibble (bits
+  3&ndash;0) holds <code>w[n, 2i+1]</code>. INT4 values are stored unsigned in the range
+  [0,&nbsp;15] with an offset of 8, so the signed weight is <code>nibble&nbsp;&minus;&nbsp;8</code>,
+  giving values in [&minus;8,&nbsp;7].
+</p>
+
+<p>
+  <strong>Dequantization:</strong> Weights are dequantized group-wise. Each contiguous block of
+  <code>group_size</code> weights along the <code>K</code> dimension shares one float16 scale:
+</p>
+<pre>
+W[n, k] = (w_q_nibble[n, k] - 8) * scales[n, k // group_size]
+</pre>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>y</code></li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input (<code>M</code> = 2, <code>N</code> = 4, <code>K</code> = 4, <code>group_size</code> = 2):
+</p>
+<p>
+  Activations \(x\) (float16, \(2 \times 4\)):
+  \[
+  \begin{bmatrix}
+  1.0 & 0.0 & 1.0 & 0.0 \\
+  0.0 & 1.0 & 0.0 & 1.0
+  \end{bmatrix}
+  \]
+  Packed weights \(w\_q\) (uint8, \(4 \times 2\)) with signed INT4 values in brackets:
+  \[
+  \begin{bmatrix}
+  \texttt{0x99} & \texttt{0x99} \\
+  \texttt{0xAA} & \texttt{0xAA} \\
+  \texttt{0x77} & \texttt{0x77} \\
+  \texttt{0x88} & \texttt{0x88}
+  \end{bmatrix}
+  \;\Rightarrow\;
+  W_{\text{int4}} =
+  \begin{bmatrix}
+  1 & 1 & 1 & 1 \\
+  2 & 2 & 2 & 2 \\
+  -1 & -1 & -1 & -1 \\
+  0 & 0 & 0 & 0
+  \end{bmatrix}
+  \]
+  Scales (float16, \(4 \times 2\), all entries 0.5):
+  \[
+  \begin{bmatrix}
+  0.5 & 0.5 \\
+  0.5 & 0.5 \\
+  0.5 & 0.5 \\
+  0.5 & 0.5
+  \end{bmatrix}
+  \;\Rightarrow\;
+  W_{\text{dequant}} =
+  \begin{bmatrix}
+  0.5 & 0.5 & 0.5 & 0.5 \\
+  1.0 & 1.0 & 1.0 & 1.0 \\
+  -0.5 & -0.5 & -0.5 & -0.5 \\
+  0.0 & 0.0 & 0.0 & 0.0
+  \end{bmatrix}
+  \]
+  Output \(y = x \times W^T\) (float16, \(2 \times 4\)):
+  \[
+  \begin{bmatrix}
+  1.0 & 2.0 & -1.0 & 0.0 \\
+  1.0 & 2.0 & -1.0 & 0.0
+  \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code>, <code>N</code> &le; 8,192</li>
+  <li>1 &le; <code>K</code> &le; 8,192</li>
+  <li><code>K</code> is divisible by <code>2</code> and by <code>group_size</code></li>
+  <li><code>group_size</code> &isin; {2, 4, 8, 16, 32, 64, 128}</li>
+  <li>All tensors are stored in row-major order</li>
+  <li>Input dtype: <code>x</code> and <code>scales</code> are float16; <code>w_q</code> is uint8</li>
+  <li>Output dtype: <code>y</code> is float16</li>
+  <li>Performance is measured with <code>M</code> = 4,096, <code>N</code> = 4,096, <code>K</code> = 4,096, <code>group_size</code> = 128</li>
+</ul>
