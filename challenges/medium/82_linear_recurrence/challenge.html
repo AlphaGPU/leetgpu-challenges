@@ -59,25 +59,7 @@
 
 <h2>Examples</h2>
 
-<p>Example 1 — exponential decay (<code>a = 0.5</code>, single impulse):</p>
-\[
-a = \begin{bmatrix} 0.5 & 0.5 & 0.5 & 0.5 \end{bmatrix}, \quad
-x = \begin{bmatrix} 1.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}
-\]
-\[
-h = \begin{bmatrix} 1.0 & 0.5 & 0.25 & 0.125 \end{bmatrix}
-\]
-
-<p>Example 2 — prefix sum (<code>a = 1</code>, unit inputs):</p>
-\[
-a = \begin{bmatrix} 1.0 & 1.0 & 1.0 & 1.0 \end{bmatrix}, \quad
-x = \begin{bmatrix} 1.0 & 1.0 & 1.0 & 1.0 \end{bmatrix}
-\]
-\[
-h = \begin{bmatrix} 1.0 & 2.0 & 3.0 & 4.0 \end{bmatrix}
-\]
-
-<p>Full example with <code>B = 2</code>, <code>L = 4</code>:</p>
+<p>Example (<code>B = 2</code>, <code>L = 4</code>): row 0 shows exponential decay (<code>a = 0.5</code>, single impulse); row 1 shows prefix sum (<code>a = 1</code>, unit inputs):</p>
 \[
 a = \begin{bmatrix} 0.5 & 0.5 & 0.5 & 0.5 \\ 1.0 & 1.0 & 1.0 & 1.0 \end{bmatrix}, \quad
 x = \begin{bmatrix} 1.0 & 0.0 & 0.0 & 0.0 \\ 1.0 & 1.0 & 1.0 & 1.0 \end{bmatrix}
