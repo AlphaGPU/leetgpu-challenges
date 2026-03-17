@@ -1,0 +1,150 @@
+<p>
+  Implement causal multi-head self-attention using the Flash Attention algorithm. Given query,
+  key, and value tensors of shape <code>(num_heads, seq_len, head_dim)</code>, compute the
+  attention output where each query position can only attend to positions at or before its own
+  index (causal mask). Your implementation must use <strong>tiled computation</strong>: process
+  the sequence in blocks so that the full <code>seq_len &times; seq_len</code> attention score
+  matrix is never materialized in memory.
+</p>
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 300" width="560" height="300"
+     style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6"
+            orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#999"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="560" height="300" fill="#222" rx="8"/>
+
+  <!-- Title -->
+  <text x="280" y="22" text-anchor="middle" fill="#ccc" font-size="13" font-family="sans-serif"
+        font-weight="bold">Flash Attention: Tiled Computation</text>
+
+  <!-- Q matrix (left) -->
+  <text x="50" y="50" text-anchor="middle" fill="#aaccee" font-size="12" font-family="monospace">Q</text>
+  <!-- Q rows as blocks -->
+  <rect x="10" y="58" width="78" height="28" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="49" y="77" text-anchor="middle" fill="#aaccee" font-size="11" font-family="sans-serif">Q&#x2080; (rows 0..Br)</text>
+
+  <rect x="10" y="92" width="78" height="28" rx="3" fill="#2a3a5a" stroke="#4477bb" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="49" y="111" text-anchor="middle" fill="#7799bb" font-size="11" font-family="sans-serif">Q&#x2081;</text>
+
+  <rect x="10" y="126" width="78" height="28" rx="3" fill="#2a3a5a" stroke="#4477bb" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="49" y="145" text-anchor="middle" fill="#7799bb" font-size="11" font-family="sans-serif">Q&#x2082;</text>
+
+  <rect x="10" y="160" width="78" height="14" rx="2" fill="#1a1a1a" stroke="#555" stroke-width="1"/>
+  <text x="49" y="171" text-anchor="middle" fill="#555" font-size="10" font-family="sans-serif">⋮</text>
+
+  <text x="49" y="195" text-anchor="middle" fill="#666" font-size="10" font-family="sans-serif"
+        font-style="italic">seq_len / Br blocks</text>
+
+  <!-- Arrow from Q0 to tile -->
+  <line x1="88" y1="72" x2="188" y2="120" stroke="#4477bb" stroke-width="1.5"
+        marker-end="url(#ah)"/>
+
+  <!-- K matrix (top) -->
+  <text x="248" y="50" text-anchor="middle" fill="#aaeebb" font-size="12" font-family="monospace">K&#x1D40;, V</text>
+  <rect x="190" y="58" width="50" height="22" rx="3" fill="#1e3d2d" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="215" y="73" text-anchor="middle" fill="#aaeebb" font-size="10" font-family="sans-serif">K&#x2080;</text>
+
+  <rect x="248" y="58" width="50" height="22" rx="3" fill="#2a4a38" stroke="#44aa66" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="273" y="73" text-anchor="middle" fill="#77bbaa" font-size="10" font-family="sans-serif">K&#x2081;</text>
+
+  <rect x="306" y="58" width="50" height="22" rx="3" fill="#2a4a38" stroke="#44aa66" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="331" y="73" text-anchor="middle" fill="#77bbaa" font-size="10" font-family="sans-serif">K&#x2082;</text>
+
+  <rect x="364" y="58" width="28" height="22" rx="2" fill="#1a1a1a" stroke="#555" stroke-width="1"/>
+  <text x="378" y="73" text-anchor="middle" fill="#555" font-size="10" font-family="sans-serif">…</text>
+
+  <text x="290" y="95" text-anchor="middle" fill="#666" font-size="10" font-family="sans-serif"
+        font-style="italic">seq_len / Bc blocks</text>
+
+  <!-- Tile computation box -->
+  <rect x="190" y="105" width="210" height="70" rx="5" fill="#2d2010" stroke="#cc8833" stroke-width="1.5"/>
+  <text x="295" y="127" text-anchor="middle" fill="#ffcc66" font-size="12" font-family="sans-serif"
+        font-weight="bold">Tile S&#x1D62;&#x2C7C; = Q&#x1D62; K&#x2C7C;&#x1D40; · scale</text>
+  <text x="295" y="145" text-anchor="middle" fill="#cc9944" font-size="11" font-family="sans-serif">Apply causal mask</text>
+  <text x="295" y="161" text-anchor="middle" fill="#cc9944" font-size="11" font-family="sans-serif">Update (m, l, O) online</text>
+
+  <!-- Loop arrows around K blocks -->
+  <path d="M 395 69 Q 420 55 420 85 Q 420 115 395 130" stroke="#44aa66" stroke-width="1.5"
+        fill="none" marker-end="url(#ah)"/>
+  <text x="435" y="100" text-anchor="middle" fill="#44aa66" font-size="10" font-family="sans-serif">loop</text>
+  <text x="435" y="113" text-anchor="middle" fill="#44aa66" font-size="10" font-family="sans-serif">over j</text>
+
+  <!-- Output O block -->
+  <text x="450" y="50" text-anchor="middle" fill="#cc88ff" font-size="12" font-family="monospace">O</text>
+  <rect x="418" y="58" width="78" height="28" rx="3" fill="#2d1e4d" stroke="#8844cc" stroke-width="1.5"/>
+  <text x="457" y="77" text-anchor="middle" fill="#cc88ff" font-size="11" font-family="sans-serif">O&#x2080; (accumulated)</text>
+
+  <!-- Arrow from tile to O -->
+  <line x1="400" y1="140" x2="457" y2="88" stroke="#cc88ff" stroke-width="1.5"
+        marker-end="url(#ah)"/>
+
+  <!-- Online softmax box -->
+  <rect x="10" y="210" width="540" height="76" rx="5" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
+  <text x="280" y="229" text-anchor="middle" fill="#ccc" font-size="12" font-family="sans-serif"
+        font-weight="bold">Online Softmax Update (for each K/V tile j):</text>
+  <text x="50" y="249" fill="#aaa" font-size="11" font-family="monospace">m_new = max(m_prev, rowmax(S&#x1D62;&#x2C7C;))</text>
+  <text x="50" y="265" fill="#aaa" font-size="11" font-family="monospace">l_new = exp(m_prev − m_new)·l_prev + rowsum(exp(S&#x1D62;&#x2C7C; − m_new))</text>
+  <text x="50" y="281" fill="#aaa" font-size="11" font-family="monospace">O_new = (exp(m_prev − m_new)·l_prev·O_prev + exp(S&#x1D62;&#x2C7C; − m_new)·V&#x2C7C;) / l_new</text>
+</svg>
+
+<p>
+  The key insight of Flash Attention is using the <strong>online softmax</strong> algorithm: instead
+  of computing softmax over the full row at once, maintain running statistics — the current maximum
+  \(m_i\) and the running normalizer \(l_i\) — and update the output accumulator \(O_i\) as each
+  new K/V tile is processed. This makes the computation exact while never requiring the full
+  \(N \times N\) score matrix in memory.
+</p>
+
+\[
+\begin{aligned}
+m_i^{(j)} &= \max\!\left(m_i^{(j-1)},\; \max_k S_{ik}^{(j)}\right) \\[4pt]
+l_i^{(j)} &= e^{m_i^{(j-1)} - m_i^{(j)}} l_i^{(j-1)} + \sum_k e^{S_{ik}^{(j)} - m_i^{(j)}} \\[4pt]
+O_i^{(j)} &= \frac{e^{m_i^{(j-1)} - m_i^{(j)}} l_i^{(j-1)} \cdot O_i^{(j-1)} + e^{S_{ik}^{(j)} - m_i^{(j)}} V^{(j)}}{l_i^{(j)}}
+\end{aligned}
+\]
+
+<p>where \(S_{ik}^{(j)} = \text{scale} \cdot Q_i K_k^\top\) is the raw attention score between
+query position \(i\) and key position \(k\) in tile \(j\), with the causal mask applied
+(\(S_{ik} = -\infty\) for \(k > i\)).</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>Write the result into the <code>output</code> tensor</li>
+  <li>Scale factor: \(\text{scale} = 1 / \sqrt{\text{head\_dim}}\)</li>
+  <li>Apply a causal mask: position \(j\) is masked out (set to \(-\infty\) before softmax) whenever \(j > i\)</li>
+  <li>Q, K, V are stored in row-major order with shape <code>(num_heads, seq_len, head_dim)</code></li>
+  <li>
+    Implement tiled computation: iterate over blocks of the key/value sequence and accumulate
+    the output using the online softmax recurrence above — do not allocate a full
+    <code>seq_len &times; seq_len</code> intermediate matrix
+  </li>
+</ul>
+
+<h2>Example</h2>
+<p>With <code>num_heads</code> = 2, <code>seq_len</code> = 3, <code>head_dim</code> = 4:</p>
+<pre>
+Input:  Q.shape = (2, 3, 4)   # 2 heads, 3 tokens, dim 4
+        K.shape = (2, 3, 4)
+        V.shape = (2, 3, 4)
+Output: output.shape = (2, 3, 4)
+
+# For head 0, token 0 (first query):
+#   Attends only to key 0 (causal) → output[0][0] = V[0][0]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>num_heads</code> &le; 32</li>
+  <li>1 &le; <code>seq_len</code> &le; 8,192</li>
+  <li>1 &le; <code>head_dim</code> &le; 256</li>
+  <li>All tensors use 32-bit floating point</li>
+  <li>Performance is measured with <code>num_heads</code> = 8, <code>seq_len</code> = 4,096, <code>head_dim</code> = 64</li>
+</ul>
