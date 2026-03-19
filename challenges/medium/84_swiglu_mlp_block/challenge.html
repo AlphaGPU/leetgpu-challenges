@@ -1,0 +1,103 @@
+<p>
+  Implement the SwiGLU MLP block — the feedforward network used in LLaMA, Mistral, Gemma, and most
+  modern large language models. Given an input matrix <code>x</code> of shape
+  <code>[M, d_model]</code> and three weight matrices <code>W_gate</code>, <code>W_up</code>
+  (each <code>[d_model, d_ffn]</code>), and <code>W_down</code> (<code>[d_ffn, d_model]</code>),
+  compute:
+  <code>output = (SiLU(x &times; W_gate) &odot; (x &times; W_up)) &times; W_down</code>,
+  where <code>SiLU(z) = z &times; sigmoid(z)</code> and <code>&odot;</code> denotes element-wise
+  multiplication. All tensors are <code>float32</code>.
+</p>
+
+<svg width="700" height="200" viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <rect width="700" height="200" fill="#222"/>
+  <!-- x box -->
+  <rect x="20" y="80" width="60" height="40" rx="4" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="50" y="104" fill="#ccc" font-size="13" text-anchor="middle" font-family="monospace">x</text>
+  <!-- arrows from x -->
+  <line x1="80" y1="90" x2="150" y2="65" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="80" y1="110" x2="150" y2="135" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- W_gate box -->
+  <rect x="150" y="45" width="80" height="40" rx="4" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="190" y="64" fill="#ccc" font-size="11" text-anchor="middle" font-family="monospace">x&#x22C5;W_gate</text>
+  <!-- W_up box -->
+  <rect x="150" y="115" width="80" height="40" rx="4" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="190" y="134" fill="#ccc" font-size="11" text-anchor="middle" font-family="monospace">x&#x22C5;W_up</text>
+  <!-- SiLU box -->
+  <rect x="260" y="45" width="60" height="40" rx="4" fill="#1a5a3a" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="290" y="69" fill="#ccc" font-size="12" text-anchor="middle" font-family="monospace">SiLU</text>
+  <!-- arrows -->
+  <line x1="230" y1="65" x2="260" y2="65" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="230" y1="135" x2="350" y2="108" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="320" y1="65" x2="350" y2="88" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- multiply box -->
+  <rect x="350" y="80" width="60" height="40" rx="4" fill="#5a3a1a" stroke="#cc8844" stroke-width="1.5"/>
+  <text x="380" y="104" fill="#ccc" font-size="18" text-anchor="middle" font-family="monospace">&#x2299;</text>
+  <!-- W_down box -->
+  <rect x="450" y="80" width="80" height="40" rx="4" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="490" y="99" fill="#ccc" font-size="11" text-anchor="middle" font-family="monospace">&#x22C5;W_down</text>
+  <!-- output box -->
+  <rect x="570" y="80" width="70" height="40" rx="4" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="605" y="104" fill="#ccc" font-size="13" text-anchor="middle" font-family="monospace">output</text>
+  <!-- arrows -->
+  <line x1="410" y1="100" x2="450" y2="100" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="530" y1="100" x2="570" y2="100" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- labels -->
+  <text x="190" y="158" fill="#888" font-size="10" text-anchor="middle" font-family="sans-serif">gate projection</text>
+  <text x="290" y="100" fill="#888" font-size="10" text-anchor="middle" font-family="sans-serif">gate</text>
+  <text x="190" y="170" fill="#888" font-size="10" text-anchor="middle" font-family="sans-serif">up projection</text>
+  <defs>
+    <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3 z" fill="#888"/>
+    </marker>
+  </defs>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the <code>solve</code> function with the signature unchanged.</li>
+  <li>Do not use external libraries beyond the framework provided.</li>
+  <li>Write the result into <code>output</code> in-place.</li>
+</ul>
+
+<h2>Example</h2>
+<pre>
+M = 2, d_model = 2, d_ffn = 4
+
+x      = [[1.0, 0.0],
+           [0.0, 1.0]]
+
+W_gate = [[1.0, 0.0, 0.0, 0.0],
+           [0.0, 1.0, 0.0, 0.0]]
+
+W_up   = [[1.0, 0.0, 0.0, 0.0],
+           [0.0, 1.0, 0.0, 0.0]]
+
+W_down = [[1.0, 0.0],
+           [0.0, 1.0],
+           [0.0, 0.0],
+           [0.0, 0.0]]
+
+Intermediate steps:
+  gate   = x @ W_gate = [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]]
+  up     = x @ W_up   = [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]]
+  SiLU(1.0) = 1.0 * sigmoid(1.0) ≈ 0.7311
+  hidden = SiLU(gate) * up = [[0.7311, 0.0, 0.0, 0.0], [0.0, 0.7311, 0.0, 0.0]]
+
+output = hidden @ W_down ≈
+  [[0.7311, 0.0],
+   [0.0,    0.7311]]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code> &le; 65,536</li>
+  <li>1 &le; <code>d_model</code> &le; 8,192</li>
+  <li>1 &le; <code>d_ffn</code> &le; 32,768</li>
+  <li>All tensors are <code>float32</code> on the GPU.</li>
+  <li>Input values are in the range [-10, 10].</li>
+  <li>
+    Performance is measured with <code>M</code> = 512, <code>d_model</code> = 4,096,
+    <code>d_ffn</code> = 14,336
+  </li>
+</ul>
