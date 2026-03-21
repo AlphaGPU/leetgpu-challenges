@@ -1,0 +1,111 @@
+<p>
+  Implement a LoRA (Low-Rank Adaptation) linear layer forward pass. Given an input matrix
+  <code>x</code> of shape <code>batch &times; d_in</code>, a base weight matrix <code>W</code> of
+  shape <code>d_out &times; d_in</code>, a LoRA down-projection matrix <code>A</code> of shape
+  <code>rank &times; d_in</code>, and a LoRA up-projection matrix <code>B</code> of shape
+  <code>d_out &times; rank</code>, compute
+  <code>output = x &times; W<sup>T</sup> + lora_scale &times; (x &times; A<sup>T</sup>) &times; B<sup>T</sup></code>.
+  All tensors are <code>float32</code>.
+</p>
+
+<svg width="680" height="200" viewBox="0 0 680 200" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <rect width="680" height="200" fill="#222"/>
+
+  <!-- x block -->
+  <rect x="20" y="70" width="60" height="60" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="50" y="95" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">x</text>
+  <text x="50" y="112" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">B&times;D_in</text>
+
+  <!-- Arrow to W branch -->
+  <line x1="80" y1="100" x2="110" y2="70" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- Arrow to A branch -->
+  <line x1="80" y1="100" x2="110" y2="145" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- W block -->
+  <rect x="112" y="40" width="70" height="55" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="147" y="63" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">W</text>
+  <text x="147" y="80" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">D_out&times;D_in</text>
+
+  <!-- base output: x@W^T -->
+  <line x1="182" y1="67" x2="225" y2="90" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="227" y="70" width="80" height="55" fill="#1a4a2a" stroke="#4aff88" stroke-width="1.5"/>
+  <text x="267" y="92" text-anchor="middle" fill="#ccc" font-size="11" font-family="monospace">x@W&#x1D57;</text>
+  <text x="267" y="108" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">B&times;D_out</text>
+
+  <!-- A block -->
+  <rect x="112" y="128" width="70" height="50" fill="#3a1a3a" stroke="#cc88ff" stroke-width="1.5"/>
+  <text x="147" y="150" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">A</text>
+  <text x="147" y="167" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">rank&times;D_in</text>
+
+  <!-- hidden = x@A^T -->
+  <line x1="182" y1="153" x2="225" y2="153" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="227" y="130" width="60" height="45" fill="#3a1a3a" stroke="#cc88ff" stroke-width="1.5"/>
+  <text x="257" y="152" text-anchor="middle" fill="#ccc" font-size="10" font-family="monospace">x@A&#x1D57;</text>
+  <text x="257" y="167" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">B&times;rank</text>
+
+  <!-- B block -->
+  <rect x="304" y="128" width="70" height="50" fill="#3a1a3a" stroke="#cc88ff" stroke-width="1.5"/>
+  <text x="339" y="150" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">B</text>
+  <text x="339" y="167" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">D_out&times;rank</text>
+
+  <!-- arrow from hidden to B -->
+  <line x1="287" y1="153" x2="302" y2="153" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- delta = (x@A^T)@B^T -->
+  <line x1="374" y1="153" x2="415" y2="120" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="417" y="95" width="80" height="55" fill="#3a2a1a" stroke="#ffaa44" stroke-width="1.5"/>
+  <text x="457" y="117" text-anchor="middle" fill="#ccc" font-size="10" font-family="monospace">&#x3B1;&times;(x@A&#x1D57;)@B&#x1D57;</text>
+  <text x="457" y="133" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">B&times;D_out</text>
+
+  <!-- plus sign -->
+  <line x1="307" y1="97" x2="415" y2="97" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="385" y="88" text-anchor="middle" fill="#ffaa44" font-size="20" font-family="monospace">+</text>
+
+  <!-- output -->
+  <line x1="497" y1="122" x2="535" y2="122" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="537" y="95" width="80" height="55" fill="#1a4a2a" stroke="#4aff88" stroke-width="1.5"/>
+  <text x="577" y="117" text-anchor="middle" fill="#ccc" font-size="12" font-family="monospace">output</text>
+  <text x="577" y="135" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">B&times;D_out</text>
+
+  <defs>
+    <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#888"/>
+    </marker>
+  </defs>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the <code>solve</code> function; do not change its signature.</li>
+  <li>Do not use external libraries beyond those provided.</li>
+  <li>Write the result into <code>output</code>.</li>
+</ul>
+
+<h2>Examples</h2>
+<p>Example 1:</p>
+<p>
+\[
+x = \begin{bmatrix} 1 & 0 & -1 & 2 \\ 0 & 1 & 1 & -1 \end{bmatrix},\quad
+W = \begin{bmatrix} 1 & 0 & 0 & 0 \\ 0 & 1 & 0 & 0 \\ 0 & 0 & 1 & 0 \end{bmatrix},\quad
+A = \begin{bmatrix} 1 & 0 & 0 & 0 \\ 0 & 1 & 0 & 0 \end{bmatrix},\quad
+B = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 0 & 0 \end{bmatrix}
+\]
+</p>
+<p>With <code>lora_scale</code> = 0.5:</p>
+<p>
+\[
+\text{output} = x W^T + 0.5 \cdot (x A^T) B^T
+= \begin{bmatrix} 1 & 0 & -1 \\ 0 & 1 & 1 \end{bmatrix}
++ 0.5 \cdot \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix} \begin{bmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \end{bmatrix}
+= \begin{bmatrix} 1.5 & 0 & -1 \\ 0 & 1.5 & 1 \end{bmatrix}
+\]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>batch</code> &le; 1,024</li>
+  <li>1 &le; <code>d_in</code>, <code>d_out</code> &le; 8,192</li>
+  <li>1 &le; <code>rank</code> &le; 256; <code>rank</code> &lt; min(<code>d_in</code>, <code>d_out</code>)</li>
+  <li>All tensors are <code>float32</code> on GPU.</li>
+  <li>Performance is measured with <code>batch</code> = 256, <code>d_in</code> = 4,096, <code>d_out</code> = 4,096, <code>rank</code> = 64</li>
+</ul>
