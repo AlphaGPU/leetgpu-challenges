@@ -3,6 +3,8 @@ import cutlass.cute as cute
 
 
 def fnv1a_hash_u32_scalar(x):
+    FNV_PRIME = 16777619
+    OFFSET_BASIS = 2166136261
     val = cute.Uint32(x)
     hash_val = cute.Uint32(OFFSET_BASIS)
     prime = cute.Uint32(FNV_PRIME)
