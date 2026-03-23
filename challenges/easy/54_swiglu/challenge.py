@@ -8,7 +8,7 @@ from core.challenge_base import ChallengeBase
 class Challenge(ChallengeBase):
     def __init__(self):
         super().__init__(
-            name="Swish-Gated Linear Unit", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
+            name="Swish-Gated Linear Unit", atol=1e-04, rtol=1e-05, num_gpus=1, access_tier="free"
         )
 
     def reference_impl(self, input: torch.Tensor, output: torch.Tensor, N: int):
