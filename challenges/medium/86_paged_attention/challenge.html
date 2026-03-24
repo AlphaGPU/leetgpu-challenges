@@ -1,0 +1,180 @@
+<p>
+  Implement decode-phase attention over a <strong>paged KV cache</strong>. In LLM serving systems (e.g., vLLM),
+  the key and value tensors for each sequence are stored in fixed-size memory <em>blocks</em> (pages) that
+  may be scattered non-contiguously across a shared GPU memory pool. A <code>block_table</code> maps each
+  sequence's logical block indices to physical block indices in the cache pool. Given a single query vector
+  per sequence (one new token being generated), compute the attention output by gathering the relevant
+  K/V blocks via the block table and computing scaled dot-product attention over the full context.
+</p>
+
+<svg width="700" height="280" viewBox="0 0 700 280" style="display:block; margin:20px auto;" xmlns="http://www.w3.org/2000/svg">
+  <rect width="700" height="280" fill="#222" rx="8"/>
+
+  <!-- Title -->
+  <text x="350" y="22" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">Paged KV-Cache: block_table lookup</text>
+
+  <!-- Sequence 0 block table -->
+  <rect x="20" y="40" width="140" height="28" fill="#2a3a4a" stroke="#4a8abf" stroke-width="1" rx="3"/>
+  <text x="30" y="59" fill="#4a8abf" font-size="11" font-family="monospace">seq 0: [3, 7, —]</text>
+
+  <!-- Sequence 1 block table -->
+  <rect x="20" y="76" width="140" height="28" fill="#2a3a4a" stroke="#4a8abf" stroke-width="1" rx="3"/>
+  <text x="30" y="95" fill="#4a8abf" font-size="11" font-family="monospace">seq 1: [1, 5, 9]</text>
+
+  <text x="90" y="130" text-anchor="middle" fill="#888" font-size="11" font-family="monospace">block_table</text>
+
+  <!-- Arrow labels -->
+  <text x="190" y="59" fill="#888" font-size="11" font-family="monospace">phys block 3</text>
+  <text x="190" y="83" fill="#888" font-size="11" font-family="monospace">phys block 7</text>
+  <text x="190" y="107" fill="#888" font-size="11" font-family="monospace">phys block 1</text>
+  <text x="190" y="131" fill="#888" font-size="11" font-family="monospace">phys block 5</text>
+  <text x="190" y="155" fill="#888" font-size="11" font-family="monospace">phys block 9</text>
+
+  <!-- Arrows from seq 0 -->
+  <line x1="160" y1="54" x2="185" y2="54" stroke="#4a8abf" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="160" y1="54" x2="185" y2="78" stroke="#4a8abf" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- Arrows from seq 1 -->
+  <line x1="160" y1="90" x2="185" y2="102" stroke="#52b788" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <line x1="160" y1="90" x2="185" y2="126" stroke="#52b788" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <line x1="160" y1="90" x2="185" y2="150" stroke="#52b788" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+  <defs>
+    <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#4a8abf"/>
+    </marker>
+    <marker id="arr2" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#52b788"/>
+    </marker>
+  </defs>
+
+  <!-- KV cache pool blocks -->
+  <text x="420" y="22" text-anchor="middle" fill="#ccc" font-size="12" font-family="monospace">K_cache / V_cache pool</text>
+
+  <!-- Draw blocks 0-9 in the pool -->
+  <rect x="305" y="35" width="55" height="22" fill="#333" stroke="#555" rx="2"/>
+  <text x="332" y="51" text-anchor="middle" fill="#666" font-size="10" font-family="monospace">blk 0</text>
+
+  <!-- block 1 (seq 1) -->
+  <rect x="305" y="61" width="55" height="22" fill="#2a4a38" stroke="#52b788" rx="2"/>
+  <text x="332" y="77" text-anchor="middle" fill="#52b788" font-size="10" font-family="monospace">blk 1</text>
+
+  <rect x="305" y="87" width="55" height="22" fill="#333" stroke="#555" rx="2"/>
+  <text x="332" y="103" text-anchor="middle" fill="#666" font-size="10" font-family="monospace">blk 2</text>
+
+  <!-- block 3 (seq 0) -->
+  <rect x="305" y="113" width="55" height="22" fill="#2a3a4a" stroke="#4a8abf" rx="2"/>
+  <text x="332" y="129" text-anchor="middle" fill="#4a8abf" font-size="10" font-family="monospace">blk 3</text>
+
+  <rect x="305" y="139" width="55" height="22" fill="#333" stroke="#555" rx="2"/>
+  <text x="332" y="155" text-anchor="middle" fill="#666" font-size="10" font-family="monospace">blk 4</text>
+
+  <!-- block 5 (seq 1) -->
+  <rect x="305" y="165" width="55" height="22" fill="#2a4a38" stroke="#52b788" rx="2"/>
+  <text x="332" y="181" text-anchor="middle" fill="#52b788" font-size="10" font-family="monospace">blk 5</text>
+
+  <rect x="305" y="191" width="55" height="22" fill="#333" stroke="#555" rx="2"/>
+  <text x="332" y="207" text-anchor="middle" fill="#666" font-size="10" font-family="monospace">blk 6</text>
+
+  <!-- block 7 (seq 0) -->
+  <rect x="305" y="217" width="55" height="22" fill="#2a3a4a" stroke="#4a8abf" rx="2"/>
+  <text x="332" y="233" text-anchor="middle" fill="#4a8abf" font-size="10" font-family="monospace">blk 7</text>
+
+  <rect x="305" y="243" width="55" height="22" fill="#333" stroke="#555" rx="2"/>
+  <text x="332" y="259" text-anchor="middle" fill="#666" font-size="10" font-family="monospace">blk 8</text>
+
+  <!-- Arrows from label to pool -->
+  <line x1="285" y1="59" x2="300" y2="72" stroke="#52b788" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="285" y1="83" x2="300" y2="228" stroke="#4a8abf" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="285" y1="107" x2="300" y2="72" stroke="#52b788" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="285" y1="131" x2="300" y2="176" stroke="#52b788" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="285" y1="155" x2="360" y2="200" stroke="#52b788" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="285" y1="59" x2="300" y2="124" stroke="#4a8abf" stroke-width="1" stroke-dasharray="3,2"/>
+
+  <!-- Attention computation box -->
+  <rect x="390" y="90" width="290" height="170" fill="#1e2e1e" stroke="#52b788" stroke-width="1" rx="5"/>
+  <text x="535" y="112" text-anchor="middle" fill="#52b788" font-size="12" font-family="monospace">Attention Computation</text>
+  <text x="535" y="135" text-anchor="middle" fill="#ccc" font-size="11" font-family="monospace">scores = Q · K_gathered&#x1D40;/ √d</text>
+  <text x="535" y="158" text-anchor="middle" fill="#ccc" font-size="11" font-family="monospace">weights = softmax(scores)</text>
+  <text x="535" y="181" text-anchor="middle" fill="#ccc" font-size="11" font-family="monospace">output = weights · V_gathered</text>
+  <text x="405" y="215" fill="#888" font-size="10" font-family="monospace">K/V tokens gathered from</text>
+  <text x="405" y="230" fill="#888" font-size="10" font-family="monospace">non-contiguous pool blocks</text>
+  <text x="405" y="245" fill="#888" font-size="10" font-family="monospace">via block_table indirection</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<p>
+  Implement the function <code>solve(Q, K_cache, V_cache, block_table, context_lens, output, batch_size, num_heads, head_dim, block_size, max_blocks_per_seq)</code>
+  that computes paged decode-phase attention:
+</p>
+<ul>
+  <li><code>Q</code>: query tensor of shape <code>(batch_size, num_heads, head_dim)</code>, dtype <code>float32</code> — one query per sequence</li>
+  <li><code>K_cache</code>: paged key cache of shape <code>(num_blocks, block_size, num_heads, head_dim)</code>, dtype <code>float32</code></li>
+  <li><code>V_cache</code>: paged value cache of shape <code>(num_blocks, block_size, num_heads, head_dim)</code>, dtype <code>float32</code></li>
+  <li><code>block_table</code>: physical block indices of shape <code>(batch_size, max_blocks_per_seq)</code>, dtype <code>int32</code></li>
+  <li><code>context_lens</code>: number of valid KV tokens per sequence, shape <code>(batch_size,)</code>, dtype <code>int32</code></li>
+  <li><code>output</code>: result of shape <code>(batch_size, num_heads, head_dim)</code>, dtype <code>float32</code></li>
+</ul>
+<p>
+  For each sequence <code>s</code> and each attention head <code>h</code>, compute:
+</p>
+<ol>
+  <li>
+    Gather the <code>context_lens[s]</code> key and value vectors from the paged cache using <code>block_table[s]</code>.
+    Token at logical position <code>t</code> lives in physical block <code>block_table[s, t / block_size]</code>
+    at offset <code>t % block_size</code> within that block.
+  </li>
+  <li>
+    Compute scaled dot-product attention:
+    <code>scores[t] = Q[s, h] &middot; K[s, h, t] / &radic;head_dim</code>
+  </li>
+  <li>
+    Apply softmax over all <code>context_lens[s]</code> positions to get attention weights.
+  </li>
+  <li>
+    Compute <code>output[s, h] = &sum;<sub>t</sub> weights[t] &times; V[s, h, t]</code>.
+  </li>
+</ol>
+<p>
+  Do not use external libraries beyond the framework you select. Keep the function signature unchanged.
+  Write results directly into <code>output</code>.
+</p>
+
+<h2>Example</h2>
+<p>
+  With <code>batch_size</code> = 1, <code>num_heads</code> = 1, <code>head_dim</code> = 4,
+  <code>block_size</code> = 2, <code>context_lens</code> = [2], <code>block_table</code> = [[0]]:
+</p>
+<pre>
+Q[0, 0]            = [1.0, 1.0, 0.0, 0.0]
+
+K_cache[0, 0, 0]   = [1.0, 0.0, 0.0, 0.0]   # block 0, token 0
+K_cache[0, 1, 0]   = [0.0, 1.0, 0.0, 0.0]   # block 0, token 1
+
+V_cache[0, 0, 0]   = [2.0, 0.0, 0.0, 0.0]
+V_cache[0, 1, 0]   = [0.0, 4.0, 0.0, 0.0]
+</pre>
+<p>
+  Scores (before softmax):
+</p>
+<pre>
+score[0] = (1·1 + 1·0 + 0·0 + 0·0) / √4 = 0.5
+score[1] = (1·0 + 1·1 + 0·0 + 0·0) / √4 = 0.5
+</pre>
+<p>
+  Attention weights = softmax([0.5, 0.5]) = [0.5, 0.5]
+</p>
+<pre>
+output[0, 0] = 0.5 × [2, 0, 0, 0] + 0.5 × [0, 4, 0, 0] = [1.0, 2.0, 0.0, 0.0]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>batch_size</code> &le; 32</li>
+  <li>1 &le; <code>num_heads</code> &le; 64</li>
+  <li>1 &le; <code>head_dim</code> &le; 256; <code>head_dim</code> is a multiple of 8</li>
+  <li>1 &le; <code>block_size</code> &le; 64; <code>block_size</code> is a power of 2</li>
+  <li>1 &le; <code>context_lens[s]</code> &le; 8,192 for all sequences <code>s</code></li>
+  <li>All input tensors are on the GPU and in <code>float32</code> (except <code>block_table</code> and <code>context_lens</code> which are <code>int32</code>)</li>
+  <li><code>block_table[s, i]</code> is a valid index into the first dimension of <code>K_cache</code> for all <code>i &lt; ceil(context_lens[s] / block_size)</code></li>
+  <li>Performance is measured with <code>batch_size</code> = 8, <code>num_heads</code> = 32, <code>head_dim</code> = 128, <code>block_size</code> = 16, <code>context_lens[s]</code> = 2,048 for all sequences</li>
+</ul>
