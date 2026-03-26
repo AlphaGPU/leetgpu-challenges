@@ -1,0 +1,148 @@
+<p>
+  Implement the token verification step of speculative decoding. In speculative decoding, a small
+  draft model proposes <code>T</code> tokens; the target model then evaluates all of them in a
+  single forward pass and accepts or rejects each token. Given a batch of <code>B</code> draft
+  sequences, the per-position acceptance probabilities, and pre-generated uniform samples, produce
+  the final output token sequence for each sequence in the batch. All probability tensors use
+  <code>float32</code>; token index tensors use <code>int32</code>.
+</p>
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 230" width="680" height="230" style="display:block; margin:20px auto;">
+  <rect width="680" height="230" fill="#222" rx="8"/>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="340" y="24" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">Speculative Decoding Verification (T=4 draft tokens)</text>
+
+  <!-- Draft tokens row -->
+  <text x="14" y="58" fill="#aaa" font-size="11" font-family="sans-serif">draft</text>
+  <rect x="80" y="44" width="60" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.2"/>
+  <text x="110" y="62" text-anchor="middle" fill="#8ec4f0" font-size="12" font-family="monospace">t₀</text>
+  <rect x="200" y="44" width="60" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.2"/>
+  <text x="230" y="62" text-anchor="middle" fill="#8ec4f0" font-size="12" font-family="monospace">t₁</text>
+  <rect x="320" y="44" width="60" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.2"/>
+  <text x="350" y="62" text-anchor="middle" fill="#8ec4f0" font-size="12" font-family="monospace">t₂</text>
+  <rect x="440" y="44" width="60" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.2"/>
+  <text x="470" y="62" text-anchor="middle" fill="#8ec4f0" font-size="12" font-family="monospace">t₃</text>
+
+  <!-- acceptance prob labels -->
+  <line x1="110" y1="70" x2="110" y2="100" stroke="#888" stroke-width="1.2" marker-end="url(#ah)"/>
+  <text x="110" y="94" text-anchor="middle" fill="#888" font-size="9" font-family="sans-serif">α₀=0.9</text>
+  <line x1="230" y1="70" x2="230" y2="100" stroke="#888" stroke-width="1.2" marker-end="url(#ah)"/>
+  <text x="230" y="94" text-anchor="middle" fill="#888" font-size="9" font-family="sans-serif">α₁=0.7</text>
+  <line x1="350" y1="70" x2="350" y2="100" stroke="#e06060" stroke-width="1.2" marker-end="url(#ah)"/>
+  <text x="350" y="94" text-anchor="middle" fill="#e06060" font-size="9" font-family="sans-serif">α₂=0.3</text>
+
+  <!-- acceptance test row -->
+  <text x="14" y="122" fill="#aaa" font-size="11" font-family="sans-serif">test</text>
+  <rect x="80" y="108" width="60" height="26" rx="4" fill="#1a3a1a" stroke="#44aa66" stroke-width="1.2"/>
+  <text x="110" y="126" text-anchor="middle" fill="#8ef0a0" font-size="11" font-family="monospace">u=0.1✓</text>
+  <rect x="200" y="108" width="60" height="26" rx="4" fill="#1a3a1a" stroke="#44aa66" stroke-width="1.2"/>
+  <text x="230" y="126" text-anchor="middle" fill="#8ef0a0" font-size="11" font-family="monospace">u=0.4✓</text>
+  <rect x="320" y="108" width="60" height="26" rx="4" fill="#4a1a1a" stroke="#e06060" stroke-width="1.2"/>
+  <text x="350" y="126" text-anchor="middle" fill="#f08080" font-size="11" font-family="monospace">u=0.8✗</text>
+
+  <!-- rejection annotation -->
+  <line x1="350" y1="134" x2="350" y2="155" stroke="#e06060" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#ah)"/>
+  <text x="390" y="148" fill="#e06060" font-size="10" font-family="sans-serif">reject → resample</text>
+  <text x="390" y="162" fill="#e06060" font-size="10" font-family="sans-serif">from clamp(q−p,0)</text>
+
+  <!-- output row -->
+  <text x="14" y="195" fill="#aaa" font-size="11" font-family="sans-serif">output</text>
+  <rect x="80" y="182" width="60" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.2"/>
+  <text x="110" y="200" text-anchor="middle" fill="#8ec4f0" font-size="12" font-family="monospace">t₀ ✓</text>
+  <rect x="200" y="182" width="60" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.2"/>
+  <text x="230" y="200" text-anchor="middle" fill="#8ec4f0" font-size="12" font-family="monospace">t₁ ✓</text>
+  <rect x="320" y="182" width="60" height="26" rx="4" fill="#3a2010" stroke="#c08040" stroke-width="1.2"/>
+  <text x="350" y="200" text-anchor="middle" fill="#f0b060" font-size="12" font-family="monospace">t₂′</text>
+  <rect x="440" y="182" width="60" height="26" rx="4" fill="#2a2a2a" stroke="#555" stroke-width="1.2"/>
+  <text x="470" y="200" text-anchor="middle" fill="#666" font-size="12" font-family="monospace">0</text>
+
+  <!-- arrows output -->
+  <line x1="110" y1="134" x2="110" y2="180" stroke="#44aa66" stroke-width="1.2" marker-end="url(#ah)"/>
+  <line x1="230" y1="134" x2="230" y2="180" stroke="#44aa66" stroke-width="1.2" marker-end="url(#ah)"/>
+
+  <!-- t3 crossed out -->
+  <line x1="440" y1="108" x2="500" y2="108" stroke="#555" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <text x="470" y="104" text-anchor="middle" fill="#555" font-size="10" font-family="sans-serif">(skipped)</text>
+</svg>
+
+<p>
+  For each sequence <code>b</code> in the batch, process draft tokens left-to-right. For position
+  <code>i</code>, compute the acceptance probability
+  \(\alpha_i = \min\!\left(1,\, \frac{q_i(t_i)}{p_i(t_i)}\right)\)
+  where \(p_i(t_i)\) is the draft model probability and \(q_i(t_i)\) is the target model
+  probability for the draft token \(t_i\). Accept token \(t_i\) if
+  \(\texttt{uniform\_samples}[b, i] < \alpha_i\); otherwise reject and stop. On rejection at
+  position <code>i</code>, sample a replacement token from the adjusted distribution
+  \(\text{adj}(v) \propto \max(0,\, q_i(v) - p_i(v))\)
+  using \(\texttt{uniform\_samples}[b, T]\) via inverse CDF. If all <code>T</code> draft tokens
+  are accepted, sample one bonus token from \(q_{T-1}\) (the target distribution at the last
+  draft position) using \(\texttt{uniform\_samples}[b, T]\). Write the result into
+  <code>output_tokens[b, :]</code>: valid tokens fill positions \(0\) through
+  <code>accepted_count</code> (inclusive), remaining positions are zero.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement <code>solve(draft_tokens, draft_probs, target_probs, uniform_samples, output_tokens, B, T, V)</code>.</li>
+  <li>Do not change the function signature or use external libraries beyond the standard GPU frameworks.</li>
+  <li>Write results into the provided <code>output_tokens</code> buffer (shape <code>[B, T+1]</code>, <code>int32</code>).</li>
+  <li>Memory layout is row-major: <code>draft_probs[b, i, v]</code> is at offset <code>b*T*V + i*V + v</code>.</li>
+  <li>
+    Inverse CDF sampling: given distribution \(\text{adj}\) (already normalized), find the
+    smallest index \(k\) where \(\sum_{v=0}^{k} \text{adj}(v) \ge r\), where
+    \(r = \texttt{uniform\_samples}[b, T]\). Clamp the result to \([0, V-1]\).
+  </li>
+  <li>
+    If the adjusted distribution is all zeros (i.e., \(q_i \le p_i\) everywhere), fall back to
+    the uniform distribution over \(V\) tokens.
+  </li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  With <code>B</code> = 1, <code>T</code> = 3, <code>V</code> = 4:
+</p>
+<pre>
+draft_tokens     = [[1, 2, 0]]
+
+draft_probs  pos 0: [0.10, 0.60, 0.20, 0.10]   # p(t=1) = 0.60
+             pos 1: [0.10, 0.20, 0.50, 0.20]   # p(t=2) = 0.50
+             pos 2: [0.40, 0.20, 0.20, 0.20]   # (not reached)
+
+target_probs pos 0: [0.10, 0.50, 0.20, 0.20]   # q(t=1) = 0.50
+             pos 1: [0.30, 0.20, 0.20, 0.30]   # q(t=2) = 0.20
+             pos 2: [0.30, 0.20, 0.30, 0.20]   # (not reached)
+
+uniform_samples = [[0.50, 0.70, 0.30, 0.90]]
+                     ^     ^     ^     ^ uniform_samples[0, T=3] for resampling
+</pre>
+<p>
+  Position 0: \(\alpha_0 = \min(1,\, 0.50/0.60) \approx 0.833\). Since \(0.50 < 0.833\), accept
+  token <code>1</code>.<br>
+  Position 1: \(\alpha_1 = \min(1,\, 0.20/0.50) = 0.40\). Since \(0.70 \ge 0.40\), reject.
+  Adjusted distribution: \(\max(0,\,[0.30\!-\!0.10,\,0.20\!-\!0.20,\,0.20\!-\!0.50,\,0.30\!-\!0.20])
+  = [0.20,\,0,\,0,\,0.10]\), normalized \(= [2/3,\,0,\,0,\,1/3]\).
+  CDF \(= [0.667,\,0.667,\,0.667,\,1.0]\). With \(r = 0.90\), inverse CDF gives token
+  <code>3</code>.
+</p>
+<pre>
+output_tokens = [[1, 3, 0, 0]]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 256</li>
+  <li>1 &le; <code>T</code> &le; 16</li>
+  <li>2 &le; <code>V</code> &le; 131,072</li>
+  <li><code>draft_probs[b, i, :]</code> and <code>target_probs[b, i, :]</code> are valid probability distributions (non-negative, sum to 1)</li>
+  <li><code>draft_probs[b, i, draft_tokens[b, i]]</code> &gt; 0 for all <code>b</code>, <code>i</code></li>
+  <li><code>uniform_samples</code> values are in \([0, 1)\)</li>
+  <li>All floating-point tensors use <code>float32</code>; token tensors use <code>int32</code></li>
+  <li>Performance is measured with <code>B</code> = 64, <code>T</code> = 8, <code>V</code> = 32,768</li>
+</ul>
