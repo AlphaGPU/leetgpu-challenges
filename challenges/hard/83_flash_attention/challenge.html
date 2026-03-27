@@ -145,7 +145,7 @@ query position \(i\) and key position \(k\) in tile \(j\), with the causal mask 
   <li>Use only native features (external libraries are not permitted)</li>
   <li>The <code>solve</code> function signature must remain unchanged</li>
   <li>Write the result into the <code>output</code> tensor</li>
-  <li>Scale factor: \(\text{scale} = 1 / \sqrt{\text{head\_dim}}\)</li>
+  <li>Scale factor: \(\text{scale} = 1 / \sqrt{\text{head_dim}}\)</li>
   <li>Apply a causal mask: position \(j\) is masked out (set to \(-\infty\) before softmax) whenever \(j > i\)</li>
   <li>Q, K, V are stored in row-major order with shape <code>(num_heads, seq_len, head_dim)</code></li>
   <li>
