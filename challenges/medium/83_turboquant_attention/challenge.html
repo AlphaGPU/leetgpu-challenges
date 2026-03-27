@@ -1,52 +1,24 @@
 <p>
-    Implement attention score computation against a TurboQuant-compressed KV cache. In modern LLM inference, key vectors are compressed using TurboQuant: each key is first rotated by an orthogonal matrix \(\Pi\), then each coordinate is scalar-quantized to the nearest centroid in a codebook, storing only the <code>uint8</code> index. Given <code>B</code> query vectors of dimension <code>D</code>, <code>S</code> quantized key vectors (stored as codebook indices), the rotation matrix \(\Pi\), and a sorted codebook of <code>C</code> centroids, compute the attention scores matrix.
-</p>
-<p>
-    For each query \(Q_i\) and quantized key \(K_j\), compute:
-    \[
-    \text{scores}_{i,j} = Q_i \cdot \text{dequant}(K_j)
-    \]
-    where dequantization reconstructs the key by looking up centroids and rotating back:
-    \[
-    \text{dequant}(K_j) = [\text{codebook}[K_j[0]],\; \text{codebook}[K_j[1]],\; \ldots,\; \text{codebook}[K_j[D{-}1]]] \;\cdot\; \Pi
-    \]
+    Implement attention score computation against a quantized KV cache. During LLM inference, the KV cache can dominate memory. <a href="https://arxiv.org/abs/2504.19874" target="_blank" style="color:#4a9eff; text-decoration:underline;">TurboQuant</a> addresses this by compressing each key vector down to <code>uint8</code> codebook indices, reducing memory by up to 4&times;. Your task is to compute attention scores between full-precision queries and these compressed keys.
 </p>
 
-<svg width="720" height="140" style="display:block; margin:20px auto;" xmlns="http://www.w3.org/2000/svg">
-    <rect width="720" height="140" fill="#222" rx="8"/>
-    <text x="12" y="24" fill="#888" font-size="11" font-family="sans-serif">Dequantization + Dot Product Pipeline</text>
-    <rect x="20" y="45" width="120" height="50" rx="6" fill="none" stroke="#4a9eff" stroke-width="2"/>
-    <text x="80" y="66" text-anchor="middle" fill="#4a9eff" font-size="11" font-family="monospace">K_idx</text>
-    <text x="80" y="82" text-anchor="middle" fill="#ccc" font-size="10" font-family="monospace">S x D (uint8)</text>
-    <line x1="140" y1="70" x2="170" y2="70" stroke="#ccc" stroke-width="1.5" marker-end="url(#arrow)"/>
-    <rect x="170" y="45" width="130" height="50" rx="6" fill="none" stroke="#50c878" stroke-width="2"/>
-    <text x="235" y="66" text-anchor="middle" fill="#50c878" font-size="11" font-family="monospace">Lookup</text>
-    <text x="235" y="82" text-anchor="middle" fill="#ccc" font-size="10" font-family="monospace">codebook[idx]</text>
-    <line x1="300" y1="70" x2="330" y2="70" stroke="#ccc" stroke-width="1.5" marker-end="url(#arrow)"/>
-    <rect x="330" y="45" width="130" height="50" rx="6" fill="none" stroke="#4a9eff" stroke-width="2"/>
-    <text x="395" y="66" text-anchor="middle" fill="#4a9eff" font-size="11" font-family="monospace">Rotate back</text>
-    <text x="395" y="82" text-anchor="middle" fill="#ccc" font-size="10" font-family="monospace">K_deq = ... * Pi</text>
-    <line x1="460" y1="70" x2="490" y2="70" stroke="#ccc" stroke-width="1.5" marker-end="url(#arrow)"/>
-    <rect x="490" y="45" width="130" height="50" rx="6" fill="none" stroke="#e8a040" stroke-width="2"/>
-    <text x="555" y="66" text-anchor="middle" fill="#e8a040" font-size="11" font-family="monospace">Dot product</text>
-    <text x="555" y="82" text-anchor="middle" fill="#ccc" font-size="10" font-family="monospace">Q * K_deq^T</text>
-    <line x1="620" y1="70" x2="650" y2="70" stroke="#ccc" stroke-width="1.5" marker-end="url(#arrow)"/>
-    <text x="668" y="74" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">scores</text>
-    <text x="360" y="125" text-anchor="middle" fill="#666" font-size="10" font-family="sans-serif">Hint: rotating queries once avoids per-key rotation</text>
-    <defs>
-        <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-            <path d="M0,0 L8,3 L0,6" fill="none" stroke="#ccc" stroke-width="1"/>
-        </marker>
-    </defs>
-</svg>
+<p>
+    <strong>How TurboQuant encodes keys</strong> (already done for you): each key vector is multiplied by a random orthogonal matrix \(\Pi\), then each coordinate is replaced by the index of its nearest centroid in a codebook.
+</p>
+
+<p>
+    <strong>What you need to compute</strong>: given queries \(Q\) and quantized key indices \(K_\text{idx}\), dequantize each key and compute dot products:
+</p>
+<ol>
+    <li><strong>Lookup</strong>: replace each index with its codebook value, producing a centroid vector \(\tilde{Y}_j\)</li>
+    <li><strong>Rotate back</strong>: recover the approximate key \(\tilde{K}_j = \tilde{Y}_j \cdot \Pi\)</li>
+    <li><strong>Dot product</strong>: \(\text{scores}_{i,j} = Q_i \cdot \tilde{K}_j\)</li>
+</ol>
 
 <h2>Implementation Requirements</h2>
 <ul>
     <li>The <code>solve</code> function signature must remain unchanged.</li>
     <li>Use only native features (no external libraries).</li>
-    <li>\(\Pi\) is an orthogonal matrix (\(\Pi^T \Pi = I\)), stored row-major as <code>float32</code>.</li>
-    <li>The codebook is sorted in ascending order (<code>float32</code>).</li>
-    <li><code>K_idx</code> contains <code>uint8</code> indices in \([0, C)\).</li>
     <li>Store the result in <code>scores</code> as <code>float32</code>.</li>
 </ul>
 
@@ -72,17 +44,18 @@ Rotation matrix \(\Pi = I_{2 \times 2}\) (identity)<br>
 Codebook (\(C=4\)): \([-0.75,\; -0.25,\; 0.25,\; 0.75]\)
 </p>
 <p>
-Dequantized keys: look up centroids for each index, then multiply by \(\Pi\) (identity here):
+Step 1: Lookup centroids for each index:
 \[
-K_\text{deq} = \begin{bmatrix}
+\tilde{Y} = \begin{bmatrix}
 -0.75 & 0.75 \\
 -0.25 & 0.25 \\
 0.75 & -0.75
 \end{bmatrix}
 \]
-Output scores (\(B=2, S=3\)):
+Step 2: Rotate back (\(\Pi\) is identity here, so \(\tilde{K} = \tilde{Y}\)).<br>
+Step 3: Dot products:
 \[
-\text{scores} = Q \cdot K_\text{deq}^T = \begin{bmatrix}
+\text{scores} = Q \cdot \tilde{K}^T = \begin{bmatrix}
 -0.75 & -0.25 & 0.75 \\
 0.75 & 0.25 & -0.75
 \end{bmatrix}
@@ -95,7 +68,9 @@ Output scores (\(B=2, S=3\)):
     <li>1 &le; <code>S</code> &le; 65,536</li>
     <li>1 &le; <code>D</code> &le; 256</li>
     <li>2 &le; <code>C</code> &le; 256</li>
-    <li>\(\Pi\) is an orthogonal matrix, codebook is sorted ascending</li>
-    <li>All floating-point values are <code>float32</code>; key indices are <code>uint8</code></li>
+    <li>\(\Pi\) is orthogonal (\(\Pi^T \Pi = I\))</li>
+    <li>Codebook values are sorted in ascending order</li>
+    <li><code>K_idx</code> values are in \([0, C)\)</li>
+    <li>All floating-point inputs are <code>float32</code>; key indices are <code>uint8</code></li>
     <li>Performance is measured with <code>B</code> = 32, <code>S</code> = 32,768, <code>D</code> = 128, <code>C</code> = 16</li>
 </ul>
