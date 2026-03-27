@@ -1,11 +1,14 @@
 import torch
 
 
-# Q, K_idx, Pi, codebook, scores are tensors on the GPU
+# Q, K_idx, qjl_signs, gamma, Pi, S_mat, codebook, scores are tensors on the GPU
 def solve(
     Q: torch.Tensor,
     K_idx: torch.Tensor,
+    qjl_signs: torch.Tensor,
+    gamma: torch.Tensor,
     Pi: torch.Tensor,
+    S_mat: torch.Tensor,
     codebook: torch.Tensor,
     scores: torch.Tensor,
     B: int,
