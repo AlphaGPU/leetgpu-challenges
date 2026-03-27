@@ -2,7 +2,7 @@ import cutlass
 import cutlass.cute as cute
 
 
-# x, scales, y are tensors on the GPU
+# x, w_q, scales, y are tensors on the GPU
 @cute.jit
 def solve(
     x: cute.Tensor,

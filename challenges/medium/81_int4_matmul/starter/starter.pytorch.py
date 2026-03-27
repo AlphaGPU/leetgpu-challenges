@@ -1,7 +1,7 @@
 import torch
 
 
-# x, scales, y are tensors on the GPU
+# x, w_q, scales, y are tensors on the GPU
 def solve(
     x: torch.Tensor,
     w_q: torch.Tensor,

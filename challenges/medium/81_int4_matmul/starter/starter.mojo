@@ -1,7 +1,7 @@
 from gpu.host import DeviceContext
 from memory import UnsafePointer
 
-# x, scales, y are device pointers
+# x, w_q, scales, y are device pointers
 @export
 def solve(
     x: UnsafePointer[Float16],
