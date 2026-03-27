@@ -1,0 +1,54 @@
+name: Test Challenge Preview Render
+
+on:
+  workflow_dispatch:
+    inputs:
+      challenge_path:
+        description: "Path to challenge.html (e.g. challenges/medium/81_int4_matmul/challenge.html)"
+        required: true
+        default: "challenges/medium/81_int4_matmul/challenge.html"
+      pr_number:
+        description: "PR number to comment on"
+        required: true
+
+jobs:
+  render-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Render challenge.html preview
+        run: |
+          npx --yes playwright install --with-deps chromium
+          node .github/scripts/render-challenge.js "${{ inputs.challenge_path }}" /tmp/challenge-preview.png
+
+      - name: Comment on PR with preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CHALLENGE_DIR=$(dirname "${{ inputs.challenge_path }}")
+          PREVIEW_PATH="${CHALLENGE_DIR}/preview.png"
+          cp /tmp/challenge-preview.png "$PREVIEW_PATH"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B preview-test
+          git add "$PREVIEW_PATH"
+          git commit -m "Add challenge.html preview image (test)"
+          git push -f origin preview-test
+
+          REPO="${{ github.repository }}"
+          SHA=$(git rev-parse HEAD)
+          IMG_URL="https://raw.githubusercontent.com/${REPO}/${SHA}/${PREVIEW_PATH}"
+          BODY=$(cat <<EOF
+          ## Challenge Preview
+          ![challenge-preview](${IMG_URL})
+          EOF
+          )
+          gh pr comment "${{ inputs.pr_number }}" --body "$BODY"
