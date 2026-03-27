@@ -90,3 +90,50 @@ jobs:
             - The challenge should require the solver to think about memory access patterns, synchronization, work distribution, or algorithm design — not just write a one-line kernel.
 
             Before opening the PR, verify every item in the "Checklist" section of CLAUDE.md. Run `pre-commit run --all-files` to lint.
+
+      - name: Render challenge.html preview
+        if: steps.claude.outputs.branch_name != ''
+        run: |
+          git checkout "${{ steps.claude.outputs.branch_name }}"
+          git pull origin "${{ steps.claude.outputs.branch_name }}"
+          CHALLENGE_HTML=$(git diff --name-only origin/main..HEAD -- 'challenges/**/challenge.html' | head -1)
+          if [ -z "$CHALLENGE_HTML" ]; then
+            echo "No challenge.html found in diff, skipping render"
+            exit 0
+          fi
+          echo "Rendering $CHALLENGE_HTML"
+          npx --yes playwright install --with-deps chromium
+          node .github/scripts/render-challenge.js "$CHALLENGE_HTML" /tmp/challenge-preview.png
+          echo "challenge_html=$CHALLENGE_HTML" >> "$GITHUB_ENV"
+
+      - name: Commit preview and comment on PR
+        if: env.challenge_html != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH="${{ steps.claude.outputs.branch_name }}"
+          PR_NUMBER=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number')
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No PR found for branch $BRANCH, skipping"
+            exit 0
+          fi
+
+          CHALLENGE_DIR=$(dirname "${{ env.challenge_html }}")
+          PREVIEW_PATH="${CHALLENGE_DIR}/preview.png"
+          cp /tmp/challenge-preview.png "$PREVIEW_PATH"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$PREVIEW_PATH"
+          git commit -m "Add challenge.html preview image"
+          git push
+
+          REPO="${{ github.repository }}"
+          SHA=$(git rev-parse HEAD)
+          IMG_URL="https://raw.githubusercontent.com/${REPO}/${SHA}/${PREVIEW_PATH}"
+          BODY=$(cat <<EOF
+          ## Challenge Preview
+          ![challenge-preview](${IMG_URL})
+          EOF
+          )
+          gh pr comment "$PR_NUMBER" --body "$BODY"
