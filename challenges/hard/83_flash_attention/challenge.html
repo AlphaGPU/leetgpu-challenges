@@ -7,90 +7,117 @@
   matrix is never materialized in memory.
 </p>
 
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 300" width="560" height="300"
-     style="display:block; margin:20px auto;">
+<svg width="620" height="380" viewBox="0 0 620 380" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto; font-family:monospace;">
+  <rect width="620" height="380" fill="#222" rx="8"/>
   <defs>
-    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6"
-            orient="auto-start-reverse">
-      <path d="M0 0L10 5L0 10z" fill="#999"/>
+    <marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#aaa"/>
     </marker>
   </defs>
 
-  <!-- Background -->
-  <rect width="560" height="300" fill="#222" rx="8"/>
+  <!-- ================================================================ -->
+  <!-- TOP: Naive attention (what we want to avoid)                     -->
+  <!-- ================================================================ -->
+  <text x="16" y="20" fill="#666" font-size="10">NAIVE (materializes full N&#xd7;N matrix &#x2014; too much memory!)</text>
 
-  <!-- Title -->
-  <text x="280" y="22" text-anchor="middle" fill="#ccc" font-size="13" font-family="sans-serif"
-        font-weight="bold">Flash Attention: Tiled Computation</text>
+  <!-- Q -->
+  <rect x="16" y="32" width="50" height="60" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="41" y="55" text-anchor="middle" fill="#aaccee" font-size="10">Q</text>
+  <text x="41" y="68" text-anchor="middle" fill="#7799bb" font-size="9">[N&#xd7;d]</text>
 
-  <!-- Q matrix (left) -->
-  <text x="50" y="50" text-anchor="middle" fill="#aaccee" font-size="12" font-family="monospace">Q</text>
-  <!-- Q rows as blocks -->
-  <rect x="10" y="58" width="78" height="28" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
-  <text x="49" y="77" text-anchor="middle" fill="#aaccee" font-size="11" font-family="sans-serif">Q&#x2080; (rows 0..Br)</text>
+  <!-- times -->
+  <text x="80" y="66" fill="#888" font-size="13" text-anchor="middle">&#xd7;</text>
 
-  <rect x="10" y="92" width="78" height="28" rx="3" fill="#2a3a5a" stroke="#4477bb" stroke-width="1" stroke-dasharray="4,2"/>
-  <text x="49" y="111" text-anchor="middle" fill="#7799bb" font-size="11" font-family="sans-serif">Q&#x2081;</text>
+  <!-- K^T -->
+  <rect x="94" y="32" width="60" height="50" rx="3" fill="#1e3d2d" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="124" y="55" text-anchor="middle" fill="#aaeebb" font-size="10">K&#x1d40;</text>
+  <text x="124" y="68" text-anchor="middle" fill="#77bbaa" font-size="9">[d&#xd7;N]</text>
 
-  <rect x="10" y="126" width="78" height="28" rx="3" fill="#2a3a5a" stroke="#4477bb" stroke-width="1" stroke-dasharray="4,2"/>
-  <text x="49" y="145" text-anchor="middle" fill="#7799bb" font-size="11" font-family="sans-serif">Q&#x2082;</text>
+  <!-- = -->
+  <text x="168" y="66" fill="#888" font-size="13" text-anchor="middle">=</text>
 
-  <rect x="10" y="160" width="78" height="14" rx="2" fill="#1a1a1a" stroke="#555" stroke-width="1"/>
-  <text x="49" y="171" text-anchor="middle" fill="#555" font-size="10" font-family="sans-serif">⋮</text>
+  <!-- S full matrix (the problem) -->
+  <rect x="182" y="30" width="70" height="70" rx="3" fill="#3d1e1e" stroke="#cc4444" stroke-width="1.5"/>
+  <text x="217" y="60" text-anchor="middle" fill="#ee6666" font-size="10">S</text>
+  <text x="217" y="74" text-anchor="middle" fill="#cc4444" font-size="9">[N&#xd7;N]</text>
 
-  <text x="49" y="195" text-anchor="middle" fill="#666" font-size="10" font-family="sans-serif"
-        font-style="italic">seq_len / Br blocks</text>
+  <!-- X mark -->
+  <text x="270" y="70" fill="#cc4444" font-size="14" text-anchor="middle">&#x2717;</text>
+  <text x="340" y="70" fill="#cc4444" font-size="10" text-anchor="middle">O(N&#xb2;) memory</text>
 
-  <!-- Arrow from Q0 to tile -->
-  <line x1="88" y1="72" x2="188" y2="120" stroke="#4477bb" stroke-width="1.5"
-        marker-end="url(#ah)"/>
+  <!-- ================================================================ -->
+  <!-- MIDDLE: Flash Attention tiled approach                           -->
+  <!-- ================================================================ -->
+  <text x="16" y="122" fill="#666" font-size="10">FLASH ATTENTION (process one Q-block at a time, loop over K/V blocks)</text>
 
-  <!-- K matrix (top) -->
-  <text x="248" y="50" text-anchor="middle" fill="#aaeebb" font-size="12" font-family="monospace">K&#x1D40;, V</text>
-  <rect x="190" y="58" width="50" height="22" rx="3" fill="#1e3d2d" stroke="#44aa66" stroke-width="1.5"/>
-  <text x="215" y="73" text-anchor="middle" fill="#aaeebb" font-size="10" font-family="sans-serif">K&#x2080;</text>
+  <!-- For each Q block i: -->
+  <text x="16" y="148" fill="#ccc" font-size="10">for each Q block i:</text>
 
-  <rect x="248" y="58" width="50" height="22" rx="3" fill="#2a4a38" stroke="#44aa66" stroke-width="1" stroke-dasharray="4,2"/>
-  <text x="273" y="73" text-anchor="middle" fill="#77bbaa" font-size="10" font-family="sans-serif">K&#x2081;</text>
+  <!-- Q_i block -->
+  <rect x="30" y="158" width="60" height="36" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="60" y="176" text-anchor="middle" fill="#aaccee" font-size="10">Q block i</text>
+  <text x="60" y="188" text-anchor="middle" fill="#7799bb" font-size="8">[Br &#xd7; d]</text>
 
-  <rect x="306" y="58" width="50" height="22" rx="3" fill="#2a4a38" stroke="#44aa66" stroke-width="1" stroke-dasharray="4,2"/>
-  <text x="331" y="73" text-anchor="middle" fill="#77bbaa" font-size="10" font-family="sans-serif">K&#x2082;</text>
+  <!-- arrow right -->
+  <line x1="92" y1="176" x2="120" y2="176" stroke="#aaa" stroke-width="1.5" marker-end="url(#ah)"/>
 
-  <rect x="364" y="58" width="28" height="22" rx="2" fill="#1a1a1a" stroke="#555" stroke-width="1"/>
-  <text x="378" y="73" text-anchor="middle" fill="#555" font-size="10" font-family="sans-serif">…</text>
+  <!-- Inner loop box -->
+  <rect x="124" y="140" width="370" height="70" rx="5" fill="#2d2010" stroke="#cc8833" stroke-width="1.5"/>
+  <text x="309" y="158" text-anchor="middle" fill="#ffcc66" font-size="10" font-weight="bold">for each K/V block j (where j &#x2264; i for causal):</text>
 
-  <text x="290" y="95" text-anchor="middle" fill="#666" font-size="10" font-family="sans-serif"
-        font-style="italic">seq_len / Bc blocks</text>
+  <!-- K_j block -->
+  <rect x="140" y="168" width="58" height="30" rx="3" fill="#1e3d2d" stroke="#44aa66" stroke-width="1"/>
+  <text x="169" y="187" text-anchor="middle" fill="#aaeebb" font-size="9">K block j</text>
 
-  <!-- Tile computation box -->
-  <rect x="190" y="105" width="210" height="70" rx="5" fill="#2d2010" stroke="#cc8833" stroke-width="1.5"/>
-  <text x="295" y="127" text-anchor="middle" fill="#ffcc66" font-size="12" font-family="sans-serif"
-        font-weight="bold">Tile S&#x1D62;&#x2C7C; = Q&#x1D62; K&#x2C7C;&#x1D40; · scale</text>
-  <text x="295" y="145" text-anchor="middle" fill="#cc9944" font-size="11" font-family="sans-serif">Apply causal mask</text>
-  <text x="295" y="161" text-anchor="middle" fill="#cc9944" font-size="11" font-family="sans-serif">Update (m, l, O) online</text>
+  <!-- V_j block -->
+  <rect x="206" y="168" width="58" height="30" rx="3" fill="#1e3d2d" stroke="#44aa66" stroke-width="1"/>
+  <text x="235" y="187" text-anchor="middle" fill="#aaeebb" font-size="9">V block j</text>
 
-  <!-- Loop arrows around K blocks -->
-  <path d="M 395 69 Q 420 55 420 85 Q 420 115 395 130" stroke="#44aa66" stroke-width="1.5"
-        fill="none" marker-end="url(#ah)"/>
-  <text x="435" y="100" text-anchor="middle" fill="#44aa66" font-size="10" font-family="sans-serif">loop</text>
-  <text x="435" y="113" text-anchor="middle" fill="#44aa66" font-size="10" font-family="sans-serif">over j</text>
+  <!-- arrow right -->
+  <text x="278" y="187" fill="#888" font-size="12" text-anchor="middle">&#x2192;</text>
 
-  <!-- Output O block -->
-  <text x="450" y="50" text-anchor="middle" fill="#cc88ff" font-size="12" font-family="monospace">O</text>
-  <rect x="418" y="58" width="78" height="28" rx="3" fill="#2d1e4d" stroke="#8844cc" stroke-width="1.5"/>
-  <text x="457" y="77" text-anchor="middle" fill="#cc88ff" font-size="11" font-family="sans-serif">O&#x2080; (accumulated)</text>
+  <!-- Small tile S_ij -->
+  <rect x="292" y="168" width="60" height="30" rx="3" fill="#3a2a1a" stroke="#e0a040" stroke-width="1"/>
+  <text x="322" y="182" text-anchor="middle" fill="#e0a040" font-size="9">S tile</text>
+  <text x="322" y="192" text-anchor="middle" fill="#cc9944" font-size="8">[Br&#xd7;Bc]</text>
 
-  <!-- Arrow from tile to O -->
-  <line x1="400" y1="140" x2="457" y2="88" stroke="#cc88ff" stroke-width="1.5"
-        marker-end="url(#ah)"/>
+  <!-- arrow right -->
+  <text x="366" y="187" fill="#888" font-size="12" text-anchor="middle">&#x2192;</text>
 
-  <!-- Online softmax box -->
-  <rect x="10" y="210" width="540" height="76" rx="5" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
-  <text x="280" y="229" text-anchor="middle" fill="#ccc" font-size="12" font-family="sans-serif"
-        font-weight="bold">Online Softmax Update (for each K/V tile j):</text>
-  <text x="50" y="249" fill="#aaa" font-size="11" font-family="monospace">m_new = max(m_prev, rowmax(S&#x1D62;&#x2C7C;))</text>
-  <text x="50" y="265" fill="#aaa" font-size="11" font-family="monospace">l_new = exp(m_prev − m_new)·l_prev + rowsum(exp(S&#x1D62;&#x2C7C; − m_new))</text>
-  <text x="50" y="281" fill="#aaa" font-size="11" font-family="monospace">O_new = (exp(m_prev − m_new)·l_prev·O_prev + exp(S&#x1D62;&#x2C7C; − m_new)·V&#x2C7C;) / l_new</text>
+  <!-- Update O -->
+  <rect x="380" y="168" width="100" height="30" rx="3" fill="#2d1e4d" stroke="#8844cc" stroke-width="1"/>
+  <text x="430" y="187" text-anchor="middle" fill="#cc88ff" font-size="9">update m, l, O</text>
+
+  <!-- Checkmark and note -->
+  <text x="510" y="180" fill="#44aa66" font-size="14" text-anchor="middle">&#x2713;</text>
+  <text x="570" y="180" fill="#44aa66" font-size="10" text-anchor="middle">O(Br&#xd7;Bc)</text>
+
+  <!-- ================================================================ -->
+  <!-- BOTTOM: Online softmax formulas                                  -->
+  <!-- ================================================================ -->
+  <rect x="16" y="230" width="588" height="136" rx="5" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
+  <text x="310" y="252" text-anchor="middle" fill="#ccc" font-size="11" font-weight="bold">Online Softmax Update (per Q-row i, for each K/V tile j):</text>
+
+  <!-- Init -->
+  <text x="36" y="276" fill="#666" font-size="10">init:</text>
+  <text x="100" y="276" fill="#888" font-size="10">m = &#x2212;&#x221e;,  l = 0,  O = 0</text>
+
+  <!-- m update -->
+  <text x="36" y="298" fill="#ffcc66" font-size="10">1.</text>
+  <text x="56" y="298" fill="#aaa" font-size="10">m_new = max( m_prev, max_k( S_ik ) )</text>
+
+  <!-- l update -->
+  <text x="36" y="318" fill="#ffcc66" font-size="10">2.</text>
+  <text x="56" y="318" fill="#aaa" font-size="10">l_new = exp(m_prev &#x2212; m_new) &#xb7; l_prev  +  &#x2211;_k exp(S_ik &#x2212; m_new)</text>
+
+  <!-- O update -->
+  <text x="36" y="338" fill="#ffcc66" font-size="10">3.</text>
+  <text x="56" y="338" fill="#aaa" font-size="10">O_new = ( exp(m_prev &#x2212; m_new) &#xb7; l_prev &#xb7; O_prev  +  &#x2211;_k exp(S_ik &#x2212; m_new) &#xb7; V_k ) / l_new</text>
+
+  <!-- final -->
+  <text x="36" y="358" fill="#666" font-size="10">done:</text>
+  <text x="100" y="358" fill="#888" font-size="10">output[i] = O after all tiles processed</text>
 </svg>
 
 <p>
@@ -105,7 +132,7 @@
 \begin{aligned}
 m_i^{(j)} &= \max\!\left(m_i^{(j-1)},\; \max_k S_{ik}^{(j)}\right) \\[4pt]
 l_i^{(j)} &= e^{m_i^{(j-1)} - m_i^{(j)}} l_i^{(j-1)} + \sum_k e^{S_{ik}^{(j)} - m_i^{(j)}} \\[4pt]
-O_i^{(j)} &= \frac{e^{m_i^{(j-1)} - m_i^{(j)}} l_i^{(j-1)} \cdot O_i^{(j-1)} + e^{S_{ik}^{(j)} - m_i^{(j)}} V^{(j)}}{l_i^{(j)}}
+O_i^{(j)} &= \frac{e^{m_i^{(j-1)} - m_i^{(j)}} l_i^{(j-1)} \cdot O_i^{(j-1)} + \sum_k e^{S_{ik}^{(j)} - m_i^{(j)}} V_k^{(j)}}{l_i^{(j)}}
 \end{aligned}
 \]
 
@@ -129,16 +156,43 @@ query position \(i\) and key position \(k\) in tile \(j\), with the causal mask 
 </ul>
 
 <h2>Example</h2>
-<p>With <code>num_heads</code> = 2, <code>seq_len</code> = 3, <code>head_dim</code> = 4:</p>
-<pre>
-Input:  Q.shape = (2, 3, 4)   # 2 heads, 3 tokens, dim 4
-        K.shape = (2, 3, 4)
-        V.shape = (2, 3, 4)
-Output: output.shape = (2, 3, 4)
-
-# For head 0, token 0 (first query):
-#   Attends only to key 0 (causal) → output[0][0] = V[0][0]
-</pre>
+<p>
+  Input: <code>num_heads</code> = 2, <code>seq_len</code> = 3, <code>head_dim</code> = 4
+</p>
+<p>
+  Head 0 — \(Q_0\):
+  \[
+  \begin{bmatrix}
+  1.0 & 0.0 & 1.0 & 0.0 \\
+  0.0 & 1.0 & 0.0 & 1.0 \\
+  1.0 & 1.0 & 0.0 & 0.0
+  \end{bmatrix}
+  \]
+  Head 0 — \(K_0\):
+  \[
+  \begin{bmatrix}
+  1.0 & 0.0 & 0.0 & 1.0 \\
+  0.0 & 1.0 & 1.0 & 0.0 \\
+  1.0 & 0.0 & 1.0 & 0.0
+  \end{bmatrix}
+  \]
+  Head 0 — \(V_0\):
+  \[
+  \begin{bmatrix}
+  1.0 & 2.0 & 3.0 & 4.0 \\
+  5.0 & 6.0 & 7.0 & 8.0 \\
+  9.0 & 10.0 & 11.0 & 12.0
+  \end{bmatrix}
+  \]
+  Head 0 — output (token 0 attends only to itself due to causal mask):
+  \[
+  \begin{bmatrix}
+  1.0000 & 2.0000 & 3.0000 & 4.0000 \\
+  3.0000 & 4.0000 & 5.0000 & 6.0000 \\
+  5.0000 & 6.0000 & 7.0000 & 8.0000
+  \end{bmatrix}
+  \]
+</p>
 
 <h2>Constraints</h2>
 <ul>
