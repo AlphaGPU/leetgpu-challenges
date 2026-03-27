@@ -97,7 +97,6 @@ class Challenge(ChallengeBase):
     def _encode_keys(self, K, Pi, S_mat, codebook):
         """Simulate TurboQuant_prod encoding: rotate, quantize, compute QJL on residual."""
         S, D = K.shape
-        C = codebook.shape[0]
 
         # Stage 1: MSE encoding
         Y = K @ Pi.T  # rotate into quantization space
