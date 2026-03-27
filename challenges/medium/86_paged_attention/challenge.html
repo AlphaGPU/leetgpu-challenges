@@ -7,98 +7,113 @@
   K/V blocks via the block table and computing scaled dot-product attention over the full context.
 </p>
 
-<svg width="700" height="280" viewBox="0 0 700 280" style="display:block; margin:20px auto;" xmlns="http://www.w3.org/2000/svg">
-  <rect width="700" height="280" fill="#222" rx="8"/>
-
-  <!-- Title -->
-  <text x="350" y="22" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">Paged KV-Cache: block_table lookup</text>
-
-  <!-- Sequence 0 block table -->
-  <rect x="20" y="40" width="140" height="28" fill="#2a3a4a" stroke="#4a8abf" stroke-width="1" rx="3"/>
-  <text x="30" y="59" fill="#4a8abf" font-size="11" font-family="monospace">seq 0: [3, 7, —]</text>
-
-  <!-- Sequence 1 block table -->
-  <rect x="20" y="76" width="140" height="28" fill="#2a3a4a" stroke="#4a8abf" stroke-width="1" rx="3"/>
-  <text x="30" y="95" fill="#4a8abf" font-size="11" font-family="monospace">seq 1: [1, 5, 9]</text>
-
-  <text x="90" y="130" text-anchor="middle" fill="#888" font-size="11" font-family="monospace">block_table</text>
-
-  <!-- Arrow labels -->
-  <text x="190" y="59" fill="#888" font-size="11" font-family="monospace">phys block 3</text>
-  <text x="190" y="83" fill="#888" font-size="11" font-family="monospace">phys block 7</text>
-  <text x="190" y="107" fill="#888" font-size="11" font-family="monospace">phys block 1</text>
-  <text x="190" y="131" fill="#888" font-size="11" font-family="monospace">phys block 5</text>
-  <text x="190" y="155" fill="#888" font-size="11" font-family="monospace">phys block 9</text>
-
-  <!-- Arrows from seq 0 -->
-  <line x1="160" y1="54" x2="185" y2="54" stroke="#4a8abf" stroke-width="1.5" marker-end="url(#arr)"/>
-  <line x1="160" y1="54" x2="185" y2="78" stroke="#4a8abf" stroke-width="1.5" marker-end="url(#arr)"/>
-  <!-- Arrows from seq 1 -->
-  <line x1="160" y1="90" x2="185" y2="102" stroke="#52b788" stroke-width="1.5" marker-end="url(#arr2)"/>
-  <line x1="160" y1="90" x2="185" y2="126" stroke="#52b788" stroke-width="1.5" marker-end="url(#arr2)"/>
-  <line x1="160" y1="90" x2="185" y2="150" stroke="#52b788" stroke-width="1.5" marker-end="url(#arr2)"/>
-
+<svg width="620" height="300" viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto; font-family:monospace;">
+  <rect width="620" height="300" fill="#222" rx="8"/>
   <defs>
-    <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-      <path d="M0,0 L6,3 L0,6 Z" fill="#4a8abf"/>
+    <marker id="ab" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+      <path d="M0,0 L0,7 L7,3.5 z" fill="#4a8abf"/>
     </marker>
-    <marker id="arr2" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-      <path d="M0,0 L6,3 L0,6 Z" fill="#52b788"/>
+    <marker id="ag" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+      <path d="M0,0 L0,7 L7,3.5 z" fill="#52b788"/>
     </marker>
   </defs>
 
-  <!-- KV cache pool blocks -->
-  <text x="420" y="22" text-anchor="middle" fill="#ccc" font-size="12" font-family="monospace">K_cache / V_cache pool</text>
+  <!-- ============================================================ -->
+  <!-- TOP: block_table as a proper table                           -->
+  <!-- ============================================================ -->
+  <text x="16" y="18" fill="#666" font-size="10">block_table</text>
 
-  <!-- Draw blocks 0-9 in the pool -->
-  <rect x="305" y="35" width="55" height="22" fill="#333" stroke="#555" rx="2"/>
-  <text x="332" y="51" text-anchor="middle" fill="#666" font-size="10" font-family="monospace">blk 0</text>
+  <!-- Column headers -->
+  <text x="168" y="18" fill="#888" font-size="9" text-anchor="middle">blk 0</text>
+  <text x="218" y="18" fill="#888" font-size="9" text-anchor="middle">blk 1</text>
+  <text x="268" y="18" fill="#888" font-size="9" text-anchor="middle">blk 2</text>
 
-  <!-- block 1 (seq 1) -->
-  <rect x="305" y="61" width="55" height="22" fill="#2a4a38" stroke="#52b788" rx="2"/>
-  <text x="332" y="77" text-anchor="middle" fill="#52b788" font-size="10" font-family="monospace">blk 1</text>
+  <!-- Seq 0 row -->
+  <text x="100" y="40" fill="#4a8abf" font-size="10" text-anchor="end">seq 0</text>
+  <rect x="114" y="26" width="48" height="22" rx="3" fill="#2a3a4a" stroke="#4a8abf" stroke-width="1.5"/>
+  <text x="138" y="42" text-anchor="middle" fill="#4a8abf" font-size="11" font-weight="bold">3</text>
+  <rect x="164" y="26" width="48" height="22" rx="3" fill="#2a3a4a" stroke="#4a8abf" stroke-width="1.5"/>
+  <text x="188" y="42" text-anchor="middle" fill="#4a8abf" font-size="11" font-weight="bold">7</text>
+  <rect x="214" y="26" width="48" height="22" rx="3" fill="#2a2a2a" stroke="#555" stroke-width="1"/>
+  <text x="238" y="42" text-anchor="middle" fill="#555" font-size="10">&#x2014;</text>
 
-  <rect x="305" y="87" width="55" height="22" fill="#333" stroke="#555" rx="2"/>
-  <text x="332" y="103" text-anchor="middle" fill="#666" font-size="10" font-family="monospace">blk 2</text>
+  <!-- Seq 1 row -->
+  <text x="100" y="68" fill="#52b788" font-size="10" text-anchor="end">seq 1</text>
+  <rect x="114" y="54" width="48" height="22" rx="3" fill="#2a4a38" stroke="#52b788" stroke-width="1.5"/>
+  <text x="138" y="70" text-anchor="middle" fill="#52b788" font-size="11" font-weight="bold">1</text>
+  <rect x="164" y="54" width="48" height="22" rx="3" fill="#2a4a38" stroke="#52b788" stroke-width="1.5"/>
+  <text x="188" y="70" text-anchor="middle" fill="#52b788" font-size="11" font-weight="bold">5</text>
+  <rect x="214" y="54" width="48" height="22" rx="3" fill="#2a4a38" stroke="#52b788" stroke-width="1.5"/>
+  <text x="238" y="70" text-anchor="middle" fill="#52b788" font-size="11" font-weight="bold">9</text>
 
-  <!-- block 3 (seq 0) -->
-  <rect x="305" y="113" width="55" height="22" fill="#2a3a4a" stroke="#4a8abf" rx="2"/>
-  <text x="332" y="129" text-anchor="middle" fill="#4a8abf" font-size="10" font-family="monospace">blk 3</text>
+  <text x="190" y="92" fill="#888" font-size="9" text-anchor="middle">values = physical block indices in pool &#x2193;</text>
 
-  <rect x="305" y="139" width="55" height="22" fill="#333" stroke="#555" rx="2"/>
-  <text x="332" y="155" text-anchor="middle" fill="#666" font-size="10" font-family="monospace">blk 4</text>
+  <!-- ============================================================ -->
+  <!-- MIDDLE: KV cache pool as a horizontal memory strip           -->
+  <!-- ============================================================ -->
+  <text x="16" y="118" fill="#666" font-size="10">K_cache / V_cache pool (GPU memory)</text>
 
-  <!-- block 5 (seq 1) -->
-  <rect x="305" y="165" width="55" height="22" fill="#2a4a38" stroke="#52b788" rx="2"/>
-  <text x="332" y="181" text-anchor="middle" fill="#52b788" font-size="10" font-family="monospace">blk 5</text>
+  <!-- 10 blocks in a horizontal strip -->
+  <!-- blk 0 (unused) -->
+  <rect x="16" y="128" width="54" height="36" rx="3" fill="#2a2a2a" stroke="#555" stroke-width="1"/>
+  <text x="43" y="151" text-anchor="middle" fill="#666" font-size="9">blk 0</text>
 
-  <rect x="305" y="191" width="55" height="22" fill="#333" stroke="#555" rx="2"/>
-  <text x="332" y="207" text-anchor="middle" fill="#666" font-size="10" font-family="monospace">blk 6</text>
+  <!-- blk 1 (seq 1) -->
+  <rect x="74" y="128" width="54" height="36" rx="3" fill="#2a4a38" stroke="#52b788" stroke-width="1.5"/>
+  <text x="101" y="148" text-anchor="middle" fill="#52b788" font-size="9">blk 1</text>
+  <text x="101" y="159" text-anchor="middle" fill="#52b788" font-size="7">seq1.0</text>
 
-  <!-- block 7 (seq 0) -->
-  <rect x="305" y="217" width="55" height="22" fill="#2a3a4a" stroke="#4a8abf" rx="2"/>
-  <text x="332" y="233" text-anchor="middle" fill="#4a8abf" font-size="10" font-family="monospace">blk 7</text>
+  <!-- blk 2 (unused) -->
+  <rect x="132" y="128" width="54" height="36" rx="3" fill="#2a2a2a" stroke="#555" stroke-width="1"/>
+  <text x="159" y="151" text-anchor="middle" fill="#666" font-size="9">blk 2</text>
 
-  <rect x="305" y="243" width="55" height="22" fill="#333" stroke="#555" rx="2"/>
-  <text x="332" y="259" text-anchor="middle" fill="#666" font-size="10" font-family="monospace">blk 8</text>
+  <!-- blk 3 (seq 0) -->
+  <rect x="190" y="128" width="54" height="36" rx="3" fill="#2a3a4a" stroke="#4a8abf" stroke-width="1.5"/>
+  <text x="217" y="148" text-anchor="middle" fill="#4a8abf" font-size="9">blk 3</text>
+  <text x="217" y="159" text-anchor="middle" fill="#4a8abf" font-size="7">seq0.0</text>
 
-  <!-- Arrows from label to pool -->
-  <line x1="285" y1="59" x2="300" y2="72" stroke="#52b788" stroke-width="1" stroke-dasharray="3,2"/>
-  <line x1="285" y1="83" x2="300" y2="228" stroke="#4a8abf" stroke-width="1" stroke-dasharray="3,2"/>
-  <line x1="285" y1="107" x2="300" y2="72" stroke="#52b788" stroke-width="1" stroke-dasharray="3,2"/>
-  <line x1="285" y1="131" x2="300" y2="176" stroke="#52b788" stroke-width="1" stroke-dasharray="3,2"/>
-  <line x1="285" y1="155" x2="360" y2="200" stroke="#52b788" stroke-width="1" stroke-dasharray="3,2"/>
-  <line x1="285" y1="59" x2="300" y2="124" stroke="#4a8abf" stroke-width="1" stroke-dasharray="3,2"/>
+  <!-- blk 4 (unused) -->
+  <rect x="248" y="128" width="54" height="36" rx="3" fill="#2a2a2a" stroke="#555" stroke-width="1"/>
+  <text x="275" y="151" text-anchor="middle" fill="#666" font-size="9">blk 4</text>
 
-  <!-- Attention computation box -->
-  <rect x="390" y="90" width="290" height="170" fill="#1e2e1e" stroke="#52b788" stroke-width="1" rx="5"/>
-  <text x="535" y="112" text-anchor="middle" fill="#52b788" font-size="12" font-family="monospace">Attention Computation</text>
-  <text x="535" y="135" text-anchor="middle" fill="#ccc" font-size="11" font-family="monospace">scores = Q · K_gathered&#x1D40;/ √d</text>
-  <text x="535" y="158" text-anchor="middle" fill="#ccc" font-size="11" font-family="monospace">weights = softmax(scores)</text>
-  <text x="535" y="181" text-anchor="middle" fill="#ccc" font-size="11" font-family="monospace">output = weights · V_gathered</text>
-  <text x="405" y="215" fill="#888" font-size="10" font-family="monospace">K/V tokens gathered from</text>
-  <text x="405" y="230" fill="#888" font-size="10" font-family="monospace">non-contiguous pool blocks</text>
-  <text x="405" y="245" fill="#888" font-size="10" font-family="monospace">via block_table indirection</text>
+  <!-- blk 5 (seq 1) -->
+  <rect x="306" y="128" width="54" height="36" rx="3" fill="#2a4a38" stroke="#52b788" stroke-width="1.5"/>
+  <text x="333" y="148" text-anchor="middle" fill="#52b788" font-size="9">blk 5</text>
+  <text x="333" y="159" text-anchor="middle" fill="#52b788" font-size="7">seq1.1</text>
+
+  <!-- blk 6 (unused) -->
+  <rect x="364" y="128" width="54" height="36" rx="3" fill="#2a2a2a" stroke="#555" stroke-width="1"/>
+  <text x="391" y="151" text-anchor="middle" fill="#666" font-size="9">blk 6</text>
+
+  <!-- blk 7 (seq 0) -->
+  <rect x="422" y="128" width="54" height="36" rx="3" fill="#2a3a4a" stroke="#4a8abf" stroke-width="1.5"/>
+  <text x="449" y="148" text-anchor="middle" fill="#4a8abf" font-size="9">blk 7</text>
+  <text x="449" y="159" text-anchor="middle" fill="#4a8abf" font-size="7">seq0.1</text>
+
+  <!-- blk 8 (unused) -->
+  <rect x="480" y="128" width="54" height="36" rx="3" fill="#2a2a2a" stroke="#555" stroke-width="1"/>
+  <text x="507" y="151" text-anchor="middle" fill="#666" font-size="9">blk 8</text>
+
+  <!-- blk 9 (seq 1) -->
+  <rect x="538" y="128" width="54" height="36" rx="3" fill="#2a4a38" stroke="#52b788" stroke-width="1.5"/>
+  <text x="565" y="148" text-anchor="middle" fill="#52b788" font-size="9">blk 9</text>
+  <text x="565" y="159" text-anchor="middle" fill="#52b788" font-size="7">seq1.2</text>
+
+  <!-- ============================================================ -->
+  <!-- BOTTOM: Attention computation                                -->
+  <!-- ============================================================ -->
+  <rect x="16" y="186" width="588" height="100" rx="5" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
+  <text x="310" y="208" text-anchor="middle" fill="#ccc" font-size="11" font-weight="bold">Decode Attention (per sequence s, per head h)</text>
+
+  <text x="36" y="232" fill="#ffcc66" font-size="10">1.</text>
+  <text x="56" y="232" fill="#aaa" font-size="10">Gather K, V: token t is at pool[ block_table[s, t/B] ], offset t%B</text>
+
+  <text x="36" y="254" fill="#ffcc66" font-size="10">2.</text>
+  <text x="56" y="254" fill="#aaa" font-size="10">scores[t] = Q[s,h] &#xb7; K[s,h,t] / &#x221a;head_dim     for t = 0 .. context_lens[s]-1</text>
+
+  <text x="36" y="276" fill="#ffcc66" font-size="10">3.</text>
+  <text x="56" y="276" fill="#aaa" font-size="10">output[s,h] = &#x2211;_t softmax(scores)[t] &#xb7; V[s,h,t]</text>
 </svg>
 
 <h2>Implementation Requirements</h2>
@@ -115,23 +130,24 @@
   <li><code>output</code>: result of shape <code>(batch_size, num_heads, head_dim)</code>, dtype <code>float32</code></li>
 </ul>
 <p>
-  For each sequence <code>s</code> and each attention head <code>h</code>, compute:
+  For each sequence \(s\) and each attention head \(h\), compute:
 </p>
 <ol>
   <li>
-    Gather the <code>context_lens[s]</code> key and value vectors from the paged cache using <code>block_table[s]</code>.
-    Token at logical position <code>t</code> lives in physical block <code>block_table[s, t / block_size]</code>
-    at offset <code>t % block_size</code> within that block.
+    Gather the \(\text{context_lens}[s]\) key and value vectors from the paged cache using
+    \(\text{block_table}[s]\). Token at logical position \(t\) lives in physical block
+    \(\text{block_table}[s,\;\lfloor t / B \rfloor]\) at offset \(t \bmod B\) within that block,
+    where \(B = \text{block_size}\).
   </li>
   <li>
     Compute scaled dot-product attention:
-    <code>scores[t] = Q[s, h] &middot; K[s, h, t] / &radic;head_dim</code>
+    \[\text{scores}[t] = \frac{Q[s, h] \cdot K[s, h, t]}{\sqrt{\text{head_dim}}}\]
   </li>
   <li>
-    Apply softmax over all <code>context_lens[s]</code> positions to get attention weights.
+    Apply softmax over all \(\text{context_lens}[s]\) positions to get attention weights.
   </li>
   <li>
-    Compute <code>output[s, h] = &sum;<sub>t</sub> weights[t] &times; V[s, h, t]</code>.
+    Compute: \(\displaystyle \text{output}[s, h] = \sum_{t} \text{softmax}(\text{scores})[t] \cdot V[s, h, t]\)
   </li>
 </ol>
 <p>
@@ -141,31 +157,36 @@
 
 <h2>Example</h2>
 <p>
-  With <code>batch_size</code> = 1, <code>num_heads</code> = 1, <code>head_dim</code> = 4,
-  <code>block_size</code> = 2, <code>context_lens</code> = [2], <code>block_table</code> = [[0]]:
+  Input: <code>batch_size</code> = 1, <code>num_heads</code> = 1, <code>head_dim</code> = 4,
+  <code>block_size</code> = 2, <code>context_lens</code> = [2], <code>block_table</code> = [[0]]
 </p>
-<pre>
-Q[0, 0]            = [1.0, 1.0, 0.0, 0.0]
-
-K_cache[0, 0, 0]   = [1.0, 0.0, 0.0, 0.0]   # block 0, token 0
-K_cache[0, 1, 0]   = [0.0, 1.0, 0.0, 0.0]   # block 0, token 1
-
-V_cache[0, 0, 0]   = [2.0, 0.0, 0.0, 0.0]
-V_cache[0, 1, 0]   = [0.0, 4.0, 0.0, 0.0]
-</pre>
+<p>
+  \(Q[0, 0] = \begin{bmatrix} 1.0 & 1.0 & 0.0 & 0.0 \end{bmatrix}\)
+</p>
+<p>
+  Keys gathered from block 0 (2 tokens):
+  \[
+  K_0 = \begin{bmatrix} 1.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}, \quad
+  K_1 = \begin{bmatrix} 0.0 & 1.0 & 0.0 & 0.0 \end{bmatrix}
+  \]
+  Values gathered from block 0:
+  \[
+  V_0 = \begin{bmatrix} 2.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}, \quad
+  V_1 = \begin{bmatrix} 0.0 & 4.0 & 0.0 & 0.0 \end{bmatrix}
+  \]
+</p>
 <p>
   Scores (before softmax):
+  \[
+  s_0 = \frac{Q \cdot K_0}{\sqrt{4}} = \frac{1}{2} = 0.5, \quad
+  s_1 = \frac{Q \cdot K_1}{\sqrt{4}} = \frac{1}{2} = 0.5
+  \]
+  Attention weights: \(\text{softmax}([0.5, 0.5]) = [0.5, 0.5]\)
+  \[
+  \text{output}[0, 0] = 0.5 \cdot V_0 + 0.5 \cdot V_1 =
+  \begin{bmatrix} 1.0 & 2.0 & 0.0 & 0.0 \end{bmatrix}
+  \]
 </p>
-<pre>
-score[0] = (1·1 + 1·0 + 0·0 + 0·0) / √4 = 0.5
-score[1] = (1·0 + 1·1 + 0·0 + 0·0) / √4 = 0.5
-</pre>
-<p>
-  Attention weights = softmax([0.5, 0.5]) = [0.5, 0.5]
-</p>
-<pre>
-output[0, 0] = 0.5 × [2, 0, 0, 0] + 0.5 × [0, 4, 0, 0] = [1.0, 2.0, 0.0, 0.0]
-</pre>
 
 <h2>Constraints</h2>
 <ul>
