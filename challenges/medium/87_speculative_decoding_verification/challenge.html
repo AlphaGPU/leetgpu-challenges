@@ -1,90 +1,116 @@
 <p>
-  Implement the token verification step of speculative decoding. In speculative decoding, a small
-  draft model proposes <code>T</code> tokens; the target model then evaluates all of them in a
-  single forward pass and accepts or rejects each token. Given a batch of <code>B</code> draft
-  sequences, the per-position acceptance probabilities, and pre-generated uniform samples, produce
-  the final output token sequence for each sequence in the batch. All probability tensors use
-  <code>float32</code>; token index tensors use <code>int32</code>.
+  Implement the token verification step of speculative decoding. A draft model proposes \(T\) tokens;
+  the target model evaluates them in one forward pass and accepts or rejects each. Given \(B\)
+  sequences, produce the verified output tokens. Probability tensors are <code>float32</code>;
+  token tensors are <code>int32</code>.
 </p>
 
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 230" width="680" height="230" style="display:block; margin:20px auto;">
-  <rect width="680" height="230" fill="#222" rx="8"/>
-  <defs>
-    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-      <path d="M0 0L10 5L0 10z" fill="#888"/>
-    </marker>
-  </defs>
+<p>
+  Notation for each sequence \(b\), at each draft position \(i = 0, \ldots, T{-}1\):
+</p>
+<ul>
+  <li>\(t_i = \texttt{draft_tokens}[b, i]\) &mdash; the token proposed by the draft model</li>
+  <li>\(p_i(v) = \texttt{draft_probs}[b, i, v]\) &mdash; draft model's probability for token \(v\)</li>
+  <li>\(q_i(v) = \texttt{target_probs}[b, i, v]\) &mdash; target model's probability for token \(v\)</li>
+  <li>\(u_i = \texttt{uniform_samples}[b, i]\) &mdash; pre-generated \(U[0,1)\) sample for position \(i\)</li>
+</ul>
 
-  <!-- Title -->
-  <text x="340" y="24" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">Speculative Decoding Verification (T=4 draft tokens)</text>
+<svg width="660" height="310" viewBox="0 0 660 310" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto; font-family:monospace;">
+  <rect width="660" height="310" fill="#222" rx="8"/>
 
-  <!-- Draft tokens row -->
-  <text x="14" y="58" fill="#aaa" font-size="11" font-family="sans-serif">draft</text>
-  <rect x="80" y="44" width="60" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.2"/>
-  <text x="110" y="62" text-anchor="middle" fill="#8ec4f0" font-size="12" font-family="monospace">t₀</text>
-  <rect x="200" y="44" width="60" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.2"/>
-  <text x="230" y="62" text-anchor="middle" fill="#8ec4f0" font-size="12" font-family="monospace">t₁</text>
-  <rect x="320" y="44" width="60" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.2"/>
-  <text x="350" y="62" text-anchor="middle" fill="#8ec4f0" font-size="12" font-family="monospace">t₂</text>
-  <rect x="440" y="44" width="60" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.2"/>
-  <text x="470" y="62" text-anchor="middle" fill="#8ec4f0" font-size="12" font-family="monospace">t₃</text>
+  <!-- Column headers -->
+  <text x="108" y="18" fill="#666" font-size="9" text-anchor="middle">pos 0</text>
+  <text x="248" y="18" fill="#666" font-size="9" text-anchor="middle">pos 1</text>
+  <text x="388" y="18" fill="#666" font-size="9" text-anchor="middle">pos 2</text>
+  <text x="528" y="18" fill="#666" font-size="9" text-anchor="middle">pos 3</text>
 
-  <!-- acceptance prob labels -->
-  <line x1="110" y1="70" x2="110" y2="100" stroke="#888" stroke-width="1.2" marker-end="url(#ah)"/>
-  <text x="110" y="94" text-anchor="middle" fill="#888" font-size="9" font-family="sans-serif">α₀=0.9</text>
-  <line x1="230" y1="70" x2="230" y2="100" stroke="#888" stroke-width="1.2" marker-end="url(#ah)"/>
-  <text x="230" y="94" text-anchor="middle" fill="#888" font-size="9" font-family="sans-serif">α₁=0.7</text>
-  <line x1="350" y1="70" x2="350" y2="100" stroke="#e06060" stroke-width="1.2" marker-end="url(#ah)"/>
-  <text x="350" y="94" text-anchor="middle" fill="#e06060" font-size="9" font-family="sans-serif">α₂=0.3</text>
+  <!-- Row 1: Draft tokens -->
+  <text x="16" y="42" fill="#888" font-size="10">draft</text>
+  <rect x="56" y="28" width="104" height="24" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="108" y="45" text-anchor="middle" fill="#8ec4f0" font-size="11">t&#x2080;</text>
+  <rect x="196" y="28" width="104" height="24" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="248" y="45" text-anchor="middle" fill="#8ec4f0" font-size="11">t&#x2081;</text>
+  <rect x="336" y="28" width="104" height="24" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="388" y="45" text-anchor="middle" fill="#8ec4f0" font-size="11">t&#x2082;</text>
+  <rect x="476" y="28" width="104" height="24" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="528" y="45" text-anchor="middle" fill="#8ec4f0" font-size="11">t&#x2083;</text>
 
-  <!-- acceptance test row -->
-  <text x="14" y="122" fill="#aaa" font-size="11" font-family="sans-serif">test</text>
-  <rect x="80" y="108" width="60" height="26" rx="4" fill="#1a3a1a" stroke="#44aa66" stroke-width="1.2"/>
-  <text x="110" y="126" text-anchor="middle" fill="#8ef0a0" font-size="11" font-family="monospace">u=0.1✓</text>
-  <rect x="200" y="108" width="60" height="26" rx="4" fill="#1a3a1a" stroke="#44aa66" stroke-width="1.2"/>
-  <text x="230" y="126" text-anchor="middle" fill="#8ef0a0" font-size="11" font-family="monospace">u=0.4✓</text>
-  <rect x="320" y="108" width="60" height="26" rx="4" fill="#4a1a1a" stroke="#e06060" stroke-width="1.2"/>
-  <text x="350" y="126" text-anchor="middle" fill="#f08080" font-size="11" font-family="monospace">u=0.8✗</text>
+  <!-- Row 2: Probabilities -->
+  <text x="16" y="76" fill="#888" font-size="10">probs</text>
+  <rect x="56" y="62" width="104" height="34" rx="4" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
+  <text x="108" y="76" text-anchor="middle" fill="#c060e0" font-size="9">p(t&#x2080;) = 0.60</text>
+  <text x="108" y="89" text-anchor="middle" fill="#e0a040" font-size="9">q(t&#x2080;) = 0.50</text>
 
-  <!-- rejection annotation -->
-  <line x1="350" y1="134" x2="350" y2="155" stroke="#e06060" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#ah)"/>
-  <text x="390" y="148" fill="#e06060" font-size="10" font-family="sans-serif">reject → resample</text>
-  <text x="390" y="162" fill="#e06060" font-size="10" font-family="sans-serif">from clamp(q−p,0)</text>
+  <rect x="196" y="62" width="104" height="34" rx="4" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
+  <text x="248" y="76" text-anchor="middle" fill="#c060e0" font-size="9">p(t&#x2081;) = 0.50</text>
+  <text x="248" y="89" text-anchor="middle" fill="#e0a040" font-size="9">q(t&#x2081;) = 0.20</text>
 
-  <!-- output row -->
-  <text x="14" y="195" fill="#aaa" font-size="11" font-family="sans-serif">output</text>
-  <rect x="80" y="182" width="60" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.2"/>
-  <text x="110" y="200" text-anchor="middle" fill="#8ec4f0" font-size="12" font-family="monospace">t₀ ✓</text>
-  <rect x="200" y="182" width="60" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.2"/>
-  <text x="230" y="200" text-anchor="middle" fill="#8ec4f0" font-size="12" font-family="monospace">t₁ ✓</text>
-  <rect x="320" y="182" width="60" height="26" rx="4" fill="#3a2010" stroke="#c08040" stroke-width="1.2"/>
-  <text x="350" y="200" text-anchor="middle" fill="#f0b060" font-size="12" font-family="monospace">t₂′</text>
-  <rect x="440" y="182" width="60" height="26" rx="4" fill="#2a2a2a" stroke="#555" stroke-width="1.2"/>
-  <text x="470" y="200" text-anchor="middle" fill="#666" font-size="12" font-family="monospace">0</text>
+  <rect x="336" y="62" width="104" height="34" rx="4" fill="#2a2a2a" stroke="#555" stroke-width="1"/>
+  <text x="388" y="80" text-anchor="middle" fill="#555" font-size="9">not reached</text>
 
-  <!-- arrows output -->
-  <line x1="110" y1="134" x2="110" y2="180" stroke="#44aa66" stroke-width="1.2" marker-end="url(#ah)"/>
-  <line x1="230" y1="134" x2="230" y2="180" stroke="#44aa66" stroke-width="1.2" marker-end="url(#ah)"/>
+  <rect x="476" y="62" width="104" height="34" rx="4" fill="#2a2a2a" stroke="#555" stroke-width="1"/>
+  <text x="528" y="80" text-anchor="middle" fill="#555" font-size="9">not reached</text>
 
-  <!-- t3 crossed out -->
-  <line x1="440" y1="108" x2="500" y2="108" stroke="#555" stroke-width="1.5" stroke-dasharray="3,3"/>
-  <text x="470" y="104" text-anchor="middle" fill="#555" font-size="10" font-family="sans-serif">(skipped)</text>
+  <!-- Row 3: Alpha + accept/reject -->
+  <text x="16" y="124" fill="#888" font-size="10">&#x3b1;, test</text>
+  <rect x="56" y="108" width="104" height="40" rx="4" fill="#1a3a1a" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="108" y="124" text-anchor="middle" fill="#aaa" font-size="9">&#x3b1; = .50/.60 = .83</text>
+  <text x="108" y="140" text-anchor="middle" fill="#44aa66" font-size="9">u=0.1 &lt; .83 &#x2713;</text>
+
+  <rect x="196" y="108" width="104" height="40" rx="4" fill="#4a1a1a" stroke="#e06060" stroke-width="1.5"/>
+  <text x="248" y="124" text-anchor="middle" fill="#aaa" font-size="9">&#x3b1; = .20/.50 = .40</text>
+  <text x="248" y="140" text-anchor="middle" fill="#e06060" font-size="9">u=0.7 &#x2265; .40 &#x2717;</text>
+
+  <rect x="336" y="108" width="104" height="40" rx="4" fill="#2a2a2a" stroke="#555" stroke-width="1"/>
+  <text x="388" y="132" text-anchor="middle" fill="#555" font-size="9">skipped</text>
+
+  <rect x="476" y="108" width="104" height="40" rx="4" fill="#2a2a2a" stroke="#555" stroke-width="1"/>
+  <text x="528" y="132" text-anchor="middle" fill="#555" font-size="9">skipped</text>
+
+  <!-- Row 4: Resample box -->
+  <rect x="56" y="164" width="524" height="38" rx="5" fill="#1a1a1a" stroke="#e06060" stroke-width="1"/>
+  <text x="318" y="180" text-anchor="middle" fill="#e06060" font-size="10">reject at pos 1 &#x2192; stop, resample from adj(v) = max(0, q(v) &#x2212; p(v))</text>
+  <text x="318" y="194" text-anchor="middle" fill="#aaa" font-size="9">normalize adj, inverse-CDF sample using u[b, T] &#x2192; replacement token t&#x2081;&#x2032;</text>
+
+  <!-- Row 5: Output tokens -->
+  <text x="16" y="224" fill="#888" font-size="10">output</text>
+  <rect x="56" y="212" width="104" height="24" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="108" y="229" text-anchor="middle" fill="#8ec4f0" font-size="11">t&#x2080;</text>
+  <rect x="196" y="212" width="104" height="24" rx="4" fill="#3a2010" stroke="#e0a040" stroke-width="1.5"/>
+  <text x="248" y="229" text-anchor="middle" fill="#f0b060" font-size="11">t&#x2081;&#x2032;</text>
+  <rect x="336" y="212" width="104" height="24" rx="4" fill="#2a2a2a" stroke="#555" stroke-width="1"/>
+  <text x="388" y="229" text-anchor="middle" fill="#555" font-size="11">0</text>
+  <rect x="476" y="212" width="104" height="24" rx="4" fill="#2a2a2a" stroke="#555" stroke-width="1"/>
+  <text x="528" y="229" text-anchor="middle" fill="#555" font-size="11">0</text>
+
+  <!-- Legend -->
+  <text x="16" y="260" fill="#c060e0" font-size="9">p = draft prob</text>
+  <text x="130" y="260" fill="#e0a040" font-size="9">q = target prob</text>
+  <text x="260" y="260" fill="#aaa" font-size="9">&#x3b1; = min(1, q/p)</text>
+  <text x="400" y="260" fill="#44aa66" font-size="9">&#x25a0; accepted</text>
+  <text x="490" y="260" fill="#e0a040" font-size="9">&#x25a0; resampled</text>
+  <text x="590" y="260" fill="#555" font-size="9">&#x25a0; pad</text>
+
+  <!-- All-accept note -->
+  <text x="330" y="290" text-anchor="middle" fill="#888" font-size="9">If all T tokens accepted: sample bonus token from q at last position using u[b, T]</text>
 </svg>
 
 <p>
-  For each sequence <code>b</code> in the batch, process draft tokens left-to-right. For position
-  <code>i</code>, compute the acceptance probability
-  \(\alpha_i = \min\!\left(1,\, \frac{q_i(t_i)}{p_i(t_i)}\right)\)
-  where \(p_i(t_i)\) is the draft model probability and \(q_i(t_i)\) is the target model
-  probability for the draft token \(t_i\). Accept token \(t_i\) if
-  \(\texttt{uniform\_samples}[b, i] < \alpha_i\); otherwise reject and stop. On rejection at
-  position <code>i</code>, sample a replacement token from the adjusted distribution
-  \(\text{adj}(v) \propto \max(0,\, q_i(v) - p_i(v))\)
-  using \(\texttt{uniform\_samples}[b, T]\) via inverse CDF. If all <code>T</code> draft tokens
-  are accepted, sample one bonus token from \(q_{T-1}\) (the target distribution at the last
-  draft position) using \(\texttt{uniform\_samples}[b, T]\). Write the result into
-  <code>output_tokens[b, :]</code>: valid tokens fill positions \(0\) through
-  <code>accepted_count</code> (inclusive), remaining positions are zero.
+  For each sequence \(b\), process positions \(i = 0, 1, \ldots, T{-}1\) left-to-right:
+</p>
+<ol>
+  <li>Compute acceptance probability: \(\displaystyle \alpha_i = \min\!\left(1,\; \frac{q_i(t_i)}{p_i(t_i)}\right)\)</li>
+  <li>If \(u_i < \alpha_i\): <strong>accept</strong> \(t_i\), continue to position \(i{+}1\).</li>
+  <li>If \(u_i \ge \alpha_i\): <strong>reject</strong>, stop. Sample replacement from:
+    \[\text{adj}(v) = \frac{\max(0,\; q_i(v) - p_i(v))}{\sum_{v'} \max(0,\; q_i(v') - p_i(v'))}\]
+    using inverse CDF with \(r = \texttt{uniform_samples}[b, T]\). If \(\text{adj}\) is all zeros, use uniform \(1/V\).
+  </li>
+  <li>If all \(T\) tokens accepted: sample a <strong>bonus token</strong> from \(q_{T-1}\) using \(\texttt{uniform_samples}[b, T]\).</li>
+</ol>
+<p>
+  Write results into <code>output_tokens[b, :]</code> (shape \([B, T{+}1]\)): accepted/resampled tokens
+  fill positions \(0\) through the accepted count (inclusive), remaining positions are zero.
 </p>
 
 <h2>Implementation Requirements</h2>
@@ -96,7 +122,7 @@
   <li>
     Inverse CDF sampling: given distribution \(\text{adj}\) (already normalized), find the
     smallest index \(k\) where \(\sum_{v=0}^{k} \text{adj}(v) \ge r\), where
-    \(r = \texttt{uniform\_samples}[b, T]\). Clamp the result to \([0, V-1]\).
+    \(r = \texttt{uniform_samples}[b, T]\). Clamp the result to \([0, V-1]\).
   </li>
   <li>
     If the adjusted distribution is all zeros (i.e., \(q_i \le p_i\) everywhere), fall back to
@@ -106,34 +132,47 @@
 
 <h2>Example</h2>
 <p>
-  With <code>B</code> = 1, <code>T</code> = 3, <code>V</code> = 4:
+  Input: \(B = 1,\; T = 3,\; V = 4\)
 </p>
-<pre>
-draft_tokens     = [[1, 2, 0]]
-
-draft_probs  pos 0: [0.10, 0.60, 0.20, 0.10]   # p(t=1) = 0.60
-             pos 1: [0.10, 0.20, 0.50, 0.20]   # p(t=2) = 0.50
-             pos 2: [0.40, 0.20, 0.20, 0.20]   # (not reached)
-
-target_probs pos 0: [0.10, 0.50, 0.20, 0.20]   # q(t=1) = 0.50
-             pos 1: [0.30, 0.20, 0.20, 0.30]   # q(t=2) = 0.20
-             pos 2: [0.30, 0.20, 0.30, 0.20]   # (not reached)
-
-uniform_samples = [[0.50, 0.70, 0.30, 0.90]]
-                     ^     ^     ^     ^ uniform_samples[0, T=3] for resampling
-</pre>
 <p>
-  Position 0: \(\alpha_0 = \min(1,\, 0.50/0.60) \approx 0.833\). Since \(0.50 < 0.833\), accept
-  token <code>1</code>.<br>
-  Position 1: \(\alpha_1 = \min(1,\, 0.20/0.50) = 0.40\). Since \(0.70 \ge 0.40\), reject.
-  Adjusted distribution: \(\max(0,\,[0.30\!-\!0.10,\,0.20\!-\!0.20,\,0.20\!-\!0.50,\,0.30\!-\!0.20])
-  = [0.20,\,0,\,0,\,0.10]\), normalized \(= [2/3,\,0,\,0,\,1/3]\).
-  CDF \(= [0.667,\,0.667,\,0.667,\,1.0]\). With \(r = 0.90\), inverse CDF gives token
-  <code>3</code>.
+  \(\text{draft_tokens} = [1, 2, 0]\)
 </p>
-<pre>
-output_tokens = [[1, 3, 0, 0]]
-</pre>
+<p>
+  Draft probabilities \(p_i\) and target probabilities \(q_i\) per position:
+  \[
+  p_0 = \begin{bmatrix} 0.10 & 0.60 & 0.20 & 0.10 \end{bmatrix}, \quad
+  q_0 = \begin{bmatrix} 0.10 & 0.50 & 0.20 & 0.20 \end{bmatrix}
+  \]
+  \[
+  p_1 = \begin{bmatrix} 0.10 & 0.20 & 0.50 & 0.20 \end{bmatrix}, \quad
+  q_1 = \begin{bmatrix} 0.30 & 0.20 & 0.20 & 0.30 \end{bmatrix}
+  \]
+  \[
+  \text{uniform_samples} = \begin{bmatrix} 0.50 & 0.70 & 0.30 & 0.90 \end{bmatrix}
+  \]
+</p>
+<p>
+  <strong>Position 0</strong> (draft token = 1):
+  \(\alpha_0 = \min\!\left(1,\, \frac{q_0(1)}{p_0(1)}\right) = \min\!\left(1,\, \frac{0.50}{0.60}\right) \approx 0.833\).
+  Since \(u_0 = 0.50 < 0.833\), <strong>accept</strong> token 1.
+</p>
+<p>
+  <strong>Position 1</strong> (draft token = 2):
+  \(\alpha_1 = \min\!\left(1,\, \frac{q_1(2)}{p_1(2)}\right) = \min\!\left(1,\, \frac{0.20}{0.50}\right) = 0.40\).
+  Since \(u_1 = 0.70 \ge 0.40\), <strong>reject</strong>. Resample from adjusted distribution:
+  \[
+  \text{adj}(v) = \max(0,\, q_1(v) - p_1(v)) = [0.20,\, 0,\, 0,\, 0.10]
+  \]
+  \[
+  \text{normalized} = \left[\tfrac{2}{3},\, 0,\, 0,\, \tfrac{1}{3}\right], \quad
+  \text{CDF} = [0.667,\, 0.667,\, 0.667,\, 1.0]
+  \]
+  With \(r = \text{uniform_samples}[0, T] = 0.90\), inverse CDF gives token <strong>3</strong>.
+</p>
+<p>
+  Output:
+  \[\text{output_tokens} = \begin{bmatrix} 1 & 3 & 0 & 0 \end{bmatrix}\]
+</p>
 
 <h2>Constraints</h2>
 <ul>
