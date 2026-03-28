@@ -6,122 +6,8 @@
   compressed keys and compute dot-product attention scores against full-precision queries.
 </p>
 
-<svg width="660" height="300" viewBox="0 0 660 300" xmlns="http://www.w3.org/2000/svg"
-     style="display:block; margin:20px auto; font-family:monospace;">
-  <rect width="660" height="300" fill="#222" rx="8"/>
-
-  <!-- Title -->
-  <text x="330" y="20" text-anchor="middle" fill="#888" font-size="10">TurboQuant Dequantization Pipeline (per key vector)</text>
-
-  <!-- ============================================================ -->
-  <!-- Stage 1: MSE dequantization (top row)                        -->
-  <!-- ============================================================ -->
-  <text x="16" y="50" fill="#4a9edd" font-size="10" font-weight="bold">Stage 1: MSE</text>
-
-  <!-- K_idx -->
-  <rect x="16" y="60" width="80" height="40" rx="4" fill="#1a3a5c" stroke="#4a9edd" stroke-width="1.5"/>
-  <text x="56" y="78" text-anchor="middle" fill="#4a9edd" font-size="10">K_idx</text>
-  <text x="56" y="92" text-anchor="middle" fill="#7799bb" font-size="8">[S, D] uint8</text>
-
-  <!-- arrow -->
-  <text x="110" y="84" fill="#888" font-size="11" text-anchor="middle">&#x2192;</text>
-
-  <!-- codebook lookup -->
-  <rect x="124" y="60" width="120" height="40" rx="4" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
-  <text x="184" y="78" text-anchor="middle" fill="#ccc" font-size="9">codebook[ K_idx ]</text>
-  <text x="184" y="92" text-anchor="middle" fill="#888" font-size="8">centroid lookup</text>
-
-  <!-- arrow -->
-  <text x="258" y="84" fill="#888" font-size="11" text-anchor="middle">&#x2192;</text>
-
-  <!-- multiply by Pi -->
-  <rect x="272" y="60" width="80" height="40" rx="4" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
-  <text x="312" y="78" text-anchor="middle" fill="#ccc" font-size="9">&#xd7; &#x3a0;</text>
-  <text x="312" y="92" text-anchor="middle" fill="#888" font-size="8">rotate back</text>
-
-  <!-- = -->
-  <text x="366" y="84" fill="#888" font-size="11" text-anchor="middle">=</text>
-
-  <!-- K_mse result -->
-  <rect x="380" y="60" width="100" height="40" rx="4" fill="#1a3a5c" stroke="#4a9edd" stroke-width="1.5"/>
-  <text x="430" y="82" text-anchor="middle" fill="#4a9edd" font-size="10">K&#x303;_mse</text>
-  <text x="430" y="94" text-anchor="middle" fill="#7799bb" font-size="8">[S, D] float32</text>
-
-  <!-- ============================================================ -->
-  <!-- Stage 2: QJL dequantization (middle row)                     -->
-  <!-- ============================================================ -->
-  <text x="16" y="130" fill="#52b788" font-size="10" font-weight="bold">Stage 2: QJL residual</text>
-
-  <!-- sigma (signs) -->
-  <rect x="16" y="140" width="60" height="40" rx="4" fill="#1a3a2a" stroke="#52b788" stroke-width="1.5"/>
-  <text x="46" y="158" text-anchor="middle" fill="#52b788" font-size="10">&#x3c3;</text>
-  <text x="46" y="172" text-anchor="middle" fill="#77bbaa" font-size="8">[S,D] &#xb1;1</text>
-
-  <!-- multiply by S_proj -->
-  <text x="90" y="164" fill="#888" font-size="11" text-anchor="middle">&#x2192;</text>
-
-  <rect x="104" y="140" width="60" height="40" rx="4" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
-  <text x="134" y="158" text-anchor="middle" fill="#ccc" font-size="9">&#x3c3; &#xb7; M</text>
-  <text x="134" y="172" text-anchor="middle" fill="#888" font-size="8">project</text>
-
-  <!-- multiply by scale * gamma -->
-  <text x="178" y="164" fill="#888" font-size="11" text-anchor="middle">&#x2192;</text>
-
-  <rect x="192" y="140" width="120" height="40" rx="4" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
-  <text x="252" y="158" text-anchor="middle" fill="#ccc" font-size="9">&#xd7; &#x221a;(&#x3c0;/2)/D &#xd7; &#x3b3;</text>
-  <text x="252" y="172" text-anchor="middle" fill="#888" font-size="8">scale by norm</text>
-
-  <!-- = -->
-  <text x="326" y="164" fill="#888" font-size="11" text-anchor="middle">=</text>
-
-  <!-- K_qjl result -->
-  <rect x="340" y="140" width="100" height="40" rx="4" fill="#1a3a2a" stroke="#52b788" stroke-width="1.5"/>
-  <text x="390" y="162" text-anchor="middle" fill="#52b788" font-size="10">K&#x303;_res</text>
-  <text x="390" y="174" text-anchor="middle" fill="#77bbaa" font-size="8">[S, D] float32</text>
-
-  <!-- ============================================================ -->
-  <!-- Combine + dot product (bottom)                               -->
-  <!-- ============================================================ -->
-  <text x="16" y="210" fill="#e0a040" font-size="10" font-weight="bold">Combine + Score</text>
-
-  <!-- K_mse + K_res -->
-  <rect x="16" y="220" width="100" height="36" rx="4" fill="#1a3a5c" stroke="#4a9edd" stroke-width="1"/>
-  <text x="66" y="242" text-anchor="middle" fill="#4a9edd" font-size="10">K&#x303;_mse</text>
-
-  <text x="128" y="242" fill="#ccc" font-size="14" text-anchor="middle">+</text>
-
-  <rect x="142" y="220" width="100" height="36" rx="4" fill="#1a3a2a" stroke="#52b788" stroke-width="1"/>
-  <text x="192" y="242" text-anchor="middle" fill="#52b788" font-size="10">K&#x303;_res</text>
-
-  <text x="256" y="242" fill="#ccc" font-size="14" text-anchor="middle">=</text>
-
-  <rect x="270" y="220" width="80" height="36" rx="4" fill="#3a2a1a" stroke="#e0a040" stroke-width="1.5"/>
-  <text x="310" y="242" text-anchor="middle" fill="#e0a040" font-size="10">K&#x303;</text>
-
-  <!-- dot with Q -->
-  <text x="370" y="242" fill="#ccc" font-size="10" text-anchor="middle">then:</text>
-
-  <rect x="394" y="220" width="70" height="36" rx="4" fill="#2a1a3a" stroke="#c060e0" stroke-width="1.5"/>
-  <text x="429" y="242" text-anchor="middle" fill="#c060e0" font-size="10">Q</text>
-
-  <text x="478" y="242" fill="#ccc" font-size="14" text-anchor="middle">&#xb7;</text>
-
-  <rect x="492" y="220" width="70" height="36" rx="4" fill="#3a2a1a" stroke="#e0a040" stroke-width="1"/>
-  <text x="527" y="242" text-anchor="middle" fill="#e0a040" font-size="10">K&#x303;&#x1d40;</text>
-
-  <text x="576" y="242" fill="#ccc" font-size="14" text-anchor="middle">=</text>
-
-  <rect x="590" y="220" width="56" height="36" rx="4" fill="#3a1a1a" stroke="#e05050" stroke-width="1.5"/>
-  <text x="618" y="242" text-anchor="middle" fill="#e05050" font-size="10">scores</text>
-
-  <!-- Legend -->
-  <text x="16" y="280" fill="#888" font-size="9">&#x3a0; = orthogonal rotation [D&#xd7;D]</text>
-  <text x="200" y="280" fill="#888" font-size="9">M = Gaussian projection [D&#xd7;D]</text>
-  <text x="420" y="280" fill="#888" font-size="9">&#x3c3; = sign bits &#xb1;1,  &#x3b3; = &#x2016;residual&#x2016;&#x2082;</text>
-</svg>
-
 <p>
-  <strong>Background — how the keys were compressed</strong> (already done for you, not part of the challenge):
+  <strong>Background - how the keys were compressed</strong> (already done for you, not part of the challenge):
 </p>
 <ol>
   <li><strong>Rotate</strong>: multiply key by orthogonal matrix \(\Pi\): \(\;y = \Pi \cdot K\). This makes each
@@ -131,21 +17,21 @@
   <li><strong>Residual correction</strong>: MSE quantization loses information. Compute the residual
     \(r = K - \tilde{K}_\text{mse}\), then store:
     <ul>
-      <li>\(\sigma = \text{sign}(M \cdot r) \in \{-1,+1\}^D\) — direction (<code>int8</code>)</li>
-      <li>\(\gamma = \|r\|_2\) — magnitude (<code>float32</code> scalar per key)</li>
+      <li>\(\sigma = \text{sign}(S_\text{mat} \cdot r) \in \{-1,+1\}^D\) - direction (<code>int8</code>)</li>
+      <li>\(\gamma = \|r\|_2\) - magnitude (<code>float32</code> scalar per key)</li>
     </ul>
-    where \(M \in \mathbb{R}^{D \times D}\) is a random Gaussian projection matrix (<code>S_mat</code> in code).
+    where \(S_\text{mat} \in \mathbb{R}^{D \times D}\) is a random Gaussian projection matrix.
   </li>
 </ol>
 
 <p>
-  <strong>What you compute</strong> — dequantize and score:
+  <strong>What you compute</strong> - dequantize and score:
 </p>
 <ol>
   <li><strong>MSE dequantize</strong>: look up centroids, undo the rotation:
     \[\tilde{K}_\text{mse} = \text{codebook}[K_\text{idx}] \cdot \Pi\]</li>
   <li><strong>Residual dequantize</strong>: reconstruct the residual correction:
-    \[\tilde{K}_\text{res} = \frac{\sqrt{\pi/2}}{D} \cdot \gamma \cdot \sigma \cdot M\]
+    \[\tilde{K}_\text{res} = \frac{\sqrt{\pi/2}}{D} \cdot \gamma \cdot \sigma \cdot S_\text{mat}\]
     The \(\sqrt{\pi/2}/D\) constant corrects for the distortion introduced by taking signs.</li>
   <li><strong>Combine</strong>:
     \(\tilde{K} = \tilde{K}_\text{mse} + \tilde{K}_\text{res}\)</li>
@@ -166,19 +52,20 @@
 
 <h2>Example</h2>
 <p>
-  Input: \(B=2,\; S=3,\; D=2,\; C=4\), with \(\Pi = I\), \(M = I\), \(\gamma = \mathbf{0}\) (residual correction disabled):
+  Input: \(B=2,\; S=3,\; D=2,\; C=4\), with \(\Pi = I\), \(S_\text{mat} = I\), \(\gamma = \mathbf{0}\) (residual correction disabled),
+  \(\sigma = \mathbf{1}\) (all +1):
 </p>
 <p>
-  \(Q = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}\), \quad
-  \(K_\text{idx} = \begin{bmatrix} 0 & 3 \\ 1 & 2 \\ 3 & 0 \end{bmatrix}\), \quad
+  \(Q = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}\),
+  \(K_\text{idx} = \begin{bmatrix} 0 & 3 \\ 1 & 2 \\ 3 & 0 \end{bmatrix}\),
   codebook \(= [-0.75,\; -0.25,\; 0.25,\; 0.75]\)
 </p>
 <p>
-  Step 1 — MSE lookup and rotate back (\(\Pi = I\)):
+  Step 1 - MSE lookup and rotate back (\(\Pi = I\)):
   \[
   \tilde{K}_\text{mse} = \begin{bmatrix} -0.75 & 0.75 \\ -0.25 & 0.25 \\ 0.75 & -0.75 \end{bmatrix}
   \]
-  Step 2 — Residual correction is zero (\(\gamma = 0\)), so \(\tilde{K} = \tilde{K}_\text{mse}\).
+  Step 2 - Residual correction is zero (\(\gamma = 0\)), so \(\tilde{K} = \tilde{K}_\text{mse}\).
 </p>
 <p>
   Output:
@@ -194,7 +81,8 @@
   <li>1 &le; <code>D</code> &le; 256</li>
   <li>2 &le; <code>C</code> &le; 256</li>
   <li>\(\Pi\) is orthogonal (\(\Pi^T \Pi = I\))</li>
-  <li>\(M\) (<code>S_mat</code>) has i.i.d. \(\mathcal{N}(0,1)\) entries</li>
+  <li><code>S_mat</code> has i.i.d. \(\mathcal{N}(0,1)\) entries</li>
+  <li><code>gamma</code> has shape \([S]\) (one \(\ell_2\) norm per key vector, <code>float32</code>)</li>
   <li><code>qjl_signs</code> (\(\sigma\)) values are in \(\{-1, +1\}\) (<code>int8</code>)</li>
   <li><code>K_idx</code> values are in \([0, C)\) (<code>uint8</code>)</li>
   <li>All floating-point inputs are <code>float32</code></li>
