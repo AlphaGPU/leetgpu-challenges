@@ -1,0 +1,108 @@
+<p>
+  Implement a fused kernel that adds an input tensor <code>x</code> to a
+  <code>residual</code> tensor and then RMS-normalizes the result, scaling each
+  feature by a learned per-feature <code>weight</code> vector.
+  Inputs are float32 tensors: <code>x</code> and <code>residual</code> have shape
+  <code>(N, C)</code> where <code>N</code> is the number of tokens and <code>C</code>
+  is the hidden dimension, and <code>weight</code> has shape <code>(C,)</code>.
+  This pattern appears before every sublayer in modern LLMs such as LLaMA and Mistral:
+  fusing the addition and normalization into a single kernel saves a full read–write
+  pass over the data compared to two separate operations.
+</p>
+
+<svg width="640" height="190" style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="ah" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#999"/>
+    </marker>
+  </defs>
+  <rect width="640" height="190" fill="#222" rx="8"/>
+
+  <!-- x box -->
+  <rect x="20" y="45" width="70" height="36" fill="#1a3a5c" rx="4"/>
+  <text x="55" y="68" fill="#7ec8e3" font-family="monospace" font-size="14" text-anchor="middle">x</text>
+
+  <!-- residual box -->
+  <rect x="20" y="105" width="70" height="36" fill="#1a3a5c" rx="4"/>
+  <text x="55" y="128" fill="#7ec8e3" font-family="monospace" font-size="12" text-anchor="middle">residual</text>
+
+  <!-- arrows into add -->
+  <line x1="90" y1="63"  x2="148" y2="90"  stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="90" y1="123" x2="148" y2="110" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- add circle -->
+  <circle cx="165" cy="100" r="18" fill="#2d5a27" stroke="#5a9c52" stroke-width="1.5"/>
+  <text x="165" y="107" fill="#ccc" font-family="monospace" font-size="18" text-anchor="middle">+</text>
+
+  <!-- z label above arrow -->
+  <text x="248" y="88" fill="#aaa" font-family="monospace" font-size="12" text-anchor="middle">z = x + residual</text>
+
+  <!-- arrow from add to rms box -->
+  <line x1="183" y1="100" x2="308" y2="100" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- RMS Norm box -->
+  <rect x="308" y="82" width="120" height="36" fill="#2d3a5c" rx="4"/>
+  <text x="368" y="105" fill="#7ec8e3" font-family="monospace" font-size="13" text-anchor="middle">RMS Norm</text>
+
+  <!-- weight box -->
+  <rect x="308" y="140" width="120" height="36" fill="#1a3a5c" rx="4"/>
+  <text x="368" y="163" fill="#7ec8e3" font-family="monospace" font-size="13" text-anchor="middle">&#215; weight</text>
+  <line x1="368" y1="140" x2="368" y2="118" stroke="#5a9c52" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- arrow to out -->
+  <line x1="428" y1="100" x2="508" y2="100" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- out box -->
+  <rect x="508" y="82" width="70" height="36" fill="#1a5c2d" rx="4"/>
+  <text x="543" y="105" fill="#7ec8e3" font-family="monospace" font-size="14" text-anchor="middle">out</text>
+</svg>
+
+<p>
+  For each row <code>i</code> (token), the kernel must compute:
+</p>
+<p>
+  \[
+    z_i = x_i + \text{residual}_i, \quad
+    \text{rms}_i = \sqrt{\frac{1}{C}\sum_{j=0}^{C-1} z_{i,j}^2 + \varepsilon}, \quad
+    \text{out}_{i,j} = \frac{z_{i,j}}{\text{rms}_i} \cdot \text{weight}_j
+  \]
+</p>
+<p>
+  Each row's RMS is computed independently, making this a per-token normalization.
+  The challenge is to fuse the addition and normalization into a single GPU kernel,
+  avoiding writing the intermediate sum <code>z</code> to global memory.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Do not change the function signature.</li>
+  <li>Do not use external libraries beyond what is available in the starter.</li>
+  <li><code>out[i, j]</code> must equal <code>(x[i,j] + residual[i,j]) / rms_i &times; weight[j]</code>
+      where <code>rms_i</code> is computed over the full row <code>i</code>.</li>
+</ul>
+
+<h2>Example</h2>
+<pre>
+N = 1, C = 4
+x        = [1.0,  0.0, -1.0,  2.0]
+residual = [0.5,  1.5,  0.5, -0.5]
+weight   = [1.0,  1.0,  1.0,  1.0]
+eps      = 1e-5
+
+z   = [1.5,  1.5, -0.5,  1.5]
+rms = sqrt((1.5^2 + 1.5^2 + 0.5^2 + 1.5^2) / 4 + 1e-5)
+    = sqrt(1.75 + 1e-5) ≈ 1.32288
+
+out ≈ [1.1339,  1.1339, -0.3780,  1.1339]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 65,536</li>
+  <li>1 &le; <code>C</code> &le; 65,536</li>
+  <li><code>x</code>, <code>residual</code>, <code>weight</code>, and <code>out</code> are float32</li>
+  <li>Values in <code>x</code> and <code>residual</code> are in the range [&minus;10, 10]</li>
+  <li><code>weight</code> values are in the range [0.5, 1.5]</li>
+  <li><code>eps</code> = 1e-5</li>
+  <li>Performance is measured with <code>N</code> = 4,096, <code>C</code> = 4,096</li>
+</ul>
