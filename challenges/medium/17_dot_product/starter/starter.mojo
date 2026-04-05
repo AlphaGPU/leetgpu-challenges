@@ -1,8 +1,8 @@
-from gpu.host import DeviceContext
-from gpu.id import block_dim, block_idx, thread_idx
-from memory import UnsafePointer
-from math import ceildiv
+from std.gpu.host import DeviceContext
+from std.gpu import block_dim, block_idx, thread_idx
+from std.memory import UnsafePointer
+from std.math import ceildiv
 
 @export
-def solve(A: UnsafePointer[Float32], B: UnsafePointer[Float32], result: UnsafePointer[Float32], N: Int32):
+fn solve(A: UnsafePointer[Float32, MutExternalOrigin], B: UnsafePointer[Float32, MutExternalOrigin], result: UnsafePointer[Float32, MutExternalOrigin], N: Int32) raises:
     pass

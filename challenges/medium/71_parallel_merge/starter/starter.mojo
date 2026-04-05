@@ -1,7 +1,7 @@
-from gpu.host import DeviceContext
-from memory import UnsafePointer
+from std.gpu.host import DeviceContext
+from std.memory import UnsafePointer
 
 # A, B, C are device pointers (i.e. pointers to memory on the GPU)
 @export
-def solve(A: UnsafePointer[Float32], B: UnsafePointer[Float32], C: UnsafePointer[Float32], M: Int32, N: Int32):
+fn solve(A: UnsafePointer[Float32, MutExternalOrigin], B: UnsafePointer[Float32, MutExternalOrigin], C: UnsafePointer[Float32, MutExternalOrigin], M: Int32, N: Int32) raises:
     pass
