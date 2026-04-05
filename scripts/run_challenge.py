@@ -14,10 +14,17 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 
 import websocket
+
+
+def parse_num_gpus(challenge_code: str) -> int:
+    m = re.search(r"num_gpus\s*=\s*(\d+)", challenge_code)
+    return int(m.group(1)) if m else 1
+
 
 SERVICE_URL = os.getenv("SERVICE_URL", "http://localhost:8080")
 LEETGPU_API_KEY = os.getenv("LEETGPU_API_KEY")
@@ -35,13 +42,21 @@ def find_solution_file(challenge_dir: Path, language: str) -> tuple[str, str]:
         "triton": "py",
         "jax": "py",
     }
-    solution_file = challenge_dir / "solution" / f"solution.{language_to_extension[language]}"
-    if not solution_file.exists():
-        raise FileNotFoundError(
-            f"No solution file found for {language}. "
-            f"Add a solution/solution.{language_to_extension[language]} file. "
-        )
-    return solution_file.name, solution_file.read_text()
+    ext = language_to_extension[language]
+    # prefer a language-tagged filename (solution.triton.py, solution.jax.py, ...)
+    # so multiple python-based languages can coexist in the same challenge dir.
+    candidates = [
+        challenge_dir / "solution" / f"solution.{language}.{ext}",
+        challenge_dir / "solution" / f"solution.{ext}",
+    ]
+    for path in candidates:
+        if path.exists():
+            # the server expects the filename to match the language's canonical solution name.
+            canonical_name = f"solution.{ext}"
+            return canonical_name, path.read_text()
+    raise FileNotFoundError(
+        f"No solution file found for {language}. " f"Tried: {', '.join(str(p) for p in candidates)}"
+    )
 
 
 def submit_solution(
@@ -52,6 +67,7 @@ def submit_solution(
     content: str,
     language: str,
     gpu: str,
+    gpu_count: int,
     action: str,
     public: bool,
 ) -> bool:
@@ -65,6 +81,7 @@ def submit_solution(
                 "files": [{"name": file_name, "content": content}],
                 "language": language,
                 "gpu": gpu,
+                "gpuCount": gpu_count,
                 "mode": "accelerated",
                 "public": public,
                 "challengeCode": challenge_code,
@@ -79,9 +96,24 @@ def submit_solution(
                 continue
             data = json.loads(msg)
             status = data.get("status")
-            output = data.get("output")
-            logger.info("Status: %s | Output: %s", status, output)
-            if status in {"success", "error", "timeout", "oom", "interrupted"}:
+            output = data.get("output") or ""
+            typ = data.get("type") or ""
+            if output:
+                sys.stdout.write(f"[{status}/{typ}] {output}")
+                if not output.endswith("\n"):
+                    sys.stdout.write("\n")
+                sys.stdout.flush()
+            if status in {
+                "success",
+                "error",
+                "timeout",
+                "oom",
+                "interrupted",
+                "test-case-failed",
+                "compilation-failed",
+                "tampering-detected",
+                "out-of-memory",
+            }:
                 return status == "success"
     finally:
         ws.close()
@@ -101,6 +133,12 @@ def main() -> int:
     parser.add_argument(
         "--action", default="run", choices=["run", "submit"], help="Action (run or submit)"
     )
+    parser.add_argument(
+        "--gpu-count",
+        type=int,
+        default=None,
+        help="Number of GPUs (default: auto-detected from challenge.py num_gpus)",
+    )
     args = parser.parse_args()
 
     challenge_py = args.challenge_path / "challenge.py"
@@ -108,6 +146,8 @@ def main() -> int:
         logger.error("No challenge.py found in %s", args.challenge_path)
         return 1
     challenge_code = challenge_py.read_text()
+    gpu_count = args.gpu_count if args.gpu_count is not None else parse_num_gpus(challenge_code)
+    logger.info("Using gpu_count=%d", gpu_count)
 
     try:
         file_name, content = find_solution_file(args.challenge_path, args.language)
@@ -125,6 +165,7 @@ def main() -> int:
         content=content,
         language=args.language,
         gpu=args.gpu,
+        gpu_count=gpu_count,
         action=args.action,
         public=False,
     )
