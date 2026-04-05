@@ -11,19 +11,34 @@ Env vars:
 """
 
 import argparse
+import importlib.util
 import json
 import logging
 import os
-import re
 import sys
 from pathlib import Path
 
 import websocket
 
 
-def parse_num_gpus(challenge_code: str) -> int:
-    m = re.search(r"num_gpus\s*=\s*(\d+)", challenge_code)
-    return int(m.group(1)) if m else 1
+def load_challenge(challenge_dir: Path):
+    """Import challenge_dir/challenge.py and return an instantiated Challenge.
+
+    Mirrors the loading dance in scripts/update_challenges.py: the parent of
+    the `easy|medium|hard` directory is added to sys.path so the module can
+    `from core.challenge_base import ChallengeBase`.
+    """
+    challenge_py = challenge_dir / "challenge.py"
+    challenges_root = challenge_dir.parent.parent
+    sys.path.insert(0, str(challenges_root))
+    try:
+        spec = importlib.util.spec_from_file_location("challenge", challenge_py)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.Challenge()
+    finally:
+        sys.path.remove(str(challenges_root))
+        sys.modules.pop("challenge", None)
 
 
 SERVICE_URL = os.getenv("SERVICE_URL", "http://localhost:8080")
@@ -146,7 +161,12 @@ def main() -> int:
         logger.error("No challenge.py found in %s", args.challenge_path)
         return 1
     challenge_code = challenge_py.read_text()
-    gpu_count = args.gpu_count if args.gpu_count is not None else parse_num_gpus(challenge_code)
+    try:
+        challenge = load_challenge(args.challenge_path)
+    except Exception as e:
+        logger.error("Failed to load challenge module: %s", e)
+        return 1
+    gpu_count = args.gpu_count if args.gpu_count is not None else getattr(challenge, "num_gpus", 1)
     logger.info("Using gpu_count=%d", gpu_count)
 
     try:
