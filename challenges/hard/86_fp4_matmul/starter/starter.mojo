@@ -2,16 +2,17 @@ from std.gpu.host import DeviceContext
 from std.memory import UnsafePointer
 
 
-# x, w_q, scales, y are device pointers
+# x_q, x_scales, w_q, w_scales, y are device pointers
 @export
 def solve(
-    x: UnsafePointer[Float16, MutExternalOrigin],
+    x_q: UnsafePointer[UInt8, MutExternalOrigin],
+    x_scales: UnsafePointer[UInt8, MutExternalOrigin],
     w_q: UnsafePointer[UInt8, MutExternalOrigin],
-    scales: UnsafePointer[Float16, MutExternalOrigin],
+    w_scales: UnsafePointer[UInt8, MutExternalOrigin],
+    alpha: Float32,
     y: UnsafePointer[Float16, MutExternalOrigin],
     M: Int32,
     N: Int32,
     K: Int32,
-    group_size: Int32,
 ) raises:
     pass

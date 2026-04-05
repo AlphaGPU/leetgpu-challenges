@@ -1,15 +1,17 @@
 <p>
-  Implement an FP4 weight-only quantized matrix multiplication, the kernel at the heart of
-  modern low-precision LLM inference on Hopper and Blackwell GPUs. Given a float16 activation
-  matrix <code>x</code> of shape <code>M &times; K</code> and a weight matrix stored in packed
-  FP4 E2M1 format, compute <code>y = x &times; W<sup>T</sup></code> of shape
-  <code>M &times; N</code>, where <code>W</code> is the dequantized float16 weight matrix of
-  shape <code>N &times; K</code>.
+  Implement an <strong>NVFP4</strong> matrix multiplication, the low-precision GEMM that powers
+  state-of-the-art LLM inference on Hopper and Blackwell GPUs. Both operands are stored in 4-bit
+  floating point (FP4 E2M1) with per-block FP8 (E4M3) scales along the reduction dimension, plus
+  a single per-tensor FP32 scale. Given packed activations <code>x_q</code> of shape
+  <code>M &times; K</code>, packed weights <code>w_q</code> of shape <code>N &times; K</code>,
+  and their respective block scales, compute
+  <code>y = alpha &times; (x &times; w<sup>T</sup>)</code> of shape <code>M &times; N</code>
+  in float16.
 </p>
 
 <p>
-  <strong>FP4 E2M1 format:</strong> Each weight is encoded in 4 bits as
-  [sign | exponent (2 bits) | mantissa (1 bit)], representing one of sixteen values:
+  <strong>FP4 E2M1 encoding:</strong> Each weight is 4 bits
+  [sign | exp (2 bits) | mantissa (1 bit)] representing one of sixteen values:
   <code>{&plusmn;0, &plusmn;0.5, &plusmn;1, &plusmn;1.5, &plusmn;2, &plusmn;3, &plusmn;4, &plusmn;6}</code>.
   The nibble-to-value mapping is:
 </p>
@@ -25,89 +27,92 @@
 </pre>
 
 <p>
-  <strong>Packing:</strong> Each byte of <code>w_q</code> stores two FP4 weights. The high
-  nibble (bits 7&ndash;4) holds <code>w[n, 2i]</code> and the low nibble (bits 3&ndash;0) holds
-  <code>w[n, 2i+1]</code>.
+  <strong>Packing:</strong> Each byte of <code>x_q</code> / <code>w_q</code> stores two FP4
+  values. The high nibble (bits 7&ndash;4) holds the even-index value and the low nibble
+  (bits 3&ndash;0) holds the odd-index value.
 </p>
 
 <p>
-  <strong>Dequantization:</strong> Weights are dequantized group-wise. Each contiguous block of
-  <code>group_size</code> weights along the <code>K</code> dimension shares one float16 scale:
+  <strong>Block scales:</strong> Each contiguous block of <strong>16</strong> FP4 values along
+  the <code>K</code> dimension shares one E4M3 (float8) scale. The scale tensors
+  <code>x_scales</code> and <code>w_scales</code> are passed as raw uint8 bytes holding the
+  E4M3 bit patterns. Dequantization is:
 </p>
 <pre>
-W[n, k] = fp4_decode(w_q_nibble[n, k]) * scales[n, k // group_size]
+x[m, k] = fp4_decode(x_q_nibble[m, k]) * e4m3_decode(x_scales[m, k // 16])
+w[n, k] = fp4_decode(w_q_nibble[n, k]) * e4m3_decode(w_scales[n, k // 16])
+y[m, n] = alpha * sum_k x[m, k] * w[n, k]
 </pre>
 
 <h2>Implementation Requirements</h2>
 <ul>
   <li>Use only native features (external libraries are not permitted)</li>
   <li>The <code>solve</code> function signature must remain unchanged</li>
-  <li>The final result must be stored in <code>y</code></li>
+  <li>The final result must be stored in <code>y</code> as float16</li>
 </ul>
 
 <h2>Example</h2>
 <p>
-  Input (<code>M</code> = 2, <code>N</code> = 4, <code>K</code> = 4, <code>group_size</code> = 2):
+  Input (<code>M</code> = 2, <code>N</code> = 2, <code>K</code> = 16, <code>alpha</code> = 1.0):
 </p>
 <p>
-  Activations \(x\) (float16, \(2 \times 4\)):
+  Packed activations \(x\_q\) (uint8, \(2 \times 8\)) and decoded FP4 values (each row has
+  sixteen values):
   \[
+  x\_q =
   \begin{bmatrix}
-  1.0 & 0.0 & 1.0 & 0.0 \\
-  0.0 & 1.0 & 0.0 & 1.0
-  \end{bmatrix}
-  \]
-  Packed weights \(w\_q\) (uint8, \(4 \times 2\)) decoded via the FP4 E2M1 table:
-  \[
-  \begin{bmatrix}
-  \texttt{0x22} & \texttt{0x22} \\
-  \texttt{0x44} & \texttt{0x44} \\
-  \texttt{0xAA} & \texttt{0xAA} \\
-  \texttt{0x00} & \texttt{0x00}
+  \texttt{0x22} & \cdots & \texttt{0x22} \\
+  \texttt{0x11} & \cdots & \texttt{0x11}
   \end{bmatrix}
   \;\Rightarrow\;
-  W_{\text{fp4}} =
+  x_{\text{fp4}} =
   \begin{bmatrix}
-  1.0 & 1.0 & 1.0 & 1.0 \\
-  2.0 & 2.0 & 2.0 & 2.0 \\
-  -1.0 & -1.0 & -1.0 & -1.0 \\
-  0.0 & 0.0 & 0.0 & 0.0
+  1.0 & 1.0 & \cdots & 1.0 \\
+  0.5 & 0.5 & \cdots & 0.5
   \end{bmatrix}
   \]
-  Scales (float16, \(4 \times 2\), all entries 0.5):
+  Packed weights \(w\_q\) (uint8, \(2 \times 8\)):
   \[
+  w\_q =
   \begin{bmatrix}
-  0.5 & 0.5 \\
-  0.5 & 0.5 \\
-  0.5 & 0.5 \\
-  0.5 & 0.5
+  \texttt{0x44} & \cdots & \texttt{0x44} \\
+  \texttt{0xAA} & \cdots & \texttt{0xAA}
   \end{bmatrix}
   \;\Rightarrow\;
-  W_{\text{dequant}} =
+  w_{\text{fp4}} =
   \begin{bmatrix}
-  0.5 & 0.5 & 0.5 & 0.5 \\
-  1.0 & 1.0 & 1.0 & 1.0 \\
-  -0.5 & -0.5 & -0.5 & -0.5 \\
-  0.0 & 0.0 & 0.0 & 0.0
+  2.0 & 2.0 & \cdots & 2.0 \\
+  -1.0 & -1.0 & \cdots & -1.0
   \end{bmatrix}
   \]
-  Output \(y = x \times W^T\) (float16, \(2 \times 4\)):
+  Block scales (one block per row since <code>K</code> = 16): both
+  <code>x_scales</code> and <code>w_scales</code> are uint8 \(2 \times 1\) with every byte
+  equal to <code>0x38</code>, which is the E4M3 bit pattern for 1.0. The dequantized operands
+  therefore equal the FP4 values above.
+</p>
+<p>
+  Output \(y = \alpha \cdot (x \times w^T)\) (float16, \(2 \times 2\)):
   \[
   \begin{bmatrix}
-  1.0 & 2.0 & -1.0 & 0.0 \\
-  1.0 & 2.0 & -1.0 & 0.0
+  \sum 1.0 \cdot 2.0 & \sum 1.0 \cdot (-1.0) \\
+  \sum 0.5 \cdot 2.0 & \sum 0.5 \cdot (-1.0)
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+  32.0 & -16.0 \\
+  16.0 & -8.0
   \end{bmatrix}
   \]
 </p>
 
 <h2>Constraints</h2>
 <ul>
-  <li>1 &le; <code>M</code>, <code>N</code> &le; 8,192</li>
-  <li>1 &le; <code>K</code> &le; 8,192</li>
-  <li><code>K</code> is divisible by <code>2</code> and by <code>group_size</code></li>
-  <li><code>group_size</code> &isin; {2, 4, 8, 16, 32}</li>
+  <li>1 &le; <code>M</code>, <code>N</code> &le; 32,768</li>
+  <li>16 &le; <code>K</code> &le; 32,768</li>
+  <li><code>K</code> is divisible by <strong>16</strong> (the NVFP4 block size)</li>
   <li>All tensors are stored in row-major order</li>
-  <li>Input dtype: <code>x</code> and <code>scales</code> are float16; <code>w_q</code> is uint8</li>
-  <li>Output dtype: <code>y</code> is float16</li>
-  <li>Performance is measured with <code>M</code> = 2,048, <code>N</code> = 8,192, <code>K</code> = 3,072, <code>group_size</code> = 32</li>
+  <li>Inputs: <code>x_q</code>, <code>w_q</code>, <code>x_scales</code>, <code>w_scales</code>
+      are <code>uint8</code>; <code>alpha</code> is <code>float32</code></li>
+  <li>Output: <code>y</code> is <code>float16</code></li>
+  <li>Performance is measured with <code>M</code> = 2,048, <code>N</code> = 18,432, <code>K</code> = 3,072</li>
 </ul>

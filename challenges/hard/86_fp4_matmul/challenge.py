@@ -5,7 +5,7 @@ import torch
 from core.challenge_base import ChallengeBase
 
 # OCP FP4 E2M1 lookup table: 4-bit unsigned index -> float value.
-# Bit layout: [sign | exp1 exp0 | mantissa]. Sixteen representable values.
+# Bit layout: [sign | exp1 exp0 | mantissa].
 FP4_E2M1_TABLE = [
     0.0,
     0.5,
@@ -25,12 +25,27 @@ FP4_E2M1_TABLE = [
     -6.0,
 ]
 
+# NVFP4 block size along the reduction dimension. Each block of 16 FP4
+# values shares one E4M3 scale. Matches CUTLASS / qutlass NVFP4 layout.
+BLOCK_SIZE = 16
+
+
+def _decode_fp4_packed(packed: torch.Tensor, rows: int, cols: int) -> torch.Tensor:
+    """Decode a (rows, cols/2) uint8 tensor of packed FP4 E2M1 nibbles into
+    a (rows, cols) float32 tensor. High nibble stores the even-index value,
+    low nibble stores the odd-index value."""
+    table = torch.tensor(FP4_E2M1_TABLE, device=packed.device, dtype=torch.float32)
+    high = ((packed >> 4) & 0xF).to(torch.long)
+    low = (packed & 0xF).to(torch.long)
+    decoded = torch.stack([table[high], table[low]], dim=-1).reshape(rows, cols)
+    return decoded
+
 
 class Challenge(ChallengeBase):
     def __init__(self):
         super().__init__(
-            name="FP4 MatMul",
-            atol=5e-02,
+            name="NVFP4 Matrix Multiplication",
+            atol=1e-01,
             rtol=5e-02,
             num_gpus=1,
             access_tier="free",
@@ -38,137 +53,153 @@ class Challenge(ChallengeBase):
 
     def reference_impl(
         self,
-        x: torch.Tensor,
+        x_q: torch.Tensor,
+        x_scales: torch.Tensor,
         w_q: torch.Tensor,
-        scales: torch.Tensor,
+        w_scales: torch.Tensor,
+        alpha: float,
         y: torch.Tensor,
         M: int,
         N: int,
         K: int,
-        group_size: int,
     ):
-        assert x.shape == (M, K)
+        assert K % BLOCK_SIZE == 0, "K must be divisible by 16 (NVFP4 block size)"
+        assert x_q.shape == (M, K // 2)
+        assert x_scales.shape == (M, K // BLOCK_SIZE)
         assert w_q.shape == (N, K // 2)
-        assert scales.shape == (N, K // group_size)
+        assert w_scales.shape == (N, K // BLOCK_SIZE)
         assert y.shape == (M, N)
-        assert x.dtype == torch.float16
+        assert x_q.dtype == torch.uint8
         assert w_q.dtype == torch.uint8
-        assert scales.dtype == torch.float16
+        assert x_scales.dtype == torch.uint8
+        assert w_scales.dtype == torch.uint8
         assert y.dtype == torch.float16
-        assert x.device.type == "cuda"
+        assert x_q.device.type == "cuda"
+        assert x_scales.device.type == "cuda"
         assert w_q.device.type == "cuda"
-        assert scales.device.type == "cuda"
+        assert w_scales.device.type == "cuda"
         assert y.device.type == "cuda"
 
-        # Decode packed FP4 E2M1 nibbles via lookup table.
-        # w_q[n, i] holds two FP4 values: w[n, 2*i] in the high nibble (bits 7:4)
-        # and w[n, 2*i+1] in the low nibble (bits 3:0).
-        table = torch.tensor(FP4_E2M1_TABLE, device=x.device, dtype=torch.float32)
-        high = ((w_q >> 4) & 0xF).to(torch.long)  # [N, K//2]
-        low = (w_q & 0xF).to(torch.long)  # [N, K//2]
-        w_high = table[high]  # [N, K//2]
-        w_low = table[low]  # [N, K//2]
-        w_fp4 = torch.stack([w_high, w_low], dim=-1).reshape(N, K)  # [N, K]
+        # Decode packed FP4 operands to float32.
+        x_fp4 = _decode_fp4_packed(x_q, M, K)
+        w_fp4 = _decode_fp4_packed(w_q, N, K)
 
-        # Apply group-wise FP16 scales: each contiguous block of `group_size`
-        # weights along K shares one scale.
-        n_groups = K // group_size
-        w_groups = w_fp4.reshape(N, n_groups, group_size)
-        scales_f = scales.float().unsqueeze(-1)  # [N, n_groups, 1]
-        w_dequant = (w_groups * scales_f).reshape(N, K)
+        # Decode E4M3 per-block scales to float32.
+        xs = x_scales.view(torch.float8_e4m3fn).float()  # (M, K/16)
+        ws = w_scales.view(torch.float8_e4m3fn).float()  # (N, K/16)
 
-        y.copy_((x.float() @ w_dequant.T).half())
+        # Apply per-block scales along the reduction dimension.
+        n_blocks = K // BLOCK_SIZE
+        x_dq = (x_fp4.reshape(M, n_blocks, BLOCK_SIZE) * xs.unsqueeze(-1)).reshape(M, K)
+        w_dq = (w_fp4.reshape(N, n_blocks, BLOCK_SIZE) * ws.unsqueeze(-1)).reshape(N, K)
+
+        # NVFP4 matmul: y = alpha * (x @ w^T), result cast to FP16.
+        out = float(alpha) * (x_dq @ w_dq.T)
+        y.copy_(out.half())
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
-            "x": (ctypes.POINTER(ctypes.c_uint16), "in"),
+            "x_q": (ctypes.POINTER(ctypes.c_uint8), "in"),
+            "x_scales": (ctypes.POINTER(ctypes.c_uint8), "in"),
             "w_q": (ctypes.POINTER(ctypes.c_uint8), "in"),
-            "scales": (ctypes.POINTER(ctypes.c_uint16), "in"),
+            "w_scales": (ctypes.POINTER(ctypes.c_uint8), "in"),
+            "alpha": (ctypes.c_float, "in"),
             "y": (ctypes.POINTER(ctypes.c_uint16), "out"),
             "M": (ctypes.c_int, "in"),
             "N": (ctypes.c_int, "in"),
             "K": (ctypes.c_int, "in"),
-            "group_size": (ctypes.c_int, "in"),
         }
 
-    def _make_test_case(self, M: int, N: int, K: int, group_size: int, zero_x: bool = False):
+    def _make_test_case(self, M: int, N: int, K: int, zero_x: bool = False, alpha: float = 1.0):
+        assert K % BLOCK_SIZE == 0, "K must be divisible by 16"
         device = "cuda"
         if zero_x:
-            x = torch.zeros(M, K, device=device, dtype=torch.float16)
+            x_q = torch.zeros(M, K // 2, dtype=torch.uint8, device=device)
         else:
-            x = torch.randn(M, K, device=device, dtype=torch.float16) * 0.5
+            x_q = torch.randint(0, 256, (M, K // 2), dtype=torch.uint8, device=device)
         w_q = torch.randint(0, 256, (N, K // 2), dtype=torch.uint8, device=device)
-        scales = torch.rand(N, K // group_size, device=device, dtype=torch.float16) * 0.1 + 0.01
+
+        # Positive E4M3 block scales in a representable range.
+        x_scales_f = torch.rand(M, K // BLOCK_SIZE, device=device) * 1.5 + 0.5
+        w_scales_f = torch.rand(N, K // BLOCK_SIZE, device=device) * 1.5 + 0.5
+        x_scales = x_scales_f.to(torch.float8_e4m3fn).view(torch.uint8)
+        w_scales = w_scales_f.to(torch.float8_e4m3fn).view(torch.uint8)
+
         y = torch.empty(M, N, device=device, dtype=torch.float16)
         return {
-            "x": x,
+            "x_q": x_q,
+            "x_scales": x_scales,
             "w_q": w_q,
-            "scales": scales,
+            "w_scales": w_scales,
+            "alpha": alpha,
             "y": y,
             "M": M,
             "N": N,
             "K": K,
-            "group_size": group_size,
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
         device = "cuda"
-        M, N, K, group_size = 2, 4, 4, 2
+        M, N, K = 2, 2, 16
 
-        x = torch.tensor(
-            [[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]],
-            device=device,
-            dtype=torch.float16,
-        )
-        # Packed FP4 E2M1 weights (high nibble first).
-        # Row 0: FP4 [1.0,1.0,1.0,1.0] -> nibbles [0x2,0x2,0x2,0x2] -> bytes [0x22,0x22] = [34,34]
-        # Row 1: FP4 [2.0,2.0,2.0,2.0] -> nibbles [0x4,0x4,0x4,0x4] -> bytes [0x44,0x44] = [68,68]
-        # Row 2: FP4 [-1,-1,-1,-1] -> nibbles [0xA,0xA,0xA,0xA] -> bytes [0xAA,0xAA] = [170,170]
-        # Row 3: FP4 [0.0,0.0,0.0,0.0] -> nibbles [0x0,0x0,0x0,0x0] -> bytes [0x00,0x00] = [0,0]
-        w_q = torch.tensor(
-            [[34, 34], [68, 68], [170, 170], [0, 0]],
+        # x row 0: sixteen FP4 values = 1.0 (nibble 0x2) -> 8 bytes of 0x22
+        # x row 1: sixteen FP4 values = 0.5 (nibble 0x1) -> 8 bytes of 0x11
+        x_q = torch.tensor(
+            [[0x22] * 8, [0x11] * 8],
             dtype=torch.uint8,
             device=device,
         )
-        scales = torch.full((N, K // group_size), 0.5, device=device, dtype=torch.float16)
-        y = torch.empty(M, N, device=device, dtype=torch.float16)
+        # w row 0: sixteen FP4 values = 2.0 (nibble 0x4) -> 8 bytes of 0x44
+        # w row 1: sixteen FP4 values = -1.0 (nibble 0xA) -> 8 bytes of 0xAA
+        w_q = torch.tensor(
+            [[0x44] * 8, [0xAA] * 8],
+            dtype=torch.uint8,
+            device=device,
+        )
+        # All block scales = E4M3 1.0 = 0x38. One block per row (K=16).
+        x_scales = torch.full((M, K // BLOCK_SIZE), 0x38, dtype=torch.uint8, device=device)
+        w_scales = torch.full((N, K // BLOCK_SIZE), 0x38, dtype=torch.uint8, device=device)
 
+        y = torch.empty(M, N, device=device, dtype=torch.float16)
         return {
-            "x": x,
+            "x_q": x_q,
+            "x_scales": x_scales,
             "w_q": w_q,
-            "scales": scales,
+            "w_scales": w_scales,
+            "alpha": 1.0,
             "y": y,
             "M": M,
             "N": N,
             "K": K,
-            "group_size": group_size,
         }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         torch.manual_seed(42)
         tests = []
 
-        # Edge cases with tiny shapes.
-        tests.append(self._make_test_case(1, 2, 4, 2, zero_x=True))
-        tests.append(self._make_test_case(2, 4, 4, 2))
-        tests.append(self._make_test_case(3, 5, 8, 4))
+        # Edge cases with the minimum K = 16 (one block).
+        tests.append(self._make_test_case(1, 2, 16, zero_x=True))
+        tests.append(self._make_test_case(2, 4, 16))
+        tests.append(self._make_test_case(3, 5, 32))
 
         # Power-of-2 shapes.
-        tests.append(self._make_test_case(16, 16, 32, 16))
-        tests.append(self._make_test_case(32, 64, 64, 32))
-        tests.append(self._make_test_case(128, 128, 256, 32))
+        tests.append(self._make_test_case(16, 16, 32))
+        tests.append(self._make_test_case(32, 64, 64))
+        tests.append(self._make_test_case(128, 128, 256))
 
-        # Non-power-of-2 shapes.
-        tests.append(self._make_test_case(30, 50, 64, 32))
-        tests.append(self._make_test_case(100, 200, 128, 32))
-        tests.append(self._make_test_case(255, 100, 128, 32))
+        # Non-power-of-2 leading dims with valid K.
+        tests.append(self._make_test_case(30, 50, 64))
+        tests.append(self._make_test_case(100, 200, 128))
+        tests.append(self._make_test_case(255, 100, 128, alpha=0.125))
 
-        # Realistic LLM inference shape.
-        tests.append(self._make_test_case(512, 1024, 1024, 32))
+        # Realistic attention-projection shape.
+        tests.append(self._make_test_case(512, 1024, 1024, alpha=1.0 / 64.0))
 
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
         torch.manual_seed(0)
-        # Matches the FP4 matmul shapes reported in AutoKernel community results.
-        return self._make_test_case(2048, 8192, 3072, 32)
+        # Verbatim from AutoKernel Table 5: the row where Triton hit 2,898 TF/s
+        # against CUTLASS's 1,777 TF/s (1.63x speedup). A correct FP4 tensor
+        # core submission at this shape directly validates the paper's claim.
+        return self._make_test_case(2048, 18432, 3072, alpha=1.0 / 64.0)
