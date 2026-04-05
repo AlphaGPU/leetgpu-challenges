@@ -5,7 +5,7 @@ from std.math import ceildiv
 
 
 @export
-fn solve(
+def solve(
     logits: UnsafePointer[Float32, MutExternalOrigin],
     true_labels: UnsafePointer[Int32, MutExternalOrigin],
     loss: UnsafePointer[Float32, MutExternalOrigin],

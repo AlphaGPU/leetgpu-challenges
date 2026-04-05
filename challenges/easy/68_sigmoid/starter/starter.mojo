@@ -4,7 +4,7 @@ from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
-fn sigmoid_kernel(
+def sigmoid_kernel(
     X: UnsafePointer[Float32, MutExternalOrigin],
     Y: UnsafePointer[Float32, MutExternalOrigin],
     N: Int32,
@@ -14,7 +14,7 @@ fn sigmoid_kernel(
 
 # X, Y are device pointers (i.e. pointers to memory on the GPU)
 @export
-fn solve(
+def solve(
     X: UnsafePointer[Float32, MutExternalOrigin],
     Y: UnsafePointer[Float32, MutExternalOrigin],
     N: Int32,

@@ -5,7 +5,7 @@ from std.math import ceildiv
 
 
 @export
-fn solve(
+def solve(
     input: UnsafePointer[Int32, MutExternalOrigin],
     histogram: UnsafePointer[Int32, MutExternalOrigin],
     N: Int32,

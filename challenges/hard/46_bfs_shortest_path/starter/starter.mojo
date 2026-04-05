@@ -3,7 +3,7 @@ from std.memory import UnsafePointer
 
 # grid, result are device pointers
 @export
-fn solve(
+def solve(
     grid: UnsafePointer[Int32, MutExternalOrigin],
     result: UnsafePointer[Int32, MutExternalOrigin],
     rows: Int32,

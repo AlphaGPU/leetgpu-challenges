@@ -5,7 +5,7 @@ from std.math import ceildiv
 
 
 @export
-fn solve(
+def solve(
     logits: UnsafePointer[Float32, MutExternalOrigin],
     topk_weights: UnsafePointer[Float32, MutExternalOrigin],
     topk_indices: UnsafePointer[Int32, MutExternalOrigin],

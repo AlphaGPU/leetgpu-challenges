@@ -4,7 +4,7 @@ from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
-fn copy_matrix_kernel(
+def copy_matrix_kernel(
     A: UnsafePointer[Float32, MutExternalOrigin],
     B: UnsafePointer[Float32, MutExternalOrigin],
     N: Int32,
@@ -14,7 +14,7 @@ fn copy_matrix_kernel(
 
 # A, B are device pointers (i.e. pointers to memory on the GPU)
 @export
-fn solve(
+def solve(
     A: UnsafePointer[Float32, MutExternalOrigin],
     B: UnsafePointer[Float32, MutExternalOrigin],
     N: Int32,

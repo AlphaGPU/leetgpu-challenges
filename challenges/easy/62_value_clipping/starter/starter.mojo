@@ -4,7 +4,7 @@ from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
-fn clip_kernel(
+def clip_kernel(
     input: UnsafePointer[Float32, MutExternalOrigin],
     output: UnsafePointer[Float32, MutExternalOrigin],
     lo: Float32,
@@ -16,7 +16,7 @@ fn clip_kernel(
 
 # input, output are device pointers
 @export
-fn solve(
+def solve(
     input: UnsafePointer[Float32, MutExternalOrigin],
     output: UnsafePointer[Float32, MutExternalOrigin],
     lo: Float32,

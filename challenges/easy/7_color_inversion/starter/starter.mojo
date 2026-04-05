@@ -4,13 +4,13 @@ from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
-fn invert_kernel(image: UnsafePointer[UInt8, MutExternalOrigin], width: Int32, height: Int32):
+def invert_kernel(image: UnsafePointer[UInt8, MutExternalOrigin], width: Int32, height: Int32):
     pass
 
 
 # image is a device pointer (i.e. pointer to memory on the GPU)
 @export
-fn solve(image: UnsafePointer[UInt8, MutExternalOrigin], width: Int32, height: Int32) raises:
+def solve(image: UnsafePointer[UInt8, MutExternalOrigin], width: Int32, height: Int32) raises:
     var threadsPerBlock: Int32 = 256
     var ctx = DeviceContext()
 

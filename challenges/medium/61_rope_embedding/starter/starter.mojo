@@ -6,7 +6,7 @@ from std.math import ceildiv
 
 # Q, cos, sin, output are device pointers
 @export
-fn solve(
+def solve(
     Q: UnsafePointer[Float32, MutExternalOrigin],
     cos: UnsafePointer[Float32, MutExternalOrigin],
     sin: UnsafePointer[Float32, MutExternalOrigin],

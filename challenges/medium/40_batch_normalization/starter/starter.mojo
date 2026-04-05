@@ -6,7 +6,7 @@ from std.math import ceildiv
 
 # input, gamma, beta, output are device pointers
 @export
-fn solve(
+def solve(
     input: UnsafePointer[Float32, MutExternalOrigin],
     gamma: UnsafePointer[Float32, MutExternalOrigin],
     beta: UnsafePointer[Float32, MutExternalOrigin],

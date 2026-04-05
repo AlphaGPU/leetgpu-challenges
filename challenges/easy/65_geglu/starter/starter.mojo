@@ -4,7 +4,7 @@ from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
-fn geglu_kernel(
+def geglu_kernel(
     input: UnsafePointer[Float32, MutExternalOrigin],
     output: UnsafePointer[Float32, MutExternalOrigin],
     N: Int32,
@@ -14,7 +14,7 @@ fn geglu_kernel(
 
 # input, output are device pointers
 @export
-fn solve(
+def solve(
     input: UnsafePointer[Float32, MutExternalOrigin],
     output: UnsafePointer[Float32, MutExternalOrigin],
     N: Int32,

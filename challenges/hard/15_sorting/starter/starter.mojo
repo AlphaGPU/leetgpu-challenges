@@ -5,5 +5,5 @@ from std.math import ceildiv
 
 
 @export
-fn solve(data: UnsafePointer[Float32, MutExternalOrigin], N: Int32) raises:
+def solve(data: UnsafePointer[Float32, MutExternalOrigin], N: Int32) raises:
     pass

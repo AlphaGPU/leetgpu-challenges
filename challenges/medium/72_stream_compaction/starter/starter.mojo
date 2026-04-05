@@ -4,7 +4,7 @@ from std.memory import UnsafePointer
 
 # A, out are device pointers
 @export
-fn solve(
+def solve(
     A: UnsafePointer[Float32, MutExternalOrigin],
     N: Int32,
     out: UnsafePointer[Float32, MutExternalOrigin],

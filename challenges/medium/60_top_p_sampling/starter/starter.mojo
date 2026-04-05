@@ -4,7 +4,7 @@ from std.gpu import block_dim, block_idx, thread_idx
 
 
 @export
-fn solve(
+def solve(
     logits: UnsafePointer[Float32, MutExternalOrigin],
     p: UnsafePointer[Float32, MutExternalOrigin],
     seed: UnsafePointer[Int32, MutExternalOrigin],

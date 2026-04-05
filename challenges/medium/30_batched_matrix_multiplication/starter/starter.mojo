@@ -5,7 +5,7 @@ from std.math import ceildiv
 
 
 @export
-fn solve(
+def solve(
     A: UnsafePointer[Float32, MutExternalOrigin],
     B: UnsafePointer[Float32, MutExternalOrigin],
     C: UnsafePointer[Float32, MutExternalOrigin],

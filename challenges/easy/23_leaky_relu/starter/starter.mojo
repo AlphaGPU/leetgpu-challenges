@@ -4,7 +4,7 @@ from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
-fn leaky_relu_kernel(
+def leaky_relu_kernel(
     input: UnsafePointer[Float32, MutExternalOrigin],
     output: UnsafePointer[Float32, MutExternalOrigin],
     N: Int32,
@@ -14,7 +14,7 @@ fn leaky_relu_kernel(
 
 # input, output are device pointers (i.e. pointers to memory on the GPU)
 @export
-fn solve(
+def solve(
     input: UnsafePointer[Float32, MutExternalOrigin],
     output: UnsafePointer[Float32, MutExternalOrigin],
     N: Int32,

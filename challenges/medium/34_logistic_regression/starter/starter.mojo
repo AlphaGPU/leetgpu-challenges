@@ -6,7 +6,7 @@ from std.math import ceildiv
 
 # X, y, beta are device pointers (i.e. pointers to memory on the GPU)
 @export
-fn solve(
+def solve(
     X: UnsafePointer[Float32, MutExternalOrigin],
     y: UnsafePointer[Float32, MutExternalOrigin],
     beta: UnsafePointer[Float32, MutExternalOrigin],

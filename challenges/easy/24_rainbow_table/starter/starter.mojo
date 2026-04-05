@@ -4,7 +4,7 @@ from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
-fn fnv1a_hash(input: Int32) -> UInt32:
+def fnv1a_hash(input: Int32) -> UInt32:
     alias FNV_PRIME: UInt32 = 16777619
     alias OFFSET_BASIS: UInt32 = 2166136261
 
@@ -17,7 +17,7 @@ fn fnv1a_hash(input: Int32) -> UInt32:
     return hash
 
 
-fn fnv1a_hash_kernel(
+def fnv1a_hash_kernel(
     input: UnsafePointer[Int32, MutExternalOrigin],
     output: UnsafePointer[UInt32, MutExternalOrigin],
     N: Int32,
@@ -28,7 +28,7 @@ fn fnv1a_hash_kernel(
 
 # input, output are device pointers (i.e. pointers to memory on the GPU)
 @export
-fn solve(
+def solve(
     input: UnsafePointer[Int32, MutExternalOrigin],
     output: UnsafePointer[UInt32, MutExternalOrigin],
     N: Int32,

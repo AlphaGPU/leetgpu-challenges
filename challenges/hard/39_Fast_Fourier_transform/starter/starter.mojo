@@ -6,7 +6,7 @@ from std.math import ceildiv
 
 # signal and spectrum are device pointers
 @export
-fn solve(
+def solve(
     signal: UnsafePointer[Float32, MutExternalOrigin],
     spectrum: UnsafePointer[Float32, MutExternalOrigin],
     N: Int32,

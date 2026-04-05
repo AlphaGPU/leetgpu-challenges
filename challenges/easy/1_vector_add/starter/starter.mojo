@@ -4,7 +4,7 @@ from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
-fn vector_add_kernel(
+def vector_add_kernel(
     A: UnsafePointer[Float32, MutExternalOrigin],
     B: UnsafePointer[Float32, MutExternalOrigin],
     C: UnsafePointer[Float32, MutExternalOrigin],
@@ -15,7 +15,7 @@ fn vector_add_kernel(
 
 # A, B, C are device pointers (i.e. pointers to memory on the GPU)
 @export
-fn solve(
+def solve(
     A: UnsafePointer[Float32, MutExternalOrigin],
     B: UnsafePointer[Float32, MutExternalOrigin],
     C: UnsafePointer[Float32, MutExternalOrigin],

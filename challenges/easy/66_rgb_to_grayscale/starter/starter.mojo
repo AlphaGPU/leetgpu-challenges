@@ -4,7 +4,7 @@ from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
-fn rgb_to_grayscale_kernel(
+def rgb_to_grayscale_kernel(
     input: UnsafePointer[Float32, MutExternalOrigin],
     output: UnsafePointer[Float32, MutExternalOrigin],
     width: Int32,
@@ -15,7 +15,7 @@ fn rgb_to_grayscale_kernel(
 
 # input, output are device pointers
 @export
-fn solve(
+def solve(
     input: UnsafePointer[Float32, MutExternalOrigin],
     output: UnsafePointer[Float32, MutExternalOrigin],
     width: Int32,

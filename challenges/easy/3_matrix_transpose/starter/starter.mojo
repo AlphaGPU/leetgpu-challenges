@@ -4,7 +4,7 @@ from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
-fn matrix_transpose_kernel(
+def matrix_transpose_kernel(
     input: UnsafePointer[Float32, MutExternalOrigin],
     output: UnsafePointer[Float32, MutExternalOrigin],
     rows: Int32,
@@ -15,7 +15,7 @@ fn matrix_transpose_kernel(
 
 # input, output are device pointers (i.e. pointers to memory on the GPU)
 @export
-fn solve(
+def solve(
     input: UnsafePointer[Float32, MutExternalOrigin],
     output: UnsafePointer[Float32, MutExternalOrigin],
     rows: Int32,

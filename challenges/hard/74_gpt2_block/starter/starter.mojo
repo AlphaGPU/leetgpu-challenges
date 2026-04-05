@@ -6,7 +6,7 @@ from std.math import ceildiv
 
 # x, output, weights are device pointers
 @export
-fn solve(
+def solve(
     x: UnsafePointer[Float32, MutExternalOrigin],
     output: UnsafePointer[Float32, MutExternalOrigin],
     weights: UnsafePointer[Float32, MutExternalOrigin],
