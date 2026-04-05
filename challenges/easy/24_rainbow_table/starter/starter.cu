@@ -1,13 +1,13 @@
 #include <cuda_runtime.h>
 
-__device__ unsigned int fnv1a_hash(int input) {
+__device__ unsigned int fnv1a_hash(unsigned int input) {
     const unsigned int FNV_PRIME = 16777619;
     const unsigned int OFFSET_BASIS = 2166136261;
 
     unsigned int hash = OFFSET_BASIS;
 
     for (int byte_pos = 0; byte_pos < 4; byte_pos++) {
-        unsigned char byte = (input >> (byte_pos * 8)) & 0xFF;
+        unsigned char byte = (input >> (byte_pos * 8)) & 0xFFu;
         hash = (hash ^ byte) * FNV_PRIME;
     }
 

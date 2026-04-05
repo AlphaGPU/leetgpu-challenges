@@ -4,14 +4,14 @@ from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
-def fnv1a_hash(input: Int32) -> UInt32:
+def fnv1a_hash(input: UInt32) -> UInt32:
     alias FNV_PRIME: UInt32 = 16777619
     alias OFFSET_BASIS: UInt32 = 2166136261
 
     var hash: UInt32 = OFFSET_BASIS
 
     for byte_pos in range(4):
-        var byte_val: UInt32 = UInt32((input >> (byte_pos * 8)) & 0xFF)
+        var byte_val: UInt32 = (input >> (byte_pos * 8)) & UInt32(0xFF)
         hash = (hash ^ byte_val) * FNV_PRIME
 
     return hash
