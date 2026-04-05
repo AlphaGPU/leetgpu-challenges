@@ -29,7 +29,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pre-commit requests websocket-client
+          pip install pre-commit requests websocket-client modular
           pre-commit install
 
       - name: Fetch open PRs

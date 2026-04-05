@@ -13,6 +13,7 @@ import logging
 import os
 import re
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -154,17 +155,27 @@ def main():
         base = Path(__file__).parent.parent / "challenges"
         dirs = [d for diff in base.iterdir() if diff.is_dir() for d in diff.iterdir() if d.is_dir()]
 
-    success = fail = 0
+    # Load sequentially: load_challenge mutates sys.path/sys.modules and is not thread-safe.
+    payloads = []
+    fail = 0
     for d in sorted(dirs):
         try:
-            payload = load_challenge(d)
-            if update_challenge(SERVICE_URL, payload, LEETGPU_API_KEY):
-                success += 1
-            else:
-                fail += 1
+            payloads.append(load_challenge(d))
         except Exception as e:
             logger.error("Failed %s: %s", d, e)
             fail += 1
+
+    # Upload in parallel: pure HTTP I/O, safe to run concurrently.
+    success = 0
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        futures = {
+            executor.submit(update_challenge, SERVICE_URL, p, LEETGPU_API_KEY): p for p in payloads
+        }
+        for future in as_completed(futures):
+            if future.result():
+                success += 1
+            else:
+                fail += 1
 
     logger.info("Summary: %d succeeded, %d failed", success, fail)
     return 0 if fail == 0 else 1

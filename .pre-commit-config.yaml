@@ -33,6 +33,15 @@ repos:
         types_or: [c++, c, cuda]
         files: \.(cu|cpp|h)$
 
+  # Mojo formatting
+  - repo: local
+    hooks:
+      - id: mojo-format
+        name: mojo format
+        entry: mojo format -q
+        language: system
+        files: \.mojo$
+
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0

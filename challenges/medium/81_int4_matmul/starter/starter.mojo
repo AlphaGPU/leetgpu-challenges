@@ -1,6 +1,7 @@
 from std.gpu.host import DeviceContext
 from std.memory import UnsafePointer
 
+
 # x, w_q, scales, y are device pointers
 @export
 fn solve(
