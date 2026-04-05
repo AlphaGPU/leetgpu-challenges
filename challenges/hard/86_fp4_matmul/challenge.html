@@ -1,0 +1,113 @@
+<p>
+  Implement an FP4 weight-only quantized matrix multiplication, the kernel at the heart of
+  modern low-precision LLM inference on Hopper and Blackwell GPUs. Given a float16 activation
+  matrix <code>x</code> of shape <code>M &times; K</code> and a weight matrix stored in packed
+  FP4 E2M1 format, compute <code>y = x &times; W<sup>T</sup></code> of shape
+  <code>M &times; N</code>, where <code>W</code> is the dequantized float16 weight matrix of
+  shape <code>N &times; K</code>.
+</p>
+
+<p>
+  <strong>FP4 E2M1 format:</strong> Each weight is encoded in 4 bits as
+  [sign | exponent (2 bits) | mantissa (1 bit)], representing one of sixteen values:
+  <code>{&plusmn;0, &plusmn;0.5, &plusmn;1, &plusmn;1.5, &plusmn;2, &plusmn;3, &plusmn;4, &plusmn;6}</code>.
+  The nibble-to-value mapping is:
+</p>
+<pre>
+  0x0 =  0.0    0x8 = -0.0
+  0x1 =  0.5    0x9 = -0.5
+  0x2 =  1.0    0xA = -1.0
+  0x3 =  1.5    0xB = -1.5
+  0x4 =  2.0    0xC = -2.0
+  0x5 =  3.0    0xD = -3.0
+  0x6 =  4.0    0xE = -4.0
+  0x7 =  6.0    0xF = -6.0
+</pre>
+
+<p>
+  <strong>Packing:</strong> Each byte of <code>w_q</code> stores two FP4 weights. The high
+  nibble (bits 7&ndash;4) holds <code>w[n, 2i]</code> and the low nibble (bits 3&ndash;0) holds
+  <code>w[n, 2i+1]</code>.
+</p>
+
+<p>
+  <strong>Dequantization:</strong> Weights are dequantized group-wise. Each contiguous block of
+  <code>group_size</code> weights along the <code>K</code> dimension shares one float16 scale:
+</p>
+<pre>
+W[n, k] = fp4_decode(w_q_nibble[n, k]) * scales[n, k // group_size]
+</pre>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>y</code></li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input (<code>M</code> = 2, <code>N</code> = 4, <code>K</code> = 4, <code>group_size</code> = 2):
+</p>
+<p>
+  Activations \(x\) (float16, \(2 \times 4\)):
+  \[
+  \begin{bmatrix}
+  1.0 & 0.0 & 1.0 & 0.0 \\
+  0.0 & 1.0 & 0.0 & 1.0
+  \end{bmatrix}
+  \]
+  Packed weights \(w\_q\) (uint8, \(4 \times 2\)) decoded via the FP4 E2M1 table:
+  \[
+  \begin{bmatrix}
+  \texttt{0x22} & \texttt{0x22} \\
+  \texttt{0x44} & \texttt{0x44} \\
+  \texttt{0xAA} & \texttt{0xAA} \\
+  \texttt{0x00} & \texttt{0x00}
+  \end{bmatrix}
+  \;\Rightarrow\;
+  W_{\text{fp4}} =
+  \begin{bmatrix}
+  1.0 & 1.0 & 1.0 & 1.0 \\
+  2.0 & 2.0 & 2.0 & 2.0 \\
+  -1.0 & -1.0 & -1.0 & -1.0 \\
+  0.0 & 0.0 & 0.0 & 0.0
+  \end{bmatrix}
+  \]
+  Scales (float16, \(4 \times 2\), all entries 0.5):
+  \[
+  \begin{bmatrix}
+  0.5 & 0.5 \\
+  0.5 & 0.5 \\
+  0.5 & 0.5 \\
+  0.5 & 0.5
+  \end{bmatrix}
+  \;\Rightarrow\;
+  W_{\text{dequant}} =
+  \begin{bmatrix}
+  0.5 & 0.5 & 0.5 & 0.5 \\
+  1.0 & 1.0 & 1.0 & 1.0 \\
+  -0.5 & -0.5 & -0.5 & -0.5 \\
+  0.0 & 0.0 & 0.0 & 0.0
+  \end{bmatrix}
+  \]
+  Output \(y = x \times W^T\) (float16, \(2 \times 4\)):
+  \[
+  \begin{bmatrix}
+  1.0 & 2.0 & -1.0 & 0.0 \\
+  1.0 & 2.0 & -1.0 & 0.0
+  \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code>, <code>N</code> &le; 8,192</li>
+  <li>1 &le; <code>K</code> &le; 8,192</li>
+  <li><code>K</code> is divisible by <code>2</code> and by <code>group_size</code></li>
+  <li><code>group_size</code> &isin; {2, 4, 8, 16, 32}</li>
+  <li>All tensors are stored in row-major order</li>
+  <li>Input dtype: <code>x</code> and <code>scales</code> are float16; <code>w_q</code> is uint8</li>
+  <li>Output dtype: <code>y</code> is float16</li>
+  <li>Performance is measured with <code>M</code> = 2,048, <code>N</code> = 8,192, <code>K</code> = 3,072, <code>group_size</code> = 32</li>
+</ul>
