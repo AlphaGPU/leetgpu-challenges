@@ -95,9 +95,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Submit a solution via WebSocket API.")
     parser.add_argument("challenge_path", type=Path, help="Path to the challenge directory")
     parser.add_argument("--language", default="cuda", help="Language (default: cuda)")
-    parser.add_argument(
-        "--gpu", default="NVIDIA TESLA T4", help="GPU name (default: NVIDIA TESLA T4)"
-    )
+    parser.add_argument("--gpu", default="T4", help="GPU name (default: T4)")
     parser.add_argument(
         "--action", default="run", choices=["run", "submit"], help="Action (run or submit)"
     )

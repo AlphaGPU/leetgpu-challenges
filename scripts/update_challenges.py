@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 SERVICE_URL = os.getenv("SERVICE_URL", "http://localhost:8080")
 LEETGPU_API_KEY = os.getenv("LEETGPU_API_KEY")
 
-GPUS = ["NVIDIA H100", "NVIDIA H200", "NVIDIA TESLA T4", "NVIDIA B200", "NVIDIA A100-80GB"]
+GPUS = ["H100", "H200", "T4", "B200", "A100-80GB"]
 
 
 def extract_id(name: str) -> int:
