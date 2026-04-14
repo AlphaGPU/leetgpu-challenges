@@ -1,0 +1,134 @@
+<p>
+  Implement the forward pass of a State Space Model (SSM) selective scan, the core operation in
+  Mamba-style sequence models. Given an input sequence <code>u</code>, time-step parameters
+  <code>delta</code>, state-transition matrix <code>A</code>, input projection <code>B</code>,
+  output projection <code>C</code>, and skip-connection weights <code>skip</code>, compute the
+  output sequence <code>y</code> in float32.
+</p>
+
+<svg width="700" height="180" viewBox="0 0 700 180" style="display:block; margin:20px auto;" xmlns="http://www.w3.org/2000/svg">
+  <rect width="700" height="180" fill="#222" rx="10"/>
+  <!-- SSM chain diagram -->
+  <!-- State boxes -->
+  <rect x="55" y="70" width="60" height="40" rx="6" fill="#1a3a5c" stroke="#4a90d9" stroke-width="1.5"/>
+  <text x="85" y="95" fill="#4a90d9" font-family="monospace" font-size="13" text-anchor="middle">h₀</text>
+
+  <rect x="195" y="70" width="60" height="40" rx="6" fill="#1a3a5c" stroke="#4a90d9" stroke-width="1.5"/>
+  <text x="225" y="95" fill="#4a90d9" font-family="monospace" font-size="13" text-anchor="middle">h₁</text>
+
+  <rect x="335" y="70" width="60" height="40" rx="6" fill="#1a3a5c" stroke="#4a90d9" stroke-width="1.5"/>
+  <text x="365" y="95" fill="#4a90d9" font-family="monospace" font-size="13" text-anchor="middle">h₂</text>
+
+  <rect x="475" y="70" width="60" height="40" rx="6" fill="#1a3a5c" stroke="#4a90d9" stroke-width="1.5"/>
+  <text x="505" y="95" fill="#4a90d9" font-family="monospace" font-size="13" text-anchor="middle">h₃</text>
+
+  <!-- Recurrence arrows -->
+  <line x1="115" y1="90" x2="193" y2="90" stroke="#4a90d9" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="255" y1="90" x2="333" y2="90" stroke="#4a90d9" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="395" y1="90" x2="473" y2="90" stroke="#4a90d9" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="153" y="83" fill="#ccc" font-family="monospace" font-size="10" text-anchor="middle">Ā</text>
+  <text x="293" y="83" fill="#ccc" font-family="monospace" font-size="10" text-anchor="middle">Ā</text>
+  <text x="433" y="83" fill="#ccc" font-family="monospace" font-size="10" text-anchor="middle">Ā</text>
+
+  <!-- Input arrows (u into h) -->
+  <line x1="85" y1="155" x2="85" y2="112" stroke="#5cb85c" stroke-width="1.5" marker-end="url(#garr)"/>
+  <line x1="225" y1="155" x2="225" y2="112" stroke="#5cb85c" stroke-width="1.5" marker-end="url(#garr)"/>
+  <line x1="365" y1="155" x2="365" y2="112" stroke="#5cb85c" stroke-width="1.5" marker-end="url(#garr)"/>
+  <line x1="505" y1="155" x2="505" y2="112" stroke="#5cb85c" stroke-width="1.5" marker-end="url(#garr)"/>
+  <text x="85" y="168" fill="#5cb85c" font-family="monospace" font-size="11" text-anchor="middle">B̄u₀</text>
+  <text x="225" y="168" fill="#5cb85c" font-family="monospace" font-size="11" text-anchor="middle">B̄u₁</text>
+  <text x="365" y="168" fill="#5cb85c" font-family="monospace" font-size="11" text-anchor="middle">B̄u₂</text>
+  <text x="505" y="168" fill="#5cb85c" font-family="monospace" font-size="11" text-anchor="middle">B̄u₃</text>
+
+  <!-- Output arrows (h to y) -->
+  <line x1="85" y1="68" x2="85" y2="30" stroke="#e87c2e" stroke-width="1.5" marker-end="url(#oarr)"/>
+  <line x1="225" y1="68" x2="225" y2="30" stroke="#e87c2e" stroke-width="1.5" marker-end="url(#oarr)"/>
+  <line x1="365" y1="68" x2="365" y2="30" stroke="#e87c2e" stroke-width="1.5" marker-end="url(#oarr)"/>
+  <line x1="505" y1="68" x2="505" y2="30" stroke="#e87c2e" stroke-width="1.5" marker-end="url(#oarr)"/>
+  <text x="85" y="22" fill="#e87c2e" font-family="monospace" font-size="11" text-anchor="middle">y₀</text>
+  <text x="225" y="22" fill="#e87c2e" font-family="monospace" font-size="11" text-anchor="middle">y₁</text>
+  <text x="365" y="22" fill="#e87c2e" font-family="monospace" font-size="11" text-anchor="middle">y₂</text>
+  <text x="505" y="22" fill="#e87c2e" font-family="monospace" font-size="11" text-anchor="middle">y₃</text>
+
+  <!-- Continuation arrow -->
+  <line x1="535" y1="90" x2="590" y2="90" stroke="#4a90d9" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+
+  <!-- Arrow markers -->
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#4a90d9"/>
+    </marker>
+    <marker id="garr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5cb85c"/>
+    </marker>
+    <marker id="oarr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#e87c2e"/>
+    </marker>
+  </defs>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<p>
+  Implement the function <code>solve(u, delta, A, B, C, skip, y, batch, seq_len, d_model, d_state)</code>
+  with the signature unchanged. Do not use external libraries beyond the allowed framework.
+  Write the result into the pre-allocated output tensor <code>y</code>.
+</p>
+<p>
+  For each batch <code>b</code>, position <code>t</code>, and channel <code>d</code>, the computation is:
+</p>
+<p>
+  \[
+  \bar{A}_{b,t,d,n} = \exp(\Delta_{b,t,d} \cdot A_{d,n})
+  \]
+  \[
+  \bar{B}_{b,t,d,n} = \Delta_{b,t,d} \cdot B_{b,t,n}
+  \]
+  \[
+  h_{b,t,d,n} = \bar{A}_{b,t,d,n} \cdot h_{b,t-1,d,n} + \bar{B}_{b,t,d,n} \cdot u_{b,t,d}
+  \]
+  \[
+  y_{b,t,d} = \sum_{n} C_{b,t,n} \cdot h_{b,t,d,n} + \text{skip}_d \cdot u_{b,t,d}
+  \]
+</p>
+<p>
+  The initial hidden state \(h_{b,-1,d,n} = 0\) for all \(b, d, n\).
+  All channels <code>d</code> are independent: they share the same <code>B</code> and <code>C</code>
+  projections but have separate state-transition rows in <code>A</code>.
+</p>
+
+<h2>Example</h2>
+<pre>
+Input:
+  u     = [[[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [0.0, 0.0]]]  shape (1,4,2)
+  delta = [[[1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]]  shape (1,4,2)
+  A     = [[-0.5, -1.0], [-0.5, -1.0]]                         shape (2,2)
+  B     = [[[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [0.5, 0.5]]]  shape (1,4,2)
+  C     = [[[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [0.5, 0.5]]]  shape (1,4,2)
+  skip  = [0.0, 0.0]                                            shape (2,)
+  batch=1, seq_len=4, d_model=2, d_state=2
+
+Derivation (delta=1 everywhere, so A_bar_dn = exp(A_dn)):
+  A_bar[d=0] = [exp(-0.5), exp(-1.0)] ≈ [0.607, 0.368]
+  A_bar[d=1] = [exp(-0.5), exp(-1.0)] ≈ [0.607, 0.368]
+
+  Hidden state h has shape (d_model=2, d_state=2); initial h = zeros.
+  t=0: h = [[1.000, 0.000], [0.000, 0.000]]  →  y[0,0] = [1.000, 0.000]
+  t=1: h = [[0.607, 0.000], [0.000, 1.000]]  →  y[0,1] = [0.000, 1.000]
+  t=2: h = [[1.368, 1.000], [1.000, 1.368]]  →  y[0,2] = [2.368, 2.368]
+  t=3: h = [[0.830, 0.368], [0.607, 0.503]]  →  y[0,3] = [0.599, 0.555]
+
+Output:
+  y = [[[1.000, 0.000], [0.000, 1.000], [2.368, 2.368], [0.599, 0.555]]]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>batch</code> &le; 16</li>
+  <li>1 &le; <code>seq_len</code> &le; 8,192</li>
+  <li>1 &le; <code>d_model</code> &le; 2,048</li>
+  <li>1 &le; <code>d_state</code> &le; 64</li>
+  <li>All entries of <code>delta</code> are positive</li>
+  <li>All entries of <code>A</code> are negative (ensuring <code>A_bar &isin; (0, 1)</code>)</li>
+  <li>All tensors are float32 on the GPU</li>
+  <li>Performance is measured with <code>batch</code> = 4, <code>seq_len</code> = 4,096, <code>d_model</code> = 512, <code>d_state</code> = 16</li>
+</ul>
