@@ -105,7 +105,6 @@ HTML fragment with four required sections:
    - Be consistent within a single challenge
 4. **Constraints** — Size bounds, data types, value ranges, **and performance test size**
 
-**SVG visualization** (optional): If the challenge involves a spatial or structural concept that is hard to understand from text alone, add an inline SVG diagram after the problem description paragraph. Good candidates include convolutions, pooling, attention masks, tree reductions, grid algorithms, and data movement patterns. Use a consistent dark theme (`#222` background, `#ccc` text, blue/green accents) and `style="display:block; margin:20px auto;"`. See existing examples in `challenges/easy/9_1d_convolution/challenge.html` or `challenges/medium/74_gpt2_block/challenge.html`.
 
 **Formatting rules:**
 - `<code>` for variables/functions; `<pre>` for 1D examples, LaTeX `\begin{bmatrix}` for matrices

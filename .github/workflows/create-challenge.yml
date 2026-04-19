@@ -2,7 +2,7 @@ name: Challenge Creation Cron
 
 on:
   schedule:
-    - cron: "0 2 * * 2,4,6" # Monday, Wednesday, Friday at 6 PM PST
+    - cron: "0 2 * * 5" # Friday at 6 PM PST (once a week)
   workflow_dispatch: {} # Allow manual trigger
 
 jobs:
@@ -52,7 +52,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-          claude_args: "--model claude-sonnet-4-6"
+          claude_args: "--model claude-opus-4-7"
 
           settings: |
             {
