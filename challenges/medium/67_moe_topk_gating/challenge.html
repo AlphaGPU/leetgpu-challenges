@@ -6,11 +6,17 @@
   For each row i, the operation computes:
   \[
   \begin{align}
-  \text{indices}_i &= \text{argsort}(\text{logits}_i)[-k:] \\
+  \text{indices}_i, \text{vals}_i &= \text{TopK}(\text{logits}_i, k) \\
   \text{vals}_i &= \text{logits}_i[\text{indices}_i] \\
   \text{weights}_i &= \text{Softmax}(\text{vals}_i)
   \end{align}
   \]
+</p>
+
+<p>
+  The selected experts must remain ordered by descending logit value, matching the order returned by
+  <code>topk</code>. The <code>topk_weights</code> array must correspond positionally to
+  <code>topk_indices</code> in that same order.
 </p>
 
 <h2>Implementation Requirements</h2>
@@ -28,14 +34,14 @@ Input:
   M = 2, E = 4, k = 2
 
 Output:
-  topk_weights = [[0.2689, 0.7311],
+  topk_weights = [[0.7311, 0.2689],
                   [0.7311, 0.2689]]
-  topk_indices = [[2, 3],
+  topk_indices = [[3, 2],
                   [0, 1]]
 
 Explanation:
-Row 0: Top-2 values are 3.0 and 4.0 at indices 2 and 3.
-       Softmax([3.0, 4.0]) = [0.2689, 0.7311]
+Row 0: Top-2 values are 4.0 and 3.0 at indices 3 and 2.
+       Softmax([4.0, 3.0]) = [0.7311, 0.2689]
 Row 1: Top-2 values are 4.0 and 3.0 at indices 0 and 1.
        Softmax([4.0, 3.0]) = [0.7311, 0.2689]
 </pre>
