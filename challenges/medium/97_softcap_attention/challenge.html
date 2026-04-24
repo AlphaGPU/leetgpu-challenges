@@ -1,0 +1,104 @@
+<p>
+  Implement multi-head self-attention with tanh logit soft-capping, a modification used in production
+  large language models such as
+  <a href="https://arxiv.org/abs/2408.00118" target="_blank">Gemma 2</a>
+  to bound attention scores before the softmax and stabilize inference.
+  Given query matrix \(Q\), key matrix \(K\), and value matrix \(V\) each of size \(N \times d_{\text{model}}\),
+  the number of heads \(h\), and a scalar <code>softcap</code> \(s > 0\), compute:
+</p>
+
+<p>
+  \[
+  \text{SoftcapAttention}(Q,K,V) = \text{Concat}(\text{head}_1,\ldots,\text{head}_h)
+  \]
+  where each head performs scaled dot-product attention with the soft-cap applied to the scores:
+  \[
+  \text{head}_i = \text{softmax}\!\left( s \cdot \tanh\!\left( \frac{Q_i K_i^{\top}}{s \sqrt{d_k}} \right) \right) V_i
+  \]
+  with \(d_k = d_{\text{model}} / h\) and \(Q_i, K_i, V_i\) being the i-th head's partition of the input matrices.
+  The softmax is applied row-wise. All tensors are <code>float32</code>; <code>N</code>, <code>d_model</code>, <code>h</code>
+  are <code>int32</code>, and <code>softcap</code> is <code>float32</code>.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the matrix <code>output</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+Input:
+\[
+\begin{align*}
+N &= 2, \quad d_{\text{model}} = 4, \quad h = 2, \quad \text{softcap} = 5.0 \\[1em]
+Q &= \begin{bmatrix}
+1.0 & 0.0 & 2.0 & 3.0 \\
+4.0 & 5.0 & 6.0 & 7.0
+\end{bmatrix} \\[1em]
+K &= \begin{bmatrix}
+1.0 & 2.0 & 3.0 & 4.0 \\
+5.0 & 6.0 & 7.0 & 8.0
+\end{bmatrix} \\[1em]
+V &= \begin{bmatrix}
+0.5 & 1.0 & 1.5 & 2.0 \\
+2.5 & 3.0 & 3.5 & 4.0
+\end{bmatrix}
+\end{align*}
+\]
+
+Output:
+\[
+\begin{bmatrix}
+2.32 & 2.82 & 2.53 & 3.03 \\
+1.59 & 2.09 & 2.50 & 3.00
+\end{bmatrix}
+\]
+</p>
+
+<h2>Example 2:</h2>
+<p>
+Input:
+\[
+\begin{align*}
+N &= 2, \quad d_{\text{model}} = 2, \quad h = 1, \quad \text{softcap} = 2.0 \\[1em]
+Q &= \begin{bmatrix}
+3.0 & 0.0 \\
+0.0 & 3.0
+\end{bmatrix} \\[1em]
+K &= \begin{bmatrix}
+3.0 & 0.0 \\
+0.0 & 3.0
+\end{bmatrix} \\[1em]
+V &= \begin{bmatrix}
+1.0 & 0.0 \\
+0.0 & 1.0
+\end{bmatrix}
+\end{align*}
+\]
+
+Output:
+\[
+\begin{bmatrix}
+0.88 & 0.12 \\
+0.12 & 0.88
+\end{bmatrix}
+\]
+</p>
+
+<p>
+  In Example 2, the raw dot-product scores \(QK^{\top}/\sqrt{d_k}\) are large (around 6.36 on the diagonal).
+  Without soft-capping, the softmax would place almost all weight on the matching row of \(V\). The tanh soft-cap
+  pulls those scores toward \(\pm s = \pm 2\), producing a much smoother attention distribution.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>\(1 \le N \le 2048\)</li>
+  <li>\(2 \le d_{\text{model}} \le 1024\)</li>
+  <li>\(1 \le h \le d_{\text{model}}\), and <code>d_model</code> is divisible by <code>h</code></li>
+  <li>\(0.1 \le \text{softcap} \le 1000.0\)</li>
+  <li>\(-10.0 \le\) values of <code>Q</code>, <code>K</code>, <code>V</code> \(\le 10.0\)</li>
+  <li>Performance is measured with <code>N</code> = 2,048, <code>d_model</code> = 1,024, <code>h</code> = 16, <code>softcap</code> = 50.0</li>
+</ul>
