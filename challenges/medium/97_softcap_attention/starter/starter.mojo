@@ -4,6 +4,7 @@ from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
+# Q, K, V, output are device pointers
 @export
 def solve(
     Q: UnsafePointer[Float32, MutExternalOrigin],
