@@ -70,7 +70,7 @@ tied embeddings, and SwiGLU gating.
 
   <!-- MLP block -->
   <rect x="200" y="400" width="320" height="36" rx="6" fill="#2a4a2a" stroke="#44aa66"/>
-  <text x="360" y="423" text-anchor="middle" fill="#ccc" font-size="12">MLP: TiedGate + SwiGLU + Carry [3p]</text>
+  <text x="360" y="423" text-anchor="middle" fill="#ccc" font-size="12">MLP: Gate + SwiGLU + Carry [3p]</text>
   <line x1="360" y1="382" x2="360" y2="400" stroke="#666" stroke-width="1.5" marker-end="url(#arr)"/>
 
   <!-- Final norm + output -->
@@ -166,9 +166,9 @@ least-significant-first).</p>
 
 <h2>Implementation Requirements</h2>
 <ul>
-  <li>Implement <code>solve(prompts, output, weights, batch_size)</code> with the exact signature shown</li>
+  <li>Implement <code>solve(prompts, output, weights, batch_size)</code> with the exact signature shown (JAX exception: <code>solve(prompts, weights, batch_size)</code> returns the output tensor directly)</li>
   <li>Do not use any external libraries beyond what the framework provides</li>
-  <li>The function must write logits into the <code>output</code> buffer</li>
+  <li>The function must write logits into the <code>output</code> buffer (except JAX, which returns it)</li>
   <li>Architecture constants are fixed: <code>vocab_size</code> = 10, <code>hidden_dim</code> = 2,
       <code>head_dim</code> = 2, <code>num_heads</code> = 1, <code>prompt_len</code> = 31,
       <code>decode_steps</code> = 11</li>
