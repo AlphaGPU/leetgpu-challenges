@@ -1,24 +1,23 @@
 <p>
-Implement batched autoregressive inference for a hand-crafted 10-parameter transformer
-that adds two 10-digit numbers. Given a batch of encoded token prompts of shape
-<code>[batch_size, 31]</code> and a weight buffer of 10 floats, produce the output logits
-of shape <code>[batch_size, 11, 10]</code> &mdash; one set of logits per autoregressive
-decode step, over a vocabulary of 10 digits (0&ndash;9). All values are 32-bit floats except
-the input tokens (32-bit integers).
+Run batched autoregressive inference for a 10-parameter transformer that adds two 10-digit
+numbers. Given prompts of shape <code>[batch_size, 31]</code> (int32) and a 10-float weight
+buffer, write output logits of shape <code>[batch_size, 11, 10]</code> &mdash; one logit
+row per decode step over the 10-digit vocabulary (0&ndash;9). All tensors are float32 except
+the int32 prompts.
 </p>
 
 <p>
-This model emerged from the
+The model comes from the
 <a href="https://gist.github.com/Lokimorty/d54e5c61997e00fb922b6692739a0f6c">AdderBoard</a>
-competition to build the smallest autoregressive transformer that can add 10-digit numbers
-with &ge;99% accuracy. The architecture uses clever RoPE geometry, tied embeddings, and
-SwiGLU gating to implement carry propagation with just 10 learned parameters.
+competition for the smallest autoregressive transformer that adds 10-digit numbers at
+&ge;99% accuracy. It encodes carry propagation in 10 learned parameters via RoPE geometry,
+tied embeddings, and SwiGLU gating.
 </p>
 
-<svg viewBox="0 0 720 520" xmlns="http://www.w3.org/2000/svg"
+<svg viewBox="0 0 720 540" xmlns="http://www.w3.org/2000/svg"
      style="display:block; margin:20px auto; max-width:720px;"
      font-family="monospace" font-size="13">
-  <rect width="720" height="520" rx="12" fill="#222"/>
+  <rect width="720" height="540" rx="12" fill="#222"/>
 
   <!-- Input -->
   <rect x="270" y="20" width="180" height="36" rx="6" fill="#335" stroke="#4477bb"/>
@@ -70,8 +69,8 @@ SwiGLU gating to implement carry propagation with just 10 learned parameters.
   <line x1="360" y1="342" x2="360" y2="350" stroke="#666" stroke-width="1.5" marker-end="url(#arr)"/>
 
   <!-- MLP block -->
-  <rect x="230" y="400" width="260" height="36" rx="6" fill="#2a4a2a" stroke="#44aa66"/>
-  <text x="360" y="423" text-anchor="middle" fill="#ccc">MLP: TiedGate + SwiGLU + Carry [3p]</text>
+  <rect x="200" y="400" width="320" height="36" rx="6" fill="#2a4a2a" stroke="#44aa66"/>
+  <text x="360" y="423" text-anchor="middle" fill="#ccc" font-size="12">MLP: TiedGate + SwiGLU + Carry [3p]</text>
   <line x1="360" y1="382" x2="360" y2="400" stroke="#666" stroke-width="1.5" marker-end="url(#arr)"/>
 
   <!-- Final norm + output -->
@@ -80,7 +79,7 @@ SwiGLU gating to implement carry propagation with just 10 learned parameters.
   <line x1="360" y1="436" x2="360" y2="460" stroke="#666" stroke-width="1.5" marker-end="url(#arr)"/>
 
   <!-- Param counts -->
-  <text x="30" y="500" fill="#666" font-size="11">Total: 10 parameters (2+2+1+2+1+2)</text>
+  <text x="30" y="520" fill="#666" font-size="11">Total: 10 parameters (2+2+1+2+1+2)</text>
 
   <defs>
     <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
@@ -91,12 +90,10 @@ SwiGLU gating to implement carry propagation with just 10 learned parameters.
 
 <h2>Model Architecture</h2>
 
-<p>The model is a single-layer pre-norm transformer with hidden dimension 2, one attention head,
-and head dimension 2. Vocabulary is 10 tokens (digits 0&ndash;9). Embeddings are tied between
-input and output projection.</p>
+<p>Single-layer pre-norm transformer. Hidden dim 2, 1 head, head dim 2, vocab 10 (digits
+0&ndash;9), tied input/output embeddings.</p>
 
-<p>The forward pass for a single autoregressive step processes the full sequence
-<code>[batch_size, seq_len, 2]</code> through these operations:</p>
+<p>Each step runs the full sequence <code>[batch_size, seq_len, 2]</code> through:</p>
 
 <p><strong>1. Token Embedding</strong> (2 parameters: <code>w0</code>, <code>w1</code>)</p>
 <p>$$e(d) = \begin{bmatrix} w_0 - w_1 \cdot d^2 \\ -d \end{bmatrix}$$</p>
