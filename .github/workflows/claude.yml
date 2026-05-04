@@ -77,7 +77,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-          claude_args: "--model claude-sonnet-4-6"
+          claude_args: "--model claude-opus-4-7"
 
           settings: |
             {
