@@ -112,7 +112,7 @@ head attends to all other positions without a causal mask. All tensors use <code
 <ul>
   <li>1 &le; <code>num_heads</code> &le; 64</li>
   <li>1 &le; <code>seq_len</code> &le; 8,192</li>
-  <li>8 &le; <code>head_dim</code> &le; 128; <code>head_dim</code> is a multiple of 8</li>
+  <li>4 &le; <code>head_dim</code> &le; 128; <code>head_dim</code> is a multiple of 4</li>
   <li>All tensor values are <code>float32</code></li>
   <li>Performance is measured with <code>num_heads</code> = 16, <code>seq_len</code> = 4,096, <code>head_dim</code> = 64</li>
 </ul>
