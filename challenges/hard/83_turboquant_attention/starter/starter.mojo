@@ -3,6 +3,7 @@ from gpu.id import block_dim, block_idx, thread_idx
 from memory import UnsafePointer
 from math import ceildiv
 
+
 # Q, K_idx, qjl_signs, gamma, Pi, S_mat, codebook, scores are device pointers
 @export
 def solve(
