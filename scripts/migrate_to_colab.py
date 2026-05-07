@@ -283,7 +283,38 @@ class Evaluate:
 if __name__ == "__main__":
     out_dir = "challenges/colab_exports"
     
+    exported_notebooks = []
+    
     challenges_glob = glob.glob("challenges/*/*")
     for challenge_dir in challenges_glob:
-        if os.path.isdir(challenge_dir) and challenge_dir != "challenges/colab_exports":
+        if os.path.isdir(challenge_dir) and "colab_exports" not in challenge_dir:
             generate_notebook(challenge_dir, out_dir)
+            parts = challenge_dir.strip('/').split('/')
+            level = parts[-2]
+            name = parts[-1]
+            if os.path.exists(os.path.join(out_dir, level, f"{name}.ipynb")):
+                exported_notebooks.append((level, name))
+                
+    # Create README.md
+    readme_path = os.path.join(out_dir, "README.md")
+    with open(readme_path, "w", encoding="utf-8") as f:
+        f.write("# LeetGPU Colab Notebooks\n\n")
+        f.write("Click the badges below to open the challenges directly in Google Colab.\n\n")
+        
+        # Group by level
+        grouped = {}
+        for level, name in exported_notebooks:
+            if level not in grouped:
+                grouped[level] = []
+            grouped[level].append(name)
+            
+        # Define specific sort order for levels
+        level_order = {"easy": 1, "medium": 2, "hard": 3}
+        for level in sorted(grouped.keys(), key=lambda x: level_order.get(x, 99)):
+            f.write(f"## {level.capitalize()}\n\n")
+            for name in sorted(grouped[level]):
+                colab_link = f"https://colab.research.google.com/github/lekhit/leetgpu-challenges/blob/main/challenges/colab_exports/{level}/{name}.ipynb"
+                badge = f"[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]({colab_link})"
+                f.write(f"- {badge} **{name}**\n")
+            f.write("\n")
+    print(f"Generated {readme_path}")
