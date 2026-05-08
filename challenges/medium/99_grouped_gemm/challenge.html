@@ -1,0 +1,139 @@
+<p>
+  Implement a Grouped General Matrix Multiplication. The input matrix <code>A</code> of shape
+  <code>M_total &times; K</code> is partitioned into <code>G</code> contiguous row groups whose
+  boundaries are given by the cumulative array <code>group_offsets</code> of length
+  <code>G + 1</code>. Each group <code>g</code> has its own weight matrix <code>B[g]</code> of
+  shape <code>K &times; N</code>. For every group, multiply the rows assigned to it by that
+  group's weight matrix and write the result into the corresponding rows of <code>C</code>.
+</p>
+
+<p>
+  Formally, for every group <code>g</code> in <code>0, 1, ..., G-1</code>, let
+  <code>s = group_offsets[g]</code> and <code>e = group_offsets[g+1]</code>. Then
+  <code>C[s:e] = A[s:e] &times; B[g]</code>. A group may be empty
+  (<code>s == e</code>), in which case no rows are written for that group.
+</p>
+
+<p>
+  This pattern is the core building block of Mixture-of-Experts (MoE) inference: after a router
+  has dispatched tokens to experts, each expert holds a variable number of tokens that all share
+  the same weight matrix. A single grouped GEMM computes every expert's projection in one launch.
+</p>
+
+<svg width="700" height="240" viewBox="0 0 700 240" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <rect width="700" height="240" fill="#222"/>
+
+  <!-- A matrix, split into 3 row groups -->
+  <text x="60" y="25" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">A</text>
+  <text x="60" y="225" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">M_total &times; K</text>
+  <rect x="30" y="35" width="60" height="35" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="60" y="57" text-anchor="middle" fill="#cce" font-size="11" font-family="monospace">A[0:s1]</text>
+  <rect x="30" y="70" width="60" height="60" fill="#3a1a3a" stroke="#cc88ff" stroke-width="1.5"/>
+  <text x="60" y="103" text-anchor="middle" fill="#ecc" font-size="11" font-family="monospace">A[s1:s2]</text>
+  <rect x="30" y="130" width="60" height="80" fill="#3a2a1a" stroke="#ffaa44" stroke-width="1.5"/>
+  <text x="60" y="173" text-anchor="middle" fill="#ecc" font-size="11" font-family="monospace">A[s2:M]</text>
+
+  <!-- arrows to per-group products -->
+  <line x1="92" y1="52" x2="155" y2="52" stroke="#4a9eff" stroke-width="1.5" marker-end="url(#arr99)"/>
+  <line x1="92" y1="100" x2="155" y2="100" stroke="#cc88ff" stroke-width="1.5" marker-end="url(#arr99)"/>
+  <line x1="92" y1="170" x2="155" y2="170" stroke="#ffaa44" stroke-width="1.5" marker-end="url(#arr99)"/>
+
+  <!-- B[0] -->
+  <rect x="160" y="32" width="70" height="40" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="195" y="50" text-anchor="middle" fill="#cce" font-size="12" font-family="monospace">B[0]</text>
+  <text x="195" y="65" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">K&times;N</text>
+
+  <!-- B[1] -->
+  <rect x="160" y="80" width="70" height="40" fill="#3a1a3a" stroke="#cc88ff" stroke-width="1.5"/>
+  <text x="195" y="98" text-anchor="middle" fill="#ecc" font-size="12" font-family="monospace">B[1]</text>
+  <text x="195" y="113" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">K&times;N</text>
+
+  <!-- B[2] -->
+  <rect x="160" y="150" width="70" height="40" fill="#3a2a1a" stroke="#ffaa44" stroke-width="1.5"/>
+  <text x="195" y="168" text-anchor="middle" fill="#ecc" font-size="12" font-family="monospace">B[2]</text>
+  <text x="195" y="183" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">K&times;N</text>
+
+  <!-- multiply signs -->
+  <text x="125" y="56" text-anchor="middle" fill="#888" font-size="14" font-family="monospace">&#xD7;</text>
+  <text x="125" y="104" text-anchor="middle" fill="#888" font-size="14" font-family="monospace">&#xD7;</text>
+  <text x="125" y="174" text-anchor="middle" fill="#888" font-size="14" font-family="monospace">&#xD7;</text>
+
+  <!-- arrows to C -->
+  <line x1="232" y1="52" x2="320" y2="52" stroke="#888" stroke-width="1.5" marker-end="url(#arr99)"/>
+  <line x1="232" y1="100" x2="320" y2="100" stroke="#888" stroke-width="1.5" marker-end="url(#arr99)"/>
+  <line x1="232" y1="170" x2="320" y2="170" stroke="#888" stroke-width="1.5" marker-end="url(#arr99)"/>
+
+  <text x="276" y="44" text-anchor="middle" fill="#888" font-size="11" font-family="monospace">@</text>
+  <text x="276" y="92" text-anchor="middle" fill="#888" font-size="11" font-family="monospace">@</text>
+  <text x="276" y="162" text-anchor="middle" fill="#888" font-size="11" font-family="monospace">@</text>
+
+  <!-- C matrix -->
+  <text x="370" y="25" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">C</text>
+  <text x="370" y="225" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">M_total &times; N</text>
+  <rect x="325" y="35" width="90" height="35" fill="#1a4a2a" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="370" y="57" text-anchor="middle" fill="#cce" font-size="11" font-family="monospace">C[0:s1]</text>
+  <rect x="325" y="70" width="90" height="60" fill="#1a4a2a" stroke="#cc88ff" stroke-width="1.5"/>
+  <text x="370" y="103" text-anchor="middle" fill="#ecc" font-size="11" font-family="monospace">C[s1:s2]</text>
+  <rect x="325" y="130" width="90" height="80" fill="#1a4a2a" stroke="#ffaa44" stroke-width="1.5"/>
+  <text x="370" y="173" text-anchor="middle" fill="#ecc" font-size="11" font-family="monospace">C[s2:M]</text>
+
+  <!-- group_offsets -->
+  <text x="560" y="25" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">group_offsets</text>
+  <rect x="470" y="40" width="180" height="30" fill="#202020" stroke="#666" stroke-width="1"/>
+  <text x="490" y="60" text-anchor="middle" fill="#cce" font-size="11" font-family="monospace">0</text>
+  <text x="535" y="60" text-anchor="middle" fill="#ecc" font-size="11" font-family="monospace">s1</text>
+  <text x="585" y="60" text-anchor="middle" fill="#ecc" font-size="11" font-family="monospace">s2</text>
+  <text x="635" y="60" text-anchor="middle" fill="#fff" font-size="11" font-family="monospace">M_total</text>
+
+  <text x="560" y="100" text-anchor="middle" fill="#888" font-size="11" font-family="monospace">group g uses rows</text>
+  <text x="560" y="118" text-anchor="middle" fill="#888" font-size="11" font-family="monospace">[group_offsets[g],</text>
+  <text x="560" y="135" text-anchor="middle" fill="#888" font-size="11" font-family="monospace">group_offsets[g+1])</text>
+
+  <text x="560" y="170" text-anchor="middle" fill="#aaa" font-size="11" font-family="monospace">G = 3 here</text>
+  <text x="560" y="188" text-anchor="middle" fill="#aaa" font-size="11" font-family="monospace">(B has shape G&times;K&times;N)</text>
+
+  <defs>
+    <marker id="arr99" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#888"/>
+    </marker>
+  </defs>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the <code>solve</code> function; do not change its signature.</li>
+  <li>External libraries are not permitted.</li>
+  <li>Write the result into <code>C</code>.</li>
+</ul>
+
+<h2>Examples</h2>
+<p>Example 1: <code>G</code> = 2, <code>M_total</code> = 4, <code>K</code> = 2, <code>N</code> = 3, <code>group_offsets</code> = <code>[0, 2, 4]</code></p>
+<p>
+\[
+A = \begin{bmatrix} 1 & 2 \\ 3 & 4 \\ 5 & 6 \\ 7 & 8 \end{bmatrix},\quad
+B[0] = \begin{bmatrix} 1 & 0 & 1 \\ 0 & 1 & 0 \end{bmatrix},\quad
+B[1] = \begin{bmatrix} 1 & 1 & 0 \\ 1 & 1 & 1 \end{bmatrix}
+\]
+</p>
+<p>
+\[
+C = \begin{bmatrix} 1 & 2 & 1 \\ 3 & 4 & 3 \\ 11 & 11 & 6 \\ 15 & 15 & 8 \end{bmatrix}
+\]
+</p>
+<p>
+  Group 0 occupies rows <code>[0, 2)</code> of <code>A</code>, so
+  <code>C[0:2] = A[0:2] &times; B[0]</code>. Group 1 occupies rows <code>[2, 4)</code>, so
+  <code>C[2:4] = A[2:4] &times; B[1]</code>.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>G</code> &le; 64 (number of groups)</li>
+  <li>1 &le; <code>M_total</code> &le; 16,384 (total rows across all groups)</li>
+  <li>1 &le; <code>K</code>, <code>N</code> &le; 4,096</li>
+  <li><code>group_offsets[0]</code> = 0, <code>group_offsets[G]</code> = <code>M_total</code>, and <code>group_offsets</code> is non-decreasing</li>
+  <li>A group may be empty (<code>group_offsets[g+1]</code> = <code>group_offsets[g]</code>); in that case nothing is written for that group</li>
+  <li><code>A</code>, <code>B</code>, and <code>C</code> are 32-bit floats; <code>group_offsets</code> is 32-bit integer</li>
+  <li>All tensors are stored on the GPU</li>
+  <li>Performance is measured with <code>G</code> = 8, <code>M_total</code> = 8,192, <code>K</code> = 1,024, <code>N</code> = 2,048</li>
+</ul>
