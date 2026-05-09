@@ -1,0 +1,86 @@
+<p>
+  Given the query matrix <code>Q</code> of size <code>M&times;d</code>, key matrix <code>K</code> of size
+  <code>N&times;d</code>, value matrix <code>V</code> of size <code>N&times;d</code>, and upstream gradient
+  <code>dO</code> of size <code>M&times;d</code>, compute the gradients of the softmax attention operation
+  with respect to <code>Q</code>, <code>K</code>, and <code>V</code>. The forward pass computes
+  $$O = \text{softmax}\!\Bigl(\frac{QK^T}{\sqrt{d}}\Bigr)V,$$
+  where softmax is applied row-wise. The backward pass produces <code>dQ</code> (M&times;d),
+  <code>dK</code> (N&times;d), and <code>dV</code> (N&times;d) via:
+  $$P = \text{softmax}\!\Bigl(\frac{QK^T}{\sqrt{d}}\Bigr), \quad dV = P^T\,dO,$$
+  $$dP = dO\,V^T, \quad dS_{ij} = P_{ij}\!\left(dP_{ij} - \sum_k P_{ik}\,dP_{ik}\right), \quad \widetilde{dS} = \frac{dS}{\sqrt{d}},$$
+  $$dQ = \widetilde{dS}\,K, \quad dK = \widetilde{dS}^T Q.$$
+</p>
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only GPU native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final results must be stored in <code>dQ</code>, <code>dK</code>, and <code>dV</code></li>
+</ul>
+<h2>Example</h2>
+<p>
+<strong>Input:</strong><br>
+<code>Q</code> (2&times;4):
+\[
+\begin{bmatrix}
+1.0 & 0.0 & 0.0 & 0.0 \\
+0.0 & 1.0 & 0.0 & 0.0
+\end{bmatrix}
+\]
+<code>K</code> (3&times;4):
+\[
+\begin{bmatrix}
+1.0 & 0.0 & 0.0 & 0.0 \\
+0.0 & 1.0 & 0.0 & 0.0 \\
+0.0 & 0.0 & 1.0 & 0.0
+\end{bmatrix}
+\]
+<code>V</code> (3&times;4):
+\[
+\begin{bmatrix}
+1.0 & 2.0 & 3.0 & 4.0 \\
+5.0 & 6.0 & 7.0 & 8.0 \\
+9.0 & 10.0 & 11.0 & 12.0
+\end{bmatrix}
+\]
+<code>dO</code> (2&times;4):
+\[
+\begin{bmatrix}
+1.0 & 0.0 & 0.0 & 0.0 \\
+0.0 & 1.0 & 0.0 & 0.0
+\end{bmatrix}
+\]
+</p>
+<p>
+<strong>Output:</strong><br>
+<code>dQ</code> (2&times;4):
+\[
+\begin{bmatrix}
+-0.74 & 0.10 & 0.65 & 0.00 \\
+-0.55 & 0.00 & 0.55 & 0.00
+\end{bmatrix}
+\]
+<code>dK</code> (3&times;4):
+\[
+\begin{bmatrix}
+-0.74 & -0.55 & 0.00 & 0.00 \\
+0.10 & 0.00 & 0.00 & 0.00 \\
+0.65 & 0.55 & 0.00 & 0.00
+\end{bmatrix}
+\]
+<code>dV</code> (3&times;4):
+\[
+\begin{bmatrix}
+0.45 & 0.27 & 0.00 & 0.00 \\
+0.27 & 0.45 & 0.00 & 0.00 \\
+0.27 & 0.27 & 0.00 & 0.00
+\end{bmatrix}
+\]
+</p>
+<h2>Constraints</h2>
+<ul>
+  <li>Matrix <code>Q</code> and <code>dO</code> are of size <code>M&times;d</code>; matrices <code>K</code>, <code>V</code> are of size <code>N&times;d</code></li>
+  <li>1 &le; <code>M</code>, <code>N</code> &le; 100,000</li>
+  <li>1 &le; <code>d</code> &le; 128</li>
+  <li>All input values are <code>float32</code></li>
+  <li>Performance is measured with <code>M</code> = 512, <code>N</code> = 256, <code>d</code> = 128</li>
+</ul>
