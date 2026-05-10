@@ -95,6 +95,7 @@ def load_challenge(problem_dir: Path) -> Dict:
         challenge = module.Challenge()
         title = challenge.name
         access_tier = challenge.access_tier
+        num_gpus = getattr(challenge, "num_gpus", 1)
     finally:
         sys.path.remove(str(challenges_dir))
         if "challenge" in sys.modules:
@@ -120,6 +121,7 @@ def load_challenge(problem_dir: Path) -> Dict:
         "challengeCode": challenge_path.read_text(),
         "difficultyLevel": get_difficulty(problem_dir),
         "accessTier": access_tier,
+        "numGpus": num_gpus,
         "gpus": GPUS,  # TODO: get from challenge.py or API
         "starterCode": starter_code,
     }

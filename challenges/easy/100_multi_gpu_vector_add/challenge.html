@@ -1,0 +1,42 @@
+<h2>Multi-GPU Vector Addition</h2>
+
+<p>
+  Compute the element-wise sum of two vectors <code>A</code> and <code>B</code>
+  into output vector <code>C</code> on <strong>2 GPUs</strong>.
+</p>
+
+<p>
+  Your <code>solve()</code> function is invoked once on each rank. The same
+  input tensors <code>A</code> and <code>B</code> are available on every rank
+  (fully replicated), and each rank must produce the full result in its own
+  <code>C</code>. You may parallelize the work across ranks and use collectives
+  (PyTorch: <code>torch.distributed</code>; CUDA: NCCL with the rank/world-size
+  and NCCL unique-id file exposed via environment variables) to combine partial
+  results.
+</p>
+
+<p>Environment variables available inside <code>solve()</code>:</p>
+<ul>
+  <li><code>RANK</code>: this rank's index (0-based)</li>
+  <li><code>WORLD_SIZE</code>: total number of ranks (2 for this challenge)</li>
+  <li><code>LOCAL_RANK</code>: local device index for this rank</li>
+  <li><code>LEETGPU_NCCL_ID_FILE</code>: (CUDA only) path to a shared file for
+      bootstrapping NCCL via <code>ncclGetUniqueId</code> /
+      <code>ncclCommInitRank</code></li>
+</ul>
+
+<p>
+  For PyTorch solutions the process group (<code>nccl</code> backend) is
+  pre-initialized by the runner — just call
+  <code>torch.distributed.all_reduce</code>,
+  <code>torch.distributed.all_gather</code>, etc.
+</p>
+
+<h3>Constraints</h3>
+<ul>
+  <li><code>1 &le; N &le; 10<sup>7</sup></code></li>
+  <li><code>A</code>, <code>B</code>, <code>C</code> are contiguous
+      <code>float32</code> tensors on the GPU</li>
+</ul>
+
+<p><strong>This is a Pro-only multi-GPU challenge.</strong></p>
