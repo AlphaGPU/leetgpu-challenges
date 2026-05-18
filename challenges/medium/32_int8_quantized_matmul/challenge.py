@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="INT8 Quantized MatMul", atol=0, rtol=0, num_gpus=1, access_tier="free"
-        )
+    name = "INT8 Quantized MatMul"
+    atol = 0
+    rtol = 0
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -54,7 +55,7 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.int8
-        device = "cuda"
+        device = self.device
         A = torch.tensor([[1, 2], [3, 4]], dtype=dtype, device=device).flatten()
         B = torch.tensor([[5, 6], [7, 8]], dtype=dtype, device=device).flatten()
         C = torch.tensor([[0, 0], [0, 0]], dtype=dtype, device=device).flatten()
@@ -76,7 +77,7 @@ class Challenge(ChallengeBase):
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.int8
-        device = "cuda"
+        device = self.device
         tests = []
 
         # 1. 4x4x4_zero_zp
@@ -188,7 +189,7 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.int8
-        device = "cuda"
+        device = self.device
         shape_A = (8192, 2048)
         shape_B = (2048, 4096)
         shape_C = (8192, 4096)

@@ -6,8 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(name="BFS Shortest Path", atol=0, rtol=0, num_gpus=1, access_tier="free")
+    name = "BFS Shortest Path"
+    atol = 0
+    rtol = 0
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -99,11 +102,11 @@ class Challenge(ChallengeBase):
         # Grid: [[0,0,0,0], [1,1,0,1], [0,0,0,0], [0,1,1,0]]
         grid_data = torch.tensor(
             [0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0],  # row 0  # row 1  # row 2  # row 3
-            device="cuda",
+            device=self.device,
             dtype=dtype_int,
         )
 
-        result_data = torch.tensor([0], device="cuda", dtype=dtype_int)
+        result_data = torch.tensor([0], device=self.device, dtype=dtype_int)
 
         return {
             "grid": grid_data,
@@ -123,8 +126,8 @@ class Challenge(ChallengeBase):
         # Test case 1: Simple path exists
         test_cases.append(
             {
-                "grid": torch.tensor([0, 0, 1, 0, 0, 0], device="cuda", dtype=dtype_int),
-                "result": torch.tensor([0], device="cuda", dtype=dtype_int),
+                "grid": torch.tensor([0, 0, 1, 0, 0, 0], device=self.device, dtype=dtype_int),
+                "result": torch.tensor([0], device=self.device, dtype=dtype_int),
                 "rows": 2,
                 "cols": 3,
                 "start_row": 0,
@@ -137,8 +140,8 @@ class Challenge(ChallengeBase):
         # Test case 2: No path (blocked)
         test_cases.append(
             {
-                "grid": torch.tensor([0, 1, 0, 1, 0], device="cuda", dtype=dtype_int),
-                "result": torch.tensor([0], device="cuda", dtype=dtype_int),
+                "grid": torch.tensor([0, 1, 0, 1, 0], device=self.device, dtype=dtype_int),
+                "result": torch.tensor([0], device=self.device, dtype=dtype_int),
                 "rows": 1,
                 "cols": 5,
                 "start_row": 0,
@@ -151,8 +154,8 @@ class Challenge(ChallengeBase):
         # Test case 3: Same start and end
         test_cases.append(
             {
-                "grid": torch.tensor([0, 1, 0, 0], device="cuda", dtype=dtype_int),
-                "result": torch.tensor([0], device="cuda", dtype=dtype_int),
+                "grid": torch.tensor([0, 1, 0, 0], device=self.device, dtype=dtype_int),
+                "result": torch.tensor([0], device=self.device, dtype=dtype_int),
                 "rows": 2,
                 "cols": 2,
                 "start_row": 0,
@@ -165,8 +168,8 @@ class Challenge(ChallengeBase):
         # Test case 4: Single cell
         test_cases.append(
             {
-                "grid": torch.tensor([0], device="cuda", dtype=dtype_int),
-                "result": torch.tensor([0], device="cuda", dtype=dtype_int),
+                "grid": torch.tensor([0], device=self.device, dtype=dtype_int),
+                "result": torch.tensor([0], device=self.device, dtype=dtype_int),
                 "rows": 1,
                 "cols": 1,
                 "start_row": 0,
@@ -177,14 +180,14 @@ class Challenge(ChallengeBase):
         )
 
         # Test case 5: Larger grid with path
-        large_grid = torch.zeros(25, device="cuda", dtype=dtype_int)  # 5x5 grid
+        large_grid = torch.zeros(25, device=self.device, dtype=dtype_int)  # 5x5 grid
         large_grid[6] = 1  # obstacle at (1,1)
         large_grid[7] = 1  # obstacle at (1,2)
         large_grid[8] = 1  # obstacle at (1,3)
         test_cases.append(
             {
                 "grid": large_grid,
-                "result": torch.tensor([0], device="cuda", dtype=dtype_int),
+                "result": torch.tensor([0], device=self.device, dtype=dtype_int),
                 "rows": 5,
                 "cols": 5,
                 "start_row": 0,
@@ -197,13 +200,13 @@ class Challenge(ChallengeBase):
         # Test case 6: Complex maze
         maze_grid = torch.tensor(
             [0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0],
-            device="cuda",
+            device=self.device,
             dtype=dtype_int,
         )
         test_cases.append(
             {
                 "grid": maze_grid,
-                "result": torch.tensor([0], device="cuda", dtype=dtype_int),
+                "result": torch.tensor([0], device=self.device, dtype=dtype_int),
                 "rows": 5,
                 "cols": 5,
                 "start_row": 0,
@@ -221,7 +224,7 @@ class Challenge(ChallengeBase):
 
         # Create a large grid with some random obstacles
         torch.manual_seed(42)
-        grid = torch.randint(0, 2, (rows * cols,), device="cuda", dtype=dtype_int)
+        grid = torch.randint(0, 2, (rows * cols,), device=self.device, dtype=dtype_int)
 
         # Ensure start and end are free
         grid[0] = 0  # start at (0,0)
@@ -232,7 +235,7 @@ class Challenge(ChallengeBase):
             if i + cols - 1 < rows * cols:
                 grid[i : i + min(cols, 10)] = 0  # Clear first 10 cells of each row
 
-        result = torch.tensor([0], device="cuda", dtype=dtype_int)
+        result = torch.tensor([0], device=self.device, dtype=dtype_int)
 
         return {
             "grid": grid,

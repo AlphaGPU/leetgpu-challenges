@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="General Matrix Multiplication (GEMM)",
-            atol=5e-2,
-            rtol=5e-2,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "General Matrix Multiplication (GEMM)"
+    atol = 0.05
+    rtol = 0.05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -50,9 +47,9 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float16
-        A = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device="cuda", dtype=dtype)
-        B = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], device="cuda", dtype=dtype)
-        C = torch.tensor([[1.0, 1.0], [1.0, 1.0]], device="cuda", dtype=dtype)
+        A = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device=self.device, dtype=dtype)
+        B = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], device=self.device, dtype=dtype)
+        C = torch.tensor([[1.0, 1.0], [1.0, 1.0]], device=self.device, dtype=dtype)
         return {
             "A": A,
             "B": B,
@@ -71,9 +68,9 @@ class Challenge(ChallengeBase):
         # 16x16x16_a1_b0
         tests.append(
             {
-                "A": torch.empty((16, 16), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "B": torch.empty((16, 16), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "C": torch.zeros((16, 16), device="cuda", dtype=dtype),
+                "A": torch.empty((16, 16), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "B": torch.empty((16, 16), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "C": torch.zeros((16, 16), device=self.device, dtype=dtype),
                 "M": 16,
                 "N": 16,
                 "K": 16,
@@ -85,9 +82,9 @@ class Challenge(ChallengeBase):
         # 16x16x16_a1_b1
         tests.append(
             {
-                "A": torch.empty((16, 16), device="cuda", dtype=dtype).uniform_(-0.5, 0.5),
-                "B": torch.empty((16, 16), device="cuda", dtype=dtype).uniform_(-0.5, 0.5),
-                "C": torch.empty((16, 16), device="cuda", dtype=dtype).uniform_(-0.5, 0.5),
+                "A": torch.empty((16, 16), device=self.device, dtype=dtype).uniform_(-0.5, 0.5),
+                "B": torch.empty((16, 16), device=self.device, dtype=dtype).uniform_(-0.5, 0.5),
+                "C": torch.empty((16, 16), device=self.device, dtype=dtype).uniform_(-0.5, 0.5),
                 "M": 16,
                 "N": 16,
                 "K": 16,
@@ -99,9 +96,9 @@ class Challenge(ChallengeBase):
         # 32x16x16_a0.5_b0.5
         tests.append(
             {
-                "A": torch.empty((32, 16), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "B": torch.empty((16, 16), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "C": torch.empty((32, 16), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
+                "A": torch.empty((32, 16), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "B": torch.empty((16, 16), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "C": torch.empty((32, 16), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
                 "M": 32,
                 "N": 16,
                 "K": 16,
@@ -113,9 +110,9 @@ class Challenge(ChallengeBase):
         # 16x32x16_a1_b1
         tests.append(
             {
-                "A": torch.empty((16, 16), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "B": torch.empty((16, 32), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "C": torch.empty((16, 32), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
+                "A": torch.empty((16, 16), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "B": torch.empty((16, 32), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "C": torch.empty((16, 32), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
                 "M": 16,
                 "N": 32,
                 "K": 16,
@@ -127,9 +124,9 @@ class Challenge(ChallengeBase):
         # 16x16x32_a0_b1
         tests.append(
             {
-                "A": torch.empty((16, 32), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "B": torch.empty((32, 16), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "C": torch.empty((16, 16), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
+                "A": torch.empty((16, 32), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "B": torch.empty((32, 16), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "C": torch.empty((16, 16), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
                 "M": 16,
                 "N": 16,
                 "K": 32,
@@ -145,9 +142,9 @@ class Challenge(ChallengeBase):
         M = 1024
         N = 1024
         K = 1024
-        A = torch.empty((M, K), device="cuda", dtype=dtype).uniform_(-1.0, 1.0)
-        B = torch.empty((K, N), device="cuda", dtype=dtype).uniform_(-1.0, 1.0)
-        C = torch.empty((M, N), device="cuda", dtype=dtype).uniform_(-1.0, 1.0)
+        A = torch.empty((M, K), device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+        B = torch.empty((K, N), device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+        C = torch.empty((M, N), device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
         return {
             "A": A,
             "B": B,

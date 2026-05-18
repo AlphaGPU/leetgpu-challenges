@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="SSM Selective Scan",
-            atol=1e-03,
-            rtol=1e-03,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "SSM Selective Scan"
+    atol = 0.001
+    rtol = 0.001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -39,13 +36,6 @@ class Challenge(ChallengeBase):
         assert (
             u.dtype == delta.dtype == A.dtype == B.dtype == C.dtype == skip.dtype == torch.float32
         )
-        assert u.device.type == "cuda"
-        assert delta.device.type == "cuda"
-        assert A.device.type == "cuda"
-        assert B.device.type == "cuda"
-        assert C.device.type == "cuda"
-        assert skip.device.type == "cuda"
-        assert y.device.type == "cuda"
 
         # Hidden state: (batch, d_model, d_state)
         h = torch.zeros(batch, d_model, d_state, device=u.device, dtype=u.dtype)
@@ -88,7 +78,7 @@ class Challenge(ChallengeBase):
         }
 
     def _make_test_case(self, batch, seq_len, d_model, d_state, zero_u=False, zero_delta=False):
-        device = "cuda"
+        device = self.device
         dtype = torch.float32
         if zero_u:
             u = torch.zeros(batch, seq_len, d_model, device=device, dtype=dtype)
@@ -121,7 +111,7 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         torch.manual_seed(0)
-        device = "cuda"
+        device = self.device
         dtype = torch.float32
         batch, seq_len, d_model, d_state = 1, 4, 2, 2
         u = torch.tensor(

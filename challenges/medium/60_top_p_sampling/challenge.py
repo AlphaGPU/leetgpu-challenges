@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Top-p Sampling", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Top-p Sampling"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -58,10 +59,10 @@ class Challenge(ChallengeBase):
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
-        logits = torch.tensor([1.0, 2.0, 3.0, 0.5], device="cuda", dtype=torch.float32)
-        p = torch.tensor([0.9], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([42], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        logits = torch.tensor([1.0, 2.0, 3.0, 0.5], device=self.device, dtype=torch.float32)
+        p = torch.tensor([0.9], device=self.device, dtype=torch.float32)
+        seed = torch.tensor([42], device=self.device, dtype=torch.int32)
+        sampled_token = torch.zeros(1, device=self.device, dtype=torch.int32)
 
         return {
             "logits": logits,
@@ -74,10 +75,10 @@ class Challenge(ChallengeBase):
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         tests = []
 
-        logits = torch.tensor([1.0, 2.0, 3.0], device="cuda", dtype=torch.float32)
-        p = torch.tensor([0.95], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([123], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        logits = torch.tensor([1.0, 2.0, 3.0], device=self.device, dtype=torch.float32)
+        p = torch.tensor([0.95], device=self.device, dtype=torch.float32)
+        seed = torch.tensor([123], device=self.device, dtype=torch.int32)
+        sampled_token = torch.zeros(1, device=self.device, dtype=torch.int32)
         tests.append(
             {
                 "logits": logits,
@@ -88,10 +89,10 @@ class Challenge(ChallengeBase):
             }
         )
 
-        logits = torch.randn(10, device="cuda", dtype=torch.float32)
-        p = torch.tensor([0.9], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([456], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        logits = torch.randn(10, device=self.device, dtype=torch.float32)
+        p = torch.tensor([0.9], device=self.device, dtype=torch.float32)
+        seed = torch.tensor([456], device=self.device, dtype=torch.int32)
+        sampled_token = torch.zeros(1, device=self.device, dtype=torch.int32)
         tests.append(
             {
                 "logits": logits,
@@ -102,10 +103,10 @@ class Challenge(ChallengeBase):
             }
         )
 
-        logits = torch.randn(100, device="cuda", dtype=torch.float32) * 5.0
-        p = torch.tensor([0.85], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([789], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        logits = torch.randn(100, device=self.device, dtype=torch.float32) * 5.0
+        p = torch.tensor([0.85], device=self.device, dtype=torch.float32)
+        seed = torch.tensor([789], device=self.device, dtype=torch.int32)
+        sampled_token = torch.zeros(1, device=self.device, dtype=torch.int32)
         tests.append(
             {
                 "logits": logits,
@@ -116,11 +117,11 @@ class Challenge(ChallengeBase):
             }
         )
 
-        logits = torch.zeros(50, device="cuda", dtype=torch.float32)
+        logits = torch.zeros(50, device=self.device, dtype=torch.float32)
         logits[0] = 10.0
-        p = torch.tensor([0.5], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([111], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        p = torch.tensor([0.5], device=self.device, dtype=torch.float32)
+        seed = torch.tensor([111], device=self.device, dtype=torch.int32)
+        sampled_token = torch.zeros(1, device=self.device, dtype=torch.int32)
         tests.append(
             {
                 "logits": logits,
@@ -131,10 +132,10 @@ class Challenge(ChallengeBase):
             }
         )
 
-        logits = torch.randn(500, device="cuda", dtype=torch.float32) * 3.0
-        p = torch.tensor([0.92], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([222], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        logits = torch.randn(500, device=self.device, dtype=torch.float32) * 3.0
+        p = torch.tensor([0.92], device=self.device, dtype=torch.float32)
+        seed = torch.tensor([222], device=self.device, dtype=torch.int32)
+        sampled_token = torch.zeros(1, device=self.device, dtype=torch.int32)
         tests.append(
             {
                 "logits": logits,
@@ -145,10 +146,10 @@ class Challenge(ChallengeBase):
             }
         )
 
-        logits = torch.linspace(-5, 5, 200, device="cuda", dtype=torch.float32)
-        p = torch.tensor([0.8], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([333], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        logits = torch.linspace(-5, 5, 200, device=self.device, dtype=torch.float32)
+        p = torch.tensor([0.8], device=self.device, dtype=torch.float32)
+        seed = torch.tensor([333], device=self.device, dtype=torch.int32)
+        sampled_token = torch.zeros(1, device=self.device, dtype=torch.int32)
         tests.append(
             {
                 "logits": logits,
@@ -159,10 +160,10 @@ class Challenge(ChallengeBase):
             }
         )
 
-        logits = torch.randn(1000, device="cuda", dtype=torch.float32) * 2.0
-        p = torch.tensor([0.95], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([444], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        logits = torch.randn(1000, device=self.device, dtype=torch.float32) * 2.0
+        p = torch.tensor([0.95], device=self.device, dtype=torch.float32)
+        seed = torch.tensor([444], device=self.device, dtype=torch.int32)
+        sampled_token = torch.zeros(1, device=self.device, dtype=torch.int32)
         tests.append(
             {
                 "logits": logits,
@@ -173,10 +174,10 @@ class Challenge(ChallengeBase):
             }
         )
 
-        logits = torch.randn(5000, device="cuda", dtype=torch.float32)
-        p = torch.tensor([0.9], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([555], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        logits = torch.randn(5000, device=self.device, dtype=torch.float32)
+        p = torch.tensor([0.9], device=self.device, dtype=torch.float32)
+        seed = torch.tensor([555], device=self.device, dtype=torch.int32)
+        sampled_token = torch.zeros(1, device=self.device, dtype=torch.int32)
         tests.append(
             {
                 "logits": logits,
@@ -191,10 +192,10 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         vocab_size = 50000
-        logits = torch.randn(vocab_size, device="cuda", dtype=torch.float32) * 3.0
-        p = torch.tensor([0.9], device="cuda", dtype=torch.float32)
-        seed = torch.tensor([999], device="cuda", dtype=torch.int32)
-        sampled_token = torch.zeros(1, device="cuda", dtype=torch.int32)
+        logits = torch.randn(vocab_size, device=self.device, dtype=torch.float32) * 3.0
+        p = torch.tensor([0.9], device=self.device, dtype=torch.float32)
+        seed = torch.tensor([999], device=self.device, dtype=torch.int32)
+        sampled_token = torch.zeros(1, device=self.device, dtype=torch.int32)
 
         return {
             "logits": logits,

@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Color Inversion", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Color Inversion"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, image: torch.Tensor, width: int, height: int):
         assert image.shape == (height * width * 4,)
@@ -30,7 +31,9 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         width, height = 1, 2
-        image = torch.tensor([255, 0, 128, 255, 0, 255, 0, 255], device="cuda", dtype=torch.uint8)
+        image = torch.tensor(
+            [255, 0, 128, 255, 0, 255, 0, 255], device=self.device, dtype=torch.uint8
+        )
         return {
             "image": image,
             "width": width,
@@ -46,25 +49,27 @@ class Challenge(ChallengeBase):
                         [[0, 0, 255, 255], [128, 128, 128, 255]],
                     ],
                     dtype=torch.uint8,
-                    device="cuda",
+                    device=self.device,
                 ).flatten(),
                 "width": 2,
                 "height": 2,
             },
             {
                 "image": torch.tensor(
-                    [[[100, 50, 200, 255]]], dtype=torch.uint8, device="cuda"
+                    [[[100, 50, 200, 255]]], dtype=torch.uint8, device=self.device
                 ).flatten(),
                 "width": 1,
                 "height": 1,
             },
             {
-                "image": torch.zeros((3, 4, 4), dtype=torch.uint8, device="cuda").flatten(),
+                "image": torch.zeros((3, 4, 4), dtype=torch.uint8, device=self.device).flatten(),
                 "width": 4,
                 "height": 3,
             },
             {
-                "image": torch.full((5, 3, 4), 255, dtype=torch.uint8, device="cuda").flatten(),
+                "image": torch.full(
+                    (5, 3, 4), 255, dtype=torch.uint8, device=self.device
+                ).flatten(),
                 "width": 3,
                 "height": 5,
             },
@@ -75,18 +80,22 @@ class Challenge(ChallengeBase):
                         [[70, 80, 90, 150], [100, 110, 120, 200]],
                     ],
                     dtype=torch.uint8,
-                    device="cuda",
+                    device=self.device,
                 ).flatten(),
                 "width": 2,
                 "height": 2,
             },
             {
-                "image": torch.randint(0, 256, (64 * 64 * 4,), dtype=torch.uint8, device="cuda"),
+                "image": torch.randint(
+                    0, 256, (64 * 64 * 4,), dtype=torch.uint8, device=self.device
+                ),
                 "width": 64,
                 "height": 64,
             },
             {
-                "image": torch.randint(0, 256, (32 * 64 * 4,), dtype=torch.uint8, device="cuda"),
+                "image": torch.randint(
+                    0, 256, (32 * 64 * 4,), dtype=torch.uint8, device=self.device
+                ),
                 "width": 64,
                 "height": 32,
             },
@@ -96,7 +105,7 @@ class Challenge(ChallengeBase):
         width, height = 4096, 5120
         size = width * height * 4
         return {
-            "image": torch.randint(0, 256, (size,), device="cuda", dtype=torch.uint8),
+            "image": torch.randint(0, 256, (size,), device=self.device, dtype=torch.uint8),
             "width": width,
             "height": height,
         }

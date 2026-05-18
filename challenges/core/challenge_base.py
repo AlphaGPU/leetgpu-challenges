@@ -3,12 +3,14 @@ from typing import Any, Dict, List
 
 
 class ChallengeBase(ABC):
-    def __init__(self, name: str, atol: float, rtol: float, num_gpus: int, access_tier: str):
-        self.name = name
-        self.atol = atol
-        self.rtol = rtol
-        self.num_gpus = num_gpus
-        self.access_tier = access_tier
+    name: str
+    atol: float
+    rtol: float
+    num_gpus: int
+    access_tier: str
+
+    def __init__(self, device: str = "cuda"):
+        self.device = device
 
     @abstractmethod
     def reference_impl(self, *args, **kwargs):

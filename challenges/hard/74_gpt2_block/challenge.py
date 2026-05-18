@@ -29,14 +29,11 @@ TOTAL_WEIGHTS = O_BPROJ + D
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="GPT-2 Transformer Block",
-            atol=1e-03,
-            rtol=1e-03,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "GPT-2 Transformer Block"
+    atol = 0.001
+    rtol = 0.001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -49,9 +46,6 @@ class Challenge(ChallengeBase):
         assert output.shape == (seq_len, D)
         assert weights.shape == (TOTAL_WEIGHTS,)
         assert x.dtype == output.dtype == weights.dtype
-        assert x.device.type == "cuda"
-        assert output.device.type == "cuda"
-        assert weights.device.type == "cuda"
 
         # unpack weights
         ln1_w = weights[O_LN1_W:O_LN1_B]
@@ -143,7 +137,7 @@ class Challenge(ChallengeBase):
 
     def _make_test_case(self, seq_len, zero_x=False):
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         weights = self._make_weights(device, dtype)
         if zero_x:
             x = torch.zeros(seq_len, D, device=device, dtype=dtype)

@@ -30,14 +30,11 @@ TOTAL_WEIGHTS = O_WDOWN + D * FFN_HIDDEN
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Llama Transformer Block",
-            atol=1e-03,
-            rtol=1e-03,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Llama Transformer Block"
+    atol = 0.001
+    rtol = 0.001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -54,11 +51,6 @@ class Challenge(ChallengeBase):
         assert cos.shape == (seq_len, HEAD_DIM // 2)
         assert sin.shape == (seq_len, HEAD_DIM // 2)
         assert x.dtype == output.dtype == weights.dtype == cos.dtype == sin.dtype
-        assert x.device.type == "cuda"
-        assert output.device.type == "cuda"
-        assert weights.device.type == "cuda"
-        assert cos.device.type == "cuda"
-        assert sin.device.type == "cuda"
 
         def rms_norm(z, w):
             return z * torch.rsqrt(z.pow(2).mean(-1, keepdim=True) + 1e-5) * w
@@ -175,7 +167,7 @@ class Challenge(ChallengeBase):
 
     def _make_test_case(self, seq_len, zero_x=False):
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         weights = self._make_weights(device, dtype)
         cos, sin = self._make_rope_tables(seq_len, device, dtype)
         if zero_x:

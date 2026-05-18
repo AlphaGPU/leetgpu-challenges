@@ -5,37 +5,33 @@ import torch
 from core.challenge_base import ChallengeBase
 
 
-def _make_graph(N: int, density: float = 0.5, max_weight: float = 10.0, seed: int = None):
-    """Create a random non-negative weighted directed graph as a flat float32 CUDA tensor."""
+def _make_graph(N: int, device, density: float = 0.5, max_weight: float = 10.0, seed: int = None):
+    """Create a random non-negative weighted directed graph as a flat float32 tensor."""
     if seed is not None:
         torch.manual_seed(seed)
-    d = torch.full((N * N,), float("inf"), device="cuda", dtype=torch.float32)
+    d = torch.full((N * N,), float("inf"), device=device, dtype=torch.float32)
     d_view = d.view(N, N)
     d_view.fill_diagonal_(0.0)
     if N > 1:
-        mask = torch.rand(N, N, device="cuda") < density
+        mask = torch.rand(N, N, device=device) < density
         mask.fill_diagonal_(False)
-        weights = torch.rand(N, N, device="cuda") * max_weight + 0.1
+        weights = torch.rand(N, N, device=device) * max_weight + 0.1
         d_view[mask] = weights[mask]
     return d
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="All-Pairs Shortest Paths",
-            atol=1e-02,
-            rtol=1e-02,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "All-Pairs Shortest Paths"
+    atol = 0.01
+    rtol = 0.01
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, dist: torch.Tensor, output: torch.Tensor, N: int):
         assert dist.shape == (N * N,)
         assert output.shape == (N * N,)
         assert dist.dtype == output.dtype == torch.float32
         assert dist.device == output.device
-        assert dist.device.type == "cuda"
         d = dist.view(N, N).clone()
         for k in range(N):
             d = torch.minimum(d, d[:, k : k + 1] + d[k : k + 1, :])
@@ -54,12 +50,12 @@ class Challenge(ChallengeBase):
         inf = float("inf")
         dist = torch.tensor(
             [0.0, 5.0, inf, 10.0, inf, 0.0, 3.0, inf, inf, inf, 0.0, 1.0, inf, inf, inf, 0.0],
-            device="cuda",
+            device=self.device,
             dtype=torch.float32,
         )
         return {
             "dist": dist,
-            "output": torch.empty(16, device="cuda", dtype=torch.float32),
+            "output": torch.empty(16, device=self.device, dtype=torch.float32),
             "N": 4,
         }
 
@@ -68,14 +64,14 @@ class Challenge(ChallengeBase):
         inf = float("inf")
 
         def make_output(N):
-            return torch.empty(N * N, device="cuda", dtype=torch.float32)
+            return torch.empty(N * N, device=self.device, dtype=torch.float32)
 
         # --- Edge cases ---
 
         # N=1: single vertex
         tests.append(
             {
-                "dist": torch.tensor([0.0], device="cuda", dtype=torch.float32),
+                "dist": torch.tensor([0.0], device=self.device, dtype=torch.float32),
                 "output": make_output(1),
                 "N": 1,
             }
@@ -84,7 +80,7 @@ class Challenge(ChallengeBase):
         # N=2: disconnected graph (no edges between vertices)
         tests.append(
             {
-                "dist": torch.tensor([0.0, inf, inf, 0.0], device="cuda", dtype=torch.float32),
+                "dist": torch.tensor([0.0, inf, inf, 0.0], device=self.device, dtype=torch.float32),
                 "output": make_output(2),
                 "N": 2,
             }
@@ -93,7 +89,7 @@ class Challenge(ChallengeBase):
         # N=2: bidirectional edges
         tests.append(
             {
-                "dist": torch.tensor([0.0, 3.0, 7.0, 0.0], device="cuda", dtype=torch.float32),
+                "dist": torch.tensor([0.0, 3.0, 7.0, 0.0], device=self.device, dtype=torch.float32),
                 "output": make_output(2),
                 "N": 2,
             }
@@ -104,7 +100,7 @@ class Challenge(ChallengeBase):
             {
                 "dist": torch.tensor(
                     [0.0, 2.0, inf, inf, 0.0, 3.0, inf, inf, 0.0],
-                    device="cuda",
+                    device=self.device,
                     dtype=torch.float32,
                 ),
                 "output": make_output(3),
@@ -134,7 +130,7 @@ class Challenge(ChallengeBase):
                         inf,
                         0.0,
                     ],
-                    device="cuda",
+                    device=self.device,
                     dtype=torch.float32,
                 ),
                 "output": make_output(4),
@@ -166,7 +162,7 @@ class Challenge(ChallengeBase):
                         inf,
                         0.0,
                     ],
-                    device="cuda",
+                    device=self.device,
                     dtype=torch.float32,
                 ),
                 "output": make_output(4),
@@ -178,7 +174,7 @@ class Challenge(ChallengeBase):
         for N, seed in [(16, 1), (32, 2), (64, 3), (128, 4)]:
             tests.append(
                 {
-                    "dist": _make_graph(N, density=0.5, seed=seed),
+                    "dist": _make_graph(N, self.device, density=0.5, seed=seed),
                     "output": make_output(N),
                     "N": N,
                 }
@@ -188,7 +184,7 @@ class Challenge(ChallengeBase):
         for N, seed in [(30, 5), (100, 6), (255, 7)]:
             tests.append(
                 {
-                    "dist": _make_graph(N, density=0.4, seed=seed),
+                    "dist": _make_graph(N, self.device, density=0.4, seed=seed),
                     "output": make_output(N),
                     "N": N,
                 }
@@ -198,7 +194,7 @@ class Challenge(ChallengeBase):
         for N, seed in [(512, 8)]:
             tests.append(
                 {
-                    "dist": _make_graph(N, density=0.3, seed=seed),
+                    "dist": _make_graph(N, self.device, density=0.3, seed=seed),
                     "output": make_output(N),
                     "N": N,
                 }
@@ -208,7 +204,7 @@ class Challenge(ChallengeBase):
         N = 8
         tests.append(
             {
-                "dist": torch.zeros(N * N, device="cuda", dtype=torch.float32),
+                "dist": torch.zeros(N * N, device=self.device, dtype=torch.float32),
                 "output": make_output(N),
                 "N": N,
             }
@@ -219,7 +215,7 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         N = 2048
         return {
-            "dist": _make_graph(N, density=0.3, seed=42),
-            "output": torch.empty(N * N, device="cuda", dtype=torch.float32),
+            "dist": _make_graph(N, self.device, density=0.3, seed=42),
+            "output": torch.empty(N * N, device=self.device, dtype=torch.float32),
             "N": N,
         }

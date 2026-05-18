@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="RGB to Grayscale", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "RGB to Grayscale"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, input: torch.Tensor, output: torch.Tensor, width: int, height: int):
         assert input.shape == (height * width * 3,)
@@ -58,10 +59,10 @@ class Challenge(ChallengeBase):
                 128.0,
                 128.0,  # gray
             ],
-            device="cuda",
+            device=self.device,
             dtype=torch.float32,
         )
-        output = torch.zeros(width * height, device="cuda", dtype=torch.float32)
+        output = torch.zeros(width * height, device=self.device, dtype=torch.float32)
         return {
             "input": input_data,
             "output": output,
@@ -76,9 +77,9 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "input": torch.tensor(
-                    [255.0, 0.0, 0.0], device="cuda", dtype=torch.float32
+                    [255.0, 0.0, 0.0], device=self.device, dtype=torch.float32
                 ),  # red pixel
-                "output": torch.zeros(1, device="cuda", dtype=torch.float32),
+                "output": torch.zeros(1, device=self.device, dtype=torch.float32),
                 "width": 1,
                 "height": 1,
             }
@@ -87,9 +88,9 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "input": torch.tensor(
-                    [0.0, 255.0, 0.0], device="cuda", dtype=torch.float32
+                    [0.0, 255.0, 0.0], device=self.device, dtype=torch.float32
                 ),  # green pixel
-                "output": torch.zeros(1, device="cuda", dtype=torch.float32),
+                "output": torch.zeros(1, device=self.device, dtype=torch.float32),
                 "width": 1,
                 "height": 1,
             }
@@ -98,9 +99,9 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "input": torch.tensor(
-                    [0.0, 0.0, 255.0], device="cuda", dtype=torch.float32
+                    [0.0, 0.0, 255.0], device=self.device, dtype=torch.float32
                 ),  # blue pixel
-                "output": torch.zeros(1, device="cuda", dtype=torch.float32),
+                "output": torch.zeros(1, device=self.device, dtype=torch.float32),
                 "width": 1,
                 "height": 1,
             }
@@ -124,10 +125,10 @@ class Challenge(ChallengeBase):
                         125.0,
                         175.0,  # mixed color 4
                     ],
-                    device="cuda",
+                    device=self.device,
                     dtype=torch.float32,
                 ),
-                "output": torch.zeros(4, device="cuda", dtype=torch.float32),
+                "output": torch.zeros(4, device=self.device, dtype=torch.float32),
                 "width": 2,
                 "height": 2,
             }
@@ -136,8 +137,8 @@ class Challenge(ChallengeBase):
         # Edge cases: zeros and max values
         test_cases.append(
             {
-                "input": torch.zeros(3, device="cuda", dtype=torch.float32),
-                "output": torch.zeros(1, device="cuda", dtype=torch.float32),
+                "input": torch.zeros(3, device=self.device, dtype=torch.float32),
+                "output": torch.zeros(1, device=self.device, dtype=torch.float32),
                 "width": 1,
                 "height": 1,
             }
@@ -145,8 +146,8 @@ class Challenge(ChallengeBase):
 
         test_cases.append(
             {
-                "input": torch.full((3,), 255.0, device="cuda", dtype=torch.float32),
-                "output": torch.zeros(1, device="cuda", dtype=torch.float32),
+                "input": torch.full((3,), 255.0, device=self.device, dtype=torch.float32),
+                "output": torch.zeros(1, device=self.device, dtype=torch.float32),
                 "width": 1,
                 "height": 1,
             }
@@ -158,9 +159,9 @@ class Challenge(ChallengeBase):
             test_cases.append(
                 {
                     "input": torch.randint(
-                        0, 256, (input_size,), device="cuda", dtype=torch.float32
+                        0, 256, (input_size,), device=self.device, dtype=torch.float32
                     ),
-                    "output": torch.zeros(size * size, device="cuda", dtype=torch.float32),
+                    "output": torch.zeros(size * size, device=self.device, dtype=torch.float32),
                     "width": size,
                     "height": size,
                 }
@@ -170,10 +171,10 @@ class Challenge(ChallengeBase):
         for w, h in [(100, 100), (64, 48)]:
             test_cases.append(
                 {
-                    "input": torch.empty(h * w * 3, device="cuda", dtype=torch.float32).uniform_(
-                        0.0, 255.0
-                    ),
-                    "output": torch.zeros(h * w, device="cuda", dtype=torch.float32),
+                    "input": torch.empty(
+                        h * w * 3, device=self.device, dtype=torch.float32
+                    ).uniform_(0.0, 255.0),
+                    "output": torch.zeros(h * w, device=self.device, dtype=torch.float32),
                     "width": w,
                     "height": h,
                 }
@@ -183,9 +184,9 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "input": torch.randint(
-                    0, 256, (2 * 3 * 3,), device="cuda", dtype=torch.float32
+                    0, 256, (2 * 3 * 3,), device=self.device, dtype=torch.float32
                 ),  # 2x3 image
-                "output": torch.zeros(2 * 3, device="cuda", dtype=torch.float32),
+                "output": torch.zeros(2 * 3, device=self.device, dtype=torch.float32),
                 "width": 3,
                 "height": 2,
             }
@@ -194,9 +195,9 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "input": torch.randint(
-                    0, 256, (3 * 2 * 3,), device="cuda", dtype=torch.float32
+                    0, 256, (3 * 2 * 3,), device=self.device, dtype=torch.float32
                 ),  # 3x2 image
-                "output": torch.zeros(3 * 2, device="cuda", dtype=torch.float32),
+                "output": torch.zeros(3 * 2, device=self.device, dtype=torch.float32),
                 "width": 2,
                 "height": 3,
             }
@@ -209,8 +210,8 @@ class Challenge(ChallengeBase):
         input_size = width * height * 3
         output_size = width * height
         return {
-            "input": torch.randint(0, 256, (input_size,), device="cuda", dtype=torch.float32),
-            "output": torch.zeros(output_size, device="cuda", dtype=torch.float32),
+            "input": torch.randint(0, 256, (input_size,), device=self.device, dtype=torch.float32),
+            "output": torch.zeros(output_size, device=self.device, dtype=torch.float32),
             "width": width,
             "height": height,
         }

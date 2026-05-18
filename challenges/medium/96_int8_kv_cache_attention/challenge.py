@@ -7,14 +7,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="INT8 KV-Cache Attention",
-            atol=1e-03,
-            rtol=1e-03,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "INT8 KV-Cache Attention"
+    atol = 0.001
+    rtol = 0.001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -40,12 +37,6 @@ class Challenge(ChallengeBase):
         assert k_scale.dtype == torch.float32
         assert v_scale.dtype == torch.float32
         assert output.dtype == torch.float32
-        assert Q.device.type == "cuda"
-        assert K_int8.device.type == "cuda"
-        assert V_int8.device.type == "cuda"
-        assert k_scale.device.type == "cuda"
-        assert v_scale.device.type == "cuda"
-        assert output.device.type == "cuda"
 
         # Dequantize: K_float[h, s, d] = K_int8[h, s, d] * k_scale[h, s]
         K_float = K_int8.float() * k_scale.unsqueeze(-1)  # [num_heads, seq_len, head_dim]
@@ -75,7 +66,7 @@ class Challenge(ChallengeBase):
         }
 
     def _make_test_case(self, num_heads, seq_len, head_dim, zero_q=False, seed=None):
-        device = "cuda"
+        device = self.device
         if seed is not None:
             torch.manual_seed(seed)
         if zero_q:
@@ -104,7 +95,7 @@ class Challenge(ChallengeBase):
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
-        device = "cuda"
+        device = self.device
         num_heads, seq_len, head_dim = 1, 3, 4
         Q = torch.tensor([[1.0, 1.0, 1.0, 1.0]], dtype=torch.float32, device=device)
         K_int8 = torch.tensor(

@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="RMS Normalization", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "RMS Normalization"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -46,10 +47,10 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         N = 4
-        input = torch.tensor([1.0, 2.0, 3.0, 4.0], device="cuda", dtype=dtype)
+        input = torch.tensor([1.0, 2.0, 3.0, 4.0], device=self.device, dtype=dtype)
         gamma = 1.0
         beta = 0.0
-        output = torch.empty(N, device="cuda", dtype=dtype)
+        output = torch.empty(N, device=self.device, dtype=dtype)
         eps = 1e-5
         return {
             "input": input,
@@ -68,10 +69,10 @@ class Challenge(ChallengeBase):
         N = 3
         tests.append(
             {
-                "input": torch.tensor([1.0, 2.0, 3.0], device="cuda", dtype=dtype),
+                "input": torch.tensor([1.0, 2.0, 3.0], device=self.device, dtype=dtype),
                 "gamma": 1.0,
                 "beta": 0.0,
-                "output": torch.empty(N, device="cuda", dtype=dtype),
+                "output": torch.empty(N, device=self.device, dtype=dtype),
                 "N": N,
                 "eps": 1e-5,
             }
@@ -81,10 +82,10 @@ class Challenge(ChallengeBase):
         N = 1
         tests.append(
             {
-                "input": torch.tensor([5.0], device="cuda", dtype=dtype),
+                "input": torch.tensor([5.0], device=self.device, dtype=dtype),
                 "gamma": 2.0,
                 "beta": -1.0,
-                "output": torch.empty(N, device="cuda", dtype=dtype),
+                "output": torch.empty(N, device=self.device, dtype=dtype),
                 "N": N,
                 "eps": 1e-5,
             }
@@ -94,10 +95,10 @@ class Challenge(ChallengeBase):
         N = 4
         tests.append(
             {
-                "input": torch.zeros(N, device="cuda", dtype=dtype),
+                "input": torch.zeros(N, device=self.device, dtype=dtype),
                 "gamma": 1.0,
                 "beta": 0.0,
-                "output": torch.empty(N, device="cuda", dtype=dtype),
+                "output": torch.empty(N, device=self.device, dtype=dtype),
                 "N": N,
                 "eps": 1e-5,
             }
@@ -107,10 +108,12 @@ class Challenge(ChallengeBase):
         N = 5
         tests.append(
             {
-                "input": torch.tensor([-1.0, -2.0, -3.0, -4.0, -5.0], device="cuda", dtype=dtype),
+                "input": torch.tensor(
+                    [-1.0, -2.0, -3.0, -4.0, -5.0], device=self.device, dtype=dtype
+                ),
                 "gamma": 1.0,
                 "beta": 0.0,
-                "output": torch.empty(N, device="cuda", dtype=dtype),
+                "output": torch.empty(N, device=self.device, dtype=dtype),
                 "N": N,
                 "eps": 1e-5,
             }
@@ -120,10 +123,10 @@ class Challenge(ChallengeBase):
         N = 3
         tests.append(
             {
-                "input": torch.tensor([0.0, 1.0, 2.0], device="cuda", dtype=dtype),
+                "input": torch.tensor([0.0, 1.0, 2.0], device=self.device, dtype=dtype),
                 "gamma": 0.5,
                 "beta": -1.0,
-                "output": torch.empty(N, device="cuda", dtype=dtype),
+                "output": torch.empty(N, device=self.device, dtype=dtype),
                 "N": N,
                 "eps": 1e-5,
             }
@@ -133,10 +136,10 @@ class Challenge(ChallengeBase):
         N = 8
         tests.append(
             {
-                "input": torch.empty(N, device="cuda", dtype=dtype).uniform_(-100.0, 100.0),
+                "input": torch.empty(N, device=self.device, dtype=dtype).uniform_(-100.0, 100.0),
                 "gamma": 1.5,
                 "beta": 0.0,
-                "output": torch.empty(N, device="cuda", dtype=dtype),
+                "output": torch.empty(N, device=self.device, dtype=dtype),
                 "N": N,
                 "eps": 1e-5,
             }
@@ -146,10 +149,10 @@ class Challenge(ChallengeBase):
         N = 2000
         tests.append(
             {
-                "input": torch.empty(N, device="cuda", dtype=dtype).uniform_(-100.0, 100.0),
+                "input": torch.empty(N, device=self.device, dtype=dtype).uniform_(-100.0, 100.0),
                 "gamma": 1.3,
                 "beta": 0.0,
-                "output": torch.empty(N, device="cuda", dtype=dtype),
+                "output": torch.empty(N, device=self.device, dtype=dtype),
                 "N": N,
                 "eps": 1e-5,
             }
@@ -161,10 +164,10 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         N = 100000
         return {
-            "input": torch.empty(N, device="cuda", dtype=dtype).uniform_(-10.0, 10.0),
+            "input": torch.empty(N, device=self.device, dtype=dtype).uniform_(-10.0, 10.0),
             "gamma": 1.5,
             "beta": 0.0,
-            "output": torch.empty(N, device="cuda", dtype=dtype),
+            "output": torch.empty(N, device=self.device, dtype=dtype),
             "N": N,
             "eps": 1e-5,
         }

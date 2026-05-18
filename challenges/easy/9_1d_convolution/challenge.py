@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="1D Convolution", atol=1e-04, rtol=1e-04, num_gpus=1, access_tier="free"
-        )
+    name = "1D Convolution"
+    atol = 0.0001
+    rtol = 0.0001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -43,9 +44,9 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        input_tensor = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device="cuda", dtype=dtype)
-        kernel_tensor = torch.tensor([1.0, 0.0, -1.0], device="cuda", dtype=dtype)
-        output_tensor = torch.empty(3, device="cuda", dtype=dtype)
+        input_tensor = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device=self.device, dtype=dtype)
+        kernel_tensor = torch.tensor([1.0, 0.0, -1.0], device=self.device, dtype=dtype)
+        output_tensor = torch.empty(3, device=self.device, dtype=dtype)
         return {
             "input": input_tensor,
             "kernel": kernel_tensor,
@@ -72,9 +73,9 @@ class Challenge(ChallengeBase):
             output_size = input_size - kernel_size + 1
             test_cases.append(
                 {
-                    "input": torch.tensor(input_vals, device="cuda", dtype=dtype),
-                    "kernel": torch.tensor(kernel_vals, device="cuda", dtype=dtype),
-                    "output": torch.empty(output_size, device="cuda", dtype=dtype),
+                    "input": torch.tensor(input_vals, device=self.device, dtype=dtype),
+                    "kernel": torch.tensor(kernel_vals, device=self.device, dtype=dtype),
+                    "output": torch.empty(output_size, device=self.device, dtype=dtype),
                     "input_size": input_size,
                     "kernel_size": kernel_size,
                 }
@@ -91,13 +92,13 @@ class Challenge(ChallengeBase):
             output_size = input_size - kernel_size + 1
             test_cases.append(
                 {
-                    "input": torch.empty(input_size, device="cuda", dtype=dtype).uniform_(
+                    "input": torch.empty(input_size, device=self.device, dtype=dtype).uniform_(
                         -10.0, 10.0
                     ),
-                    "kernel": torch.empty(kernel_size, device="cuda", dtype=dtype).uniform_(
+                    "kernel": torch.empty(kernel_size, device=self.device, dtype=dtype).uniform_(
                         -1.0, 1.0
                     ),
-                    "output": torch.empty(output_size, device="cuda", dtype=dtype),
+                    "output": torch.empty(output_size, device=self.device, dtype=dtype),
                     "input_size": input_size,
                     "kernel_size": kernel_size,
                 }
@@ -112,13 +113,13 @@ class Challenge(ChallengeBase):
             output_size = input_size - kernel_size + 1
             test_cases.append(
                 {
-                    "input": torch.empty(input_size, device="cuda", dtype=dtype).uniform_(
+                    "input": torch.empty(input_size, device=self.device, dtype=dtype).uniform_(
                         -1.0, 1.0
                     ),
-                    "kernel": torch.empty(kernel_size, device="cuda", dtype=dtype).uniform_(
+                    "kernel": torch.empty(kernel_size, device=self.device, dtype=dtype).uniform_(
                         -0.1, 0.1
                     ),
-                    "output": torch.empty(output_size, device="cuda", dtype=dtype),
+                    "output": torch.empty(output_size, device=self.device, dtype=dtype),
                     "input_size": input_size,
                     "kernel_size": kernel_size,
                 }
@@ -131,9 +132,9 @@ class Challenge(ChallengeBase):
         input_size, kernel_size = 1500000, 2047  # Large convolution for performance testing
         output_size = input_size - kernel_size + 1
         return {
-            "input": torch.empty(input_size, device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-            "kernel": torch.empty(kernel_size, device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-            "output": torch.empty(output_size, device="cuda", dtype=dtype),
+            "input": torch.empty(input_size, device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+            "kernel": torch.empty(kernel_size, device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+            "output": torch.empty(output_size, device=self.device, dtype=dtype),
             "input_size": input_size,
             "kernel_size": kernel_size,
         }

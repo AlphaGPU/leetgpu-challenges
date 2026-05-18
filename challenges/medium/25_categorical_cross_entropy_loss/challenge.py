@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Categorical Cross Entropy Loss",
-            atol=1e-05,
-            rtol=1e-05,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Categorical Cross Entropy Loss"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self, logits: torch.Tensor, true_labels: torch.Tensor, loss: torch.Tensor, N: int, C: int
@@ -48,9 +45,11 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         dtype_logits = torch.float32
         dtype_labels = torch.int32
-        logits = torch.tensor([[1.0, 2.0, 0.5], [0.1, 3.0, 1.5]], device="cuda", dtype=dtype_logits)
-        true_labels = torch.tensor([1, 1], device="cuda", dtype=dtype_labels)
-        loss = torch.zeros(1, device="cuda", dtype=dtype_logits)
+        logits = torch.tensor(
+            [[1.0, 2.0, 0.5], [0.1, 3.0, 1.5]], device=self.device, dtype=dtype_logits
+        )
+        true_labels = torch.tensor([1, 1], device=self.device, dtype=dtype_labels)
+        loss = torch.zeros(1, device=self.device, dtype=dtype_logits)
         return {
             "logits": logits,
             "true_labels": true_labels,
@@ -67,10 +66,10 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "logits": torch.tensor(
-                    [[1.0, 2.0, 0.5], [0.1, 3.0, 1.5]], device="cuda", dtype=dtype_logits
+                    [[1.0, 2.0, 0.5], [0.1, 3.0, 1.5]], device=self.device, dtype=dtype_logits
                 ),
-                "true_labels": torch.tensor([1, 1], device="cuda", dtype=dtype_labels),
-                "loss": torch.zeros(1, device="cuda", dtype=dtype_logits),
+                "true_labels": torch.tensor([1, 1], device=self.device, dtype=dtype_labels),
+                "loss": torch.zeros(1, device=self.device, dtype=dtype_logits),
                 "N": 2,
                 "C": 3,
             }
@@ -80,11 +79,11 @@ class Challenge(ChallengeBase):
             {
                 "logits": torch.tensor(
                     [[-0.5, 1.5, 0.0, 1.0], [2.0, -1.0, 0.5, 0.5], [0.0, 0.0, 0.0, 0.0]],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype_logits,
                 ),
-                "true_labels": torch.tensor([3, 0, 1], device="cuda", dtype=dtype_labels),
-                "loss": torch.zeros(1, device="cuda", dtype=dtype_logits),
+                "true_labels": torch.tensor([3, 0, 1], device=self.device, dtype=dtype_labels),
+                "loss": torch.zeros(1, device=self.device, dtype=dtype_logits),
                 "N": 3,
                 "C": 4,
             }
@@ -93,10 +92,10 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "logits": torch.tensor(
-                    [[0.1, 0.2, 0.3, 0.4, 0.5]], device="cuda", dtype=dtype_logits
+                    [[0.1, 0.2, 0.3, 0.4, 0.5]], device=self.device, dtype=dtype_logits
                 ),
-                "true_labels": torch.tensor([4], device="cuda", dtype=dtype_labels),
-                "loss": torch.zeros(1, device="cuda", dtype=dtype_logits),
+                "true_labels": torch.tensor([4], device=self.device, dtype=dtype_labels),
+                "loss": torch.zeros(1, device=self.device, dtype=dtype_logits),
                 "N": 1,
                 "C": 5,
             }
@@ -104,9 +103,11 @@ class Challenge(ChallengeBase):
         # uniform_logits_correct_label
         tests.append(
             {
-                "logits": torch.tensor([[1.0] * 5, [1.0] * 5], device="cuda", dtype=dtype_logits),
-                "true_labels": torch.tensor([0, 0], device="cuda", dtype=dtype_labels),
-                "loss": torch.zeros(1, device="cuda", dtype=dtype_logits),
+                "logits": torch.tensor(
+                    [[1.0] * 5, [1.0] * 5], device=self.device, dtype=dtype_logits
+                ),
+                "true_labels": torch.tensor([0, 0], device=self.device, dtype=dtype_labels),
+                "loss": torch.zeros(1, device=self.device, dtype=dtype_logits),
                 "N": 2,
                 "C": 5,
             }
@@ -116,11 +117,11 @@ class Challenge(ChallengeBase):
             {
                 "logits": torch.tensor(
                     [[-5.0, -5.0, 10.0, -5.0], [10.0, -5.0, -5.0, -5.0]],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype_logits,
                 ),
-                "true_labels": torch.tensor([2, 0], device="cuda", dtype=dtype_labels),
-                "loss": torch.zeros(1, device="cuda", dtype=dtype_logits),
+                "true_labels": torch.tensor([2, 0], device=self.device, dtype=dtype_labels),
+                "loss": torch.zeros(1, device=self.device, dtype=dtype_logits),
                 "N": 2,
                 "C": 4,
             }
@@ -129,10 +130,10 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "logits": torch.tensor(
-                    [[10.0, -5.0, -5.0], [-5.0, 10.0, -5.0]], device="cuda", dtype=dtype_logits
+                    [[10.0, -5.0, -5.0], [-5.0, 10.0, -5.0]], device=self.device, dtype=dtype_logits
                 ),
-                "true_labels": torch.tensor([1, 2], device="cuda", dtype=dtype_labels),
-                "loss": torch.zeros(1, device="cuda", dtype=dtype_logits),
+                "true_labels": torch.tensor([1, 2], device=self.device, dtype=dtype_labels),
+                "loss": torch.zeros(1, device=self.device, dtype=dtype_logits),
                 "N": 2,
                 "C": 3,
             }
@@ -140,11 +141,11 @@ class Challenge(ChallengeBase):
         # larger_batch_random
         tests.append(
             {
-                "logits": torch.empty(100, 5, device="cuda", dtype=dtype_logits).uniform_(
+                "logits": torch.empty(100, 5, device=self.device, dtype=dtype_logits).uniform_(
                     -5.0, 5.0
                 ),
-                "true_labels": torch.randint(0, 5, (100,), device="cuda", dtype=dtype_labels),
-                "loss": torch.zeros(1, device="cuda", dtype=dtype_logits),
+                "true_labels": torch.randint(0, 5, (100,), device=self.device, dtype=dtype_labels),
+                "loss": torch.zeros(1, device=self.device, dtype=dtype_logits),
                 "N": 100,
                 "C": 5,
             }
@@ -154,9 +155,11 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype_logits = torch.float32
         dtype_labels = torch.int32
-        logits = torch.empty(10000, 1000, device="cuda", dtype=dtype_logits).uniform_(-10.0, 10.0)
-        true_labels = torch.randint(0, 1000, (10000,), device="cuda", dtype=dtype_labels)
-        loss = torch.zeros(1, device="cuda", dtype=dtype_logits)
+        logits = torch.empty(10000, 1000, device=self.device, dtype=dtype_logits).uniform_(
+            -10.0, 10.0
+        )
+        true_labels = torch.randint(0, 1000, (10000,), device=self.device, dtype=dtype_labels)
+        loss = torch.zeros(1, device=self.device, dtype=dtype_logits)
         return {
             "logits": logits,
             "true_labels": true_labels,

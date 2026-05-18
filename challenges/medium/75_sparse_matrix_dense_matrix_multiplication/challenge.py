@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Sparse Matrix-Dense Matrix Multiplication",
-            atol=1e-03,
-            rtol=1e-03,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Sparse Matrix-Dense Matrix Multiplication"
+    atol = 0.001
+    rtol = 0.001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -46,9 +43,6 @@ class Challenge(ChallengeBase):
         ), f"C.shape {C.shape} does not match expected {(M, K)} or {(M * K,)}"
         assert A_matrix.dtype == torch.float32
         assert B_matrix.dtype == torch.float32
-        assert A_matrix.device.type == "cuda"
-        assert B_matrix.device.type == "cuda"
-        assert C.device.type == "cuda"
         result = torch.matmul(A_matrix, B_matrix)
         C.copy_(result.view(C.shape))
 
@@ -71,7 +65,7 @@ class Challenge(ChallengeBase):
                 [0.0, 3.0, 0.0, 0.0],
                 [0.0, 0.0, 4.0, 0.0],
             ],
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
         B = torch.tensor(
@@ -81,10 +75,10 @@ class Challenge(ChallengeBase):
                 [5.0, 6.0],
                 [7.0, 8.0],
             ],
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
-        C = torch.empty((3, 2), device="cuda", dtype=dtype)
+        C = torch.empty((3, 2), device=self.device, dtype=dtype)
         return {
             "A": A,
             "B": B,
@@ -102,9 +96,9 @@ class Challenge(ChallengeBase):
         # edge_1x1x1
         tests.append(
             {
-                "A": torch.tensor([[3.0]], device="cuda", dtype=dtype),
-                "B": torch.tensor([[2.0]], device="cuda", dtype=dtype),
-                "C": torch.empty((1, 1), device="cuda", dtype=dtype),
+                "A": torch.tensor([[3.0]], device=self.device, dtype=dtype),
+                "B": torch.tensor([[2.0]], device=self.device, dtype=dtype),
+                "C": torch.empty((1, 1), device=self.device, dtype=dtype),
                 "M": 1,
                 "N": 1,
                 "K": 1,
@@ -115,9 +109,9 @@ class Challenge(ChallengeBase):
         # edge_2x2_k1_spmv_like
         tests.append(
             {
-                "A": torch.tensor([[1.0, 0.0], [0.0, 2.0]], device="cuda", dtype=dtype),
-                "B": torch.tensor([[3.0], [4.0]], device="cuda", dtype=dtype),
-                "C": torch.empty((2, 1), device="cuda", dtype=dtype),
+                "A": torch.tensor([[1.0, 0.0], [0.0, 2.0]], device=self.device, dtype=dtype),
+                "B": torch.tensor([[3.0], [4.0]], device=self.device, dtype=dtype),
+                "C": torch.empty((2, 1), device=self.device, dtype=dtype),
                 "M": 2,
                 "N": 2,
                 "K": 1,
@@ -128,9 +122,11 @@ class Challenge(ChallengeBase):
         # edge_zero_matrix
         tests.append(
             {
-                "A": torch.zeros((3, 3), device="cuda", dtype=dtype),
-                "B": torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], device="cuda", dtype=dtype),
-                "C": torch.empty((3, 2), device="cuda", dtype=dtype),
+                "A": torch.zeros((3, 3), device=self.device, dtype=dtype),
+                "B": torch.tensor(
+                    [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], device=self.device, dtype=dtype
+                ),
+                "C": torch.empty((3, 2), device=self.device, dtype=dtype),
                 "M": 3,
                 "N": 3,
                 "K": 2,
@@ -141,13 +137,13 @@ class Challenge(ChallengeBase):
         # edge_identity_a
         tests.append(
             {
-                "A": torch.eye(4, device="cuda", dtype=dtype),
+                "A": torch.eye(4, device=self.device, dtype=dtype),
                 "B": torch.tensor(
                     [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [10.0, 11.0, 12.0]],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype,
                 ),
-                "C": torch.empty((4, 3), device="cuda", dtype=dtype),
+                "C": torch.empty((4, 3), device=self.device, dtype=dtype),
                 "M": 4,
                 "N": 4,
                 "K": 3,
@@ -157,14 +153,14 @@ class Challenge(ChallengeBase):
 
         # power_of_2_16x16x8
         M, N, K = 16, 16, 8
-        A_dense = torch.empty((M, N), device="cuda", dtype=dtype).uniform_(-2.0, 2.0)
-        mask = torch.rand((M, N), device="cuda") > 0.65
+        A_dense = torch.empty((M, N), device=self.device, dtype=dtype).uniform_(-2.0, 2.0)
+        mask = torch.rand((M, N), device=self.device) > 0.65
         A_sparse = A_dense * mask
         tests.append(
             {
                 "A": A_sparse,
-                "B": torch.empty((N, K), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "C": torch.empty((M, K), device="cuda", dtype=dtype),
+                "B": torch.empty((N, K), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "C": torch.empty((M, K), device=self.device, dtype=dtype),
                 "M": M,
                 "N": N,
                 "K": K,
@@ -174,14 +170,14 @@ class Challenge(ChallengeBase):
 
         # power_of_2_64x32x16
         M, N, K = 64, 32, 16
-        A_dense = torch.empty((M, N), device="cuda", dtype=dtype).uniform_(-3.0, 3.0)
-        mask = torch.rand((M, N), device="cuda") > 0.70
+        A_dense = torch.empty((M, N), device=self.device, dtype=dtype).uniform_(-3.0, 3.0)
+        mask = torch.rand((M, N), device=self.device) > 0.70
         A_sparse = A_dense * mask
         tests.append(
             {
                 "A": A_sparse,
-                "B": torch.empty((N, K), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "C": torch.empty((M, K), device="cuda", dtype=dtype),
+                "B": torch.empty((N, K), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "C": torch.empty((M, K), device=self.device, dtype=dtype),
                 "M": M,
                 "N": N,
                 "K": K,
@@ -191,14 +187,14 @@ class Challenge(ChallengeBase):
 
         # non_power_of_2_negative_values
         M, N, K = 30, 50, 20
-        A_dense = torch.empty((M, N), device="cuda", dtype=dtype).uniform_(-5.0, 5.0)
-        mask = torch.rand((M, N), device="cuda") > 0.65
+        A_dense = torch.empty((M, N), device=self.device, dtype=dtype).uniform_(-5.0, 5.0)
+        mask = torch.rand((M, N), device=self.device) > 0.65
         A_sparse = A_dense * mask
         tests.append(
             {
                 "A": A_sparse,
-                "B": torch.empty((N, K), device="cuda", dtype=dtype).uniform_(-3.0, 3.0),
-                "C": torch.empty((M, K), device="cuda", dtype=dtype),
+                "B": torch.empty((N, K), device=self.device, dtype=dtype).uniform_(-3.0, 3.0),
+                "C": torch.empty((M, K), device=self.device, dtype=dtype),
                 "M": M,
                 "N": N,
                 "K": K,
@@ -208,14 +204,14 @@ class Challenge(ChallengeBase):
 
         # non_power_of_2_255x100x33
         M, N, K = 255, 100, 33
-        A_dense = torch.empty((M, N), device="cuda", dtype=dtype).uniform_(-2.0, 2.0)
-        mask = torch.rand((M, N), device="cuda") > 0.70
+        A_dense = torch.empty((M, N), device=self.device, dtype=dtype).uniform_(-2.0, 2.0)
+        mask = torch.rand((M, N), device=self.device) > 0.70
         A_sparse = A_dense * mask
         tests.append(
             {
                 "A": A_sparse,
-                "B": torch.empty((N, K), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "C": torch.empty((M, K), device="cuda", dtype=dtype),
+                "B": torch.empty((N, K), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "C": torch.empty((M, K), device=self.device, dtype=dtype),
                 "M": M,
                 "N": N,
                 "K": K,
@@ -225,14 +221,14 @@ class Challenge(ChallengeBase):
 
         # realistic_1000x500x64
         M, N, K = 1000, 500, 64
-        A_dense = torch.empty((M, N), device="cuda", dtype=dtype).uniform_(-1.0, 1.0)
-        mask = torch.rand((M, N), device="cuda") > 0.65
+        A_dense = torch.empty((M, N), device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+        mask = torch.rand((M, N), device=self.device) > 0.65
         A_sparse = A_dense * mask
         tests.append(
             {
                 "A": A_sparse,
-                "B": torch.empty((N, K), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "C": torch.empty((M, K), device="cuda", dtype=dtype),
+                "B": torch.empty((N, K), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "C": torch.empty((M, K), device=self.device, dtype=dtype),
                 "M": M,
                 "N": N,
                 "K": K,
@@ -247,12 +243,12 @@ class Challenge(ChallengeBase):
         M = 4096
         N = 2048
         K = 512
-        A_dense = torch.empty((M, N), device="cuda", dtype=dtype).uniform_(-1.0, 1.0)
-        mask = torch.rand((M, N), device="cuda") > 0.65
+        A_dense = torch.empty((M, N), device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+        mask = torch.rand((M, N), device=self.device) > 0.65
         A_sparse = A_dense * mask
         nnz = int(mask.sum().item())
-        B = torch.empty((N, K), device="cuda", dtype=dtype).uniform_(-1.0, 1.0)
-        C = torch.empty((M, K), device="cuda", dtype=dtype)
+        B = torch.empty((N, K), device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+        C = torch.empty((M, K), device=self.device, dtype=dtype)
         return {
             "A": A_sparse,
             "B": B,

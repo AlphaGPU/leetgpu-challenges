@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Simple Inference", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Simple Inference"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, input: torch.Tensor, model: nn.Module, output: torch.Tensor):
         assert input.device == output.device
@@ -28,7 +29,7 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
 
         # Create a simple linear model
         model = nn.Linear(2, 2)
@@ -47,7 +48,7 @@ class Challenge(ChallengeBase):
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         tests = []
 
         # Test 1: Basic 2->2 linear layer
@@ -169,7 +170,7 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
 
         # Large model for performance testing
         model = nn.Linear(512, 256)

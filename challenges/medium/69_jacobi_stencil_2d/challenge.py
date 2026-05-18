@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="2D Jacobi Stencil",
-            atol=1e-05,
-            rtol=1e-05,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "2D Jacobi Stencil"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -25,7 +22,6 @@ class Challenge(ChallengeBase):
         assert input.shape == (rows, cols)
         assert output.shape == (rows, cols)
         assert input.dtype == torch.float32
-        assert input.device.type == "cuda"
 
         # Copy boundary cells unchanged
         output.copy_(input)
@@ -56,10 +52,10 @@ class Challenge(ChallengeBase):
                 [9.0, 10.0, 11.0, 12.0],
                 [13.0, 14.0, 15.0, 16.0],
             ],
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
-        output = torch.empty((4, 4), device="cuda", dtype=dtype)
+        output = torch.empty((4, 4), device=self.device, dtype=dtype)
         return {
             "input": input,
             "output": output,
@@ -76,10 +72,10 @@ class Challenge(ChallengeBase):
             {
                 "input": torch.tensor(
                     [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype,
                 ),
-                "output": torch.empty((3, 3), device="cuda", dtype=dtype),
+                "output": torch.empty((3, 3), device=self.device, dtype=dtype),
                 "rows": 3,
                 "cols": 3,
             }
@@ -88,8 +84,8 @@ class Challenge(ChallengeBase):
         # minimal_1x1 (all boundary, no interior cells)
         tests.append(
             {
-                "input": torch.tensor([[42.0]], device="cuda", dtype=dtype),
-                "output": torch.empty((1, 1), device="cuda", dtype=dtype),
+                "input": torch.tensor([[42.0]], device=self.device, dtype=dtype),
+                "output": torch.empty((1, 1), device=self.device, dtype=dtype),
                 "rows": 1,
                 "cols": 1,
             }
@@ -98,8 +94,8 @@ class Challenge(ChallengeBase):
         # single_row (all boundary)
         tests.append(
             {
-                "input": torch.tensor([[1.0, 2.0, 3.0, 4.0]], device="cuda", dtype=dtype),
-                "output": torch.empty((1, 4), device="cuda", dtype=dtype),
+                "input": torch.tensor([[1.0, 2.0, 3.0, 4.0]], device=self.device, dtype=dtype),
+                "output": torch.empty((1, 4), device=self.device, dtype=dtype),
                 "rows": 1,
                 "cols": 4,
             }
@@ -108,8 +104,10 @@ class Challenge(ChallengeBase):
         # single_col (all boundary)
         tests.append(
             {
-                "input": torch.tensor([[1.0], [2.0], [3.0], [4.0]], device="cuda", dtype=dtype),
-                "output": torch.empty((4, 1), device="cuda", dtype=dtype),
+                "input": torch.tensor(
+                    [[1.0], [2.0], [3.0], [4.0]], device=self.device, dtype=dtype
+                ),
+                "output": torch.empty((4, 1), device=self.device, dtype=dtype),
                 "rows": 4,
                 "cols": 1,
             }
@@ -118,8 +116,8 @@ class Challenge(ChallengeBase):
         # all_zeros (interior should stay zero)
         tests.append(
             {
-                "input": torch.zeros((16, 16), device="cuda", dtype=dtype),
-                "output": torch.empty((16, 16), device="cuda", dtype=dtype),
+                "input": torch.zeros((16, 16), device=self.device, dtype=dtype),
+                "output": torch.empty((16, 16), device=self.device, dtype=dtype),
                 "rows": 16,
                 "cols": 16,
             }
@@ -128,8 +126,8 @@ class Challenge(ChallengeBase):
         # uniform_constant (interior stays the same when all values equal)
         tests.append(
             {
-                "input": torch.full((32, 32), 3.14, device="cuda", dtype=dtype),
-                "output": torch.empty((32, 32), device="cuda", dtype=dtype),
+                "input": torch.full((32, 32), 3.14, device=self.device, dtype=dtype),
+                "output": torch.empty((32, 32), device=self.device, dtype=dtype),
                 "rows": 32,
                 "cols": 32,
             }
@@ -138,8 +136,8 @@ class Challenge(ChallengeBase):
         # power_of_2_square_64
         tests.append(
             {
-                "input": torch.empty((64, 64), device="cuda", dtype=dtype).uniform_(-5.0, 5.0),
-                "output": torch.empty((64, 64), device="cuda", dtype=dtype),
+                "input": torch.empty((64, 64), device=self.device, dtype=dtype).uniform_(-5.0, 5.0),
+                "output": torch.empty((64, 64), device=self.device, dtype=dtype),
                 "rows": 64,
                 "cols": 64,
             }
@@ -148,8 +146,10 @@ class Challenge(ChallengeBase):
         # power_of_2_square_128
         tests.append(
             {
-                "input": torch.empty((128, 128), device="cuda", dtype=dtype).uniform_(-10.0, 10.0),
-                "output": torch.empty((128, 128), device="cuda", dtype=dtype),
+                "input": torch.empty((128, 128), device=self.device, dtype=dtype).uniform_(
+                    -10.0, 10.0
+                ),
+                "output": torch.empty((128, 128), device=self.device, dtype=dtype),
                 "rows": 128,
                 "cols": 128,
             }
@@ -158,8 +158,8 @@ class Challenge(ChallengeBase):
         # non_power_of_2_30x30
         tests.append(
             {
-                "input": torch.empty((30, 30), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "output": torch.empty((30, 30), device="cuda", dtype=dtype),
+                "input": torch.empty((30, 30), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "output": torch.empty((30, 30), device=self.device, dtype=dtype),
                 "rows": 30,
                 "cols": 30,
             }
@@ -168,8 +168,10 @@ class Challenge(ChallengeBase):
         # non_power_of_2_100x100
         tests.append(
             {
-                "input": torch.empty((100, 100), device="cuda", dtype=dtype).uniform_(-3.0, 3.0),
-                "output": torch.empty((100, 100), device="cuda", dtype=dtype),
+                "input": torch.empty((100, 100), device=self.device, dtype=dtype).uniform_(
+                    -3.0, 3.0
+                ),
+                "output": torch.empty((100, 100), device=self.device, dtype=dtype),
                 "rows": 100,
                 "cols": 100,
             }
@@ -178,8 +180,10 @@ class Challenge(ChallengeBase):
         # non_square_255x33
         tests.append(
             {
-                "input": torch.empty((255, 33), device="cuda", dtype=dtype).uniform_(-2.0, 2.0),
-                "output": torch.empty((255, 33), device="cuda", dtype=dtype),
+                "input": torch.empty((255, 33), device=self.device, dtype=dtype).uniform_(
+                    -2.0, 2.0
+                ),
+                "output": torch.empty((255, 33), device=self.device, dtype=dtype),
                 "rows": 255,
                 "cols": 33,
             }
@@ -188,8 +192,10 @@ class Challenge(ChallengeBase):
         # negative_values_non_square_17x97
         tests.append(
             {
-                "input": torch.empty((17, 97), device="cuda", dtype=dtype).uniform_(-100.0, 0.0),
-                "output": torch.empty((17, 97), device="cuda", dtype=dtype),
+                "input": torch.empty((17, 97), device=self.device, dtype=dtype).uniform_(
+                    -100.0, 0.0
+                ),
+                "output": torch.empty((17, 97), device=self.device, dtype=dtype),
                 "rows": 17,
                 "cols": 97,
             }
@@ -198,8 +204,10 @@ class Challenge(ChallengeBase):
         # realistic_medium_512x256
         tests.append(
             {
-                "input": torch.empty((512, 256), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "output": torch.empty((512, 256), device="cuda", dtype=dtype),
+                "input": torch.empty((512, 256), device=self.device, dtype=dtype).uniform_(
+                    -1.0, 1.0
+                ),
+                "output": torch.empty((512, 256), device=self.device, dtype=dtype),
                 "rows": 512,
                 "cols": 256,
             }
@@ -208,8 +216,10 @@ class Challenge(ChallengeBase):
         # realistic_large_1024x1024
         tests.append(
             {
-                "input": torch.empty((1024, 1024), device="cuda", dtype=dtype).uniform_(-5.0, 5.0),
-                "output": torch.empty((1024, 1024), device="cuda", dtype=dtype),
+                "input": torch.empty((1024, 1024), device=self.device, dtype=dtype).uniform_(
+                    -5.0, 5.0
+                ),
+                "output": torch.empty((1024, 1024), device=self.device, dtype=dtype),
                 "rows": 1024,
                 "cols": 1024,
             }
@@ -222,8 +232,8 @@ class Challenge(ChallengeBase):
         rows = 8192
         cols = 8192
         return {
-            "input": torch.empty((rows, cols), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-            "output": torch.empty((rows, cols), device="cuda", dtype=dtype),
+            "input": torch.empty((rows, cols), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+            "output": torch.empty((rows, cols), device=self.device, dtype=dtype),
             "rows": rows,
             "cols": cols,
         }

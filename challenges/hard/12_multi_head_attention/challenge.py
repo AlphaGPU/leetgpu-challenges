@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Multi-Head Attention", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Multi-Head Attention"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -52,10 +53,16 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        Q = torch.tensor([[1.0, 0.0, 2.0, 3.0], [4.0, 5.0, 6.0, 7.0]], device="cuda", dtype=dtype)
-        K = torch.tensor([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]], device="cuda", dtype=dtype)
-        V = torch.tensor([[0.5, 1.0, 1.5, 2.0], [2.5, 3.0, 3.5, 4.0]], device="cuda", dtype=dtype)
-        output = torch.empty(2, 4, device="cuda", dtype=dtype)
+        Q = torch.tensor(
+            [[1.0, 0.0, 2.0, 3.0], [4.0, 5.0, 6.0, 7.0]], device=self.device, dtype=dtype
+        )
+        K = torch.tensor(
+            [[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]], device=self.device, dtype=dtype
+        )
+        V = torch.tensor(
+            [[0.5, 1.0, 1.5, 2.0], [2.5, 3.0, 3.5, 4.0]], device=self.device, dtype=dtype
+        )
+        output = torch.empty(2, 4, device=self.device, dtype=dtype)
         return {
             "Q": Q,
             "K": K,
@@ -70,28 +77,34 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         test_cases = []
         # basic_example
-        Q = torch.tensor([[1.0, 0.0, 2.0, 3.0], [4.0, 5.0, 6.0, 7.0]], device="cuda", dtype=dtype)
-        K = torch.tensor([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]], device="cuda", dtype=dtype)
-        V = torch.tensor([[0.5, 1.0, 1.5, 2.0], [2.5, 3.0, 3.5, 4.0]], device="cuda", dtype=dtype)
-        output = torch.empty(2, 4, device="cuda", dtype=dtype)
+        Q = torch.tensor(
+            [[1.0, 0.0, 2.0, 3.0], [4.0, 5.0, 6.0, 7.0]], device=self.device, dtype=dtype
+        )
+        K = torch.tensor(
+            [[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]], device=self.device, dtype=dtype
+        )
+        V = torch.tensor(
+            [[0.5, 1.0, 1.5, 2.0], [2.5, 3.0, 3.5, 4.0]], device=self.device, dtype=dtype
+        )
+        output = torch.empty(2, 4, device=self.device, dtype=dtype)
         test_cases.append({"Q": Q, "K": K, "V": V, "output": output, "N": 2, "d_model": 4, "h": 2})
         # single_head
-        Q = torch.tensor([[1.0, 1.0], [2.0, 2.0]], device="cuda", dtype=dtype)
-        K = torch.tensor([[1.0, 1.0], [1.0, 1.0]], device="cuda", dtype=dtype)
-        V = torch.tensor([[2.0, 3.0], [4.0, 5.0]], device="cuda", dtype=dtype)
-        output = torch.empty(2, 2, device="cuda", dtype=dtype)
+        Q = torch.tensor([[1.0, 1.0], [2.0, 2.0]], device=self.device, dtype=dtype)
+        K = torch.tensor([[1.0, 1.0], [1.0, 1.0]], device=self.device, dtype=dtype)
+        V = torch.tensor([[2.0, 3.0], [4.0, 5.0]], device=self.device, dtype=dtype)
+        output = torch.empty(2, 2, device=self.device, dtype=dtype)
         test_cases.append({"Q": Q, "K": K, "V": V, "output": output, "N": 2, "d_model": 2, "h": 1})
         # four_heads (random)
-        Q = torch.empty(4, 4, device="cuda", dtype=dtype).uniform_(-1.0, 1.0)
-        K = torch.empty(4, 4, device="cuda", dtype=dtype).uniform_(-1.0, 1.0)
-        V = torch.empty(4, 4, device="cuda", dtype=dtype).uniform_(-1.0, 1.0)
-        output = torch.empty(4, 4, device="cuda", dtype=dtype)
+        Q = torch.empty(4, 4, device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+        K = torch.empty(4, 4, device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+        V = torch.empty(4, 4, device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+        output = torch.empty(4, 4, device=self.device, dtype=dtype)
         test_cases.append({"Q": Q, "K": K, "V": V, "output": output, "N": 4, "d_model": 4, "h": 4})
         # medium_size (random)
-        Q = torch.empty(32, 32, device="cuda", dtype=dtype).uniform_(-1.0, 1.0)
-        K = torch.empty(32, 32, device="cuda", dtype=dtype).uniform_(-1.0, 1.0)
-        V = torch.empty(32, 32, device="cuda", dtype=dtype).uniform_(-1.0, 1.0)
-        output = torch.empty(32, 32, device="cuda", dtype=dtype)
+        Q = torch.empty(32, 32, device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+        K = torch.empty(32, 32, device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+        V = torch.empty(32, 32, device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+        output = torch.empty(32, 32, device=self.device, dtype=dtype)
         test_cases.append(
             {"Q": Q, "K": K, "V": V, "output": output, "N": 32, "d_model": 32, "h": 8}
         )
@@ -99,10 +112,10 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        Q = torch.empty(1024, 1024, device="cuda", dtype=dtype).uniform_(-10.0, 10.0)
-        K = torch.empty(1024, 1024, device="cuda", dtype=dtype).uniform_(-10.0, 10.0)
-        V = torch.empty(1024, 1024, device="cuda", dtype=dtype).uniform_(-10.0, 10.0)
-        output = torch.zeros(1024, 1024, device="cuda", dtype=dtype)
+        Q = torch.empty(1024, 1024, device=self.device, dtype=dtype).uniform_(-10.0, 10.0)
+        K = torch.empty(1024, 1024, device=self.device, dtype=dtype).uniform_(-10.0, 10.0)
+        V = torch.empty(1024, 1024, device=self.device, dtype=dtype).uniform_(-10.0, 10.0)
+        output = torch.zeros(1024, 1024, device=self.device, dtype=dtype)
         return {
             "Q": Q,
             "K": K,
