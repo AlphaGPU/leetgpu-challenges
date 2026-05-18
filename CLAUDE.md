@@ -38,21 +38,23 @@ Must inherit from `ChallengeBase` and follow Black formatting (line length 100).
 
 ### Required Methods
 
-#### `__init__`
+#### Class attributes (no `__init__`)
 ```python
-super().__init__(
-    name="Challenge Display Name",  # Used to generate URLs — use URL-friendly characters only (no parentheses, special symbols, etc.)
-    atol=1e-05,           # Absolute tolerance (float32 default)
-    rtol=1e-05,           # Relative tolerance (float32 default)
-    num_gpus=1,
-    access_tier="free"    # "free" or "premium"
-)
+class Challenge(ChallengeBase):
+    name = "Challenge Display Name"  # Used to generate URLs — URL-friendly characters only (no parentheses or special symbols)
+    atol = 1e-05           # Absolute tolerance (float32 default)
+    rtol = 1e-05           # Relative tolerance (float32 default)
+    num_gpus = 1
+    access_tier = "free"   # "free" or "premium"
 ```
+
+No `__init__` — `ChallengeBase` provides one that accepts `device` (default `"cuda"`). All tensor allocations in `generate_*_test` methods must use `device=self.device`, never hardcoded `device="cuda"`.
 
 #### `reference_impl(self, ...)`
 - Same parameters as user's `solve` function
-- Must include assertions on shape, dtype, and device (`cuda`)
+- Must include assertions on shape and dtype (no device assertions — the runner targets multiple accelerators)
 - Use PyTorch operations (not Python loops) for performance
+- **Must work on both CUDA and XLA (TPU) devices.** Stick to standard PyTorch ops that have XLA lowerings. No CUDA-only kernels (`flash_attn`, `sdp_kernel`, manual cuDNN flag flips), no `.is_cuda` / `.device.type == "cuda"` checks, no `torch.cuda.*` API.
 
 #### `get_solve_signature(self) -> Dict[str, tuple]`
 Maps parameter names to `(ctype, direction)` tuples.
@@ -186,9 +188,11 @@ Verify every item before submitting. This is the single source of truth — work
 
 ### challenge.py
 - [ ] `class Challenge` inherits `ChallengeBase`
-- [ ] `__init__` calls `super().__init__()` with name, atol, rtol, num_gpus, access_tier
-- [ ] `reference_impl` has assertions on shape, dtype, and device
-- [ ] All 6 methods present: `__init__`, `reference_impl`, `get_solve_signature`, `generate_example_test`, `generate_functional_test`, `generate_performance_test`
+- [ ] Five class attributes set: `name`, `atol`, `rtol`, `num_gpus`, `access_tier` (no `__init__`)
+- [ ] `reference_impl` has assertions on shape and dtype only (no device-specific checks)
+- [ ] `reference_impl` works on both CUDA and XLA — standard PyTorch ops only, no CUDA-only kernels or `torch.cuda.*` API
+- [ ] All tensor allocations use `device=self.device`, never hardcoded `"cuda"`
+- [ ] All 5 required methods present: `reference_impl`, `get_solve_signature`, `generate_example_test`, `generate_functional_test`, `generate_performance_test`
 - [ ] `generate_functional_test` returns 7-10 cases: edge cases (1-4 elements), powers-of-2, non-powers-of-2, realistic sizes, zeros, negatives
 - [ ] `generate_performance_test` fits 5x in 16GB VRAM (Tesla T4)
 
