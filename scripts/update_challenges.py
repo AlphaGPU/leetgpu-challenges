@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 SERVICE_URL = os.getenv("SERVICE_URL", "http://localhost:8080")
 LEETGPU_API_KEY = os.getenv("LEETGPU_API_KEY")
 
-GPUS = ["H100", "H200", "T4", "B200", "A100-80GB"]
+ACCELERATORS = ["H100", "H200", "T4", "B200", "A100-80GB"]
 
 
 def extract_id(name: str) -> int:
@@ -120,7 +120,7 @@ def load_challenge(problem_dir: Path) -> Dict:
         "challengeCode": challenge_path.read_text(),
         "difficultyLevel": get_difficulty(problem_dir),
         "accessTier": access_tier,
-        "gpus": GPUS,  # TODO: get from challenge.py or API
+        "accelerators": ACCELERATORS,  # TODO: get from challenge.py or API
         "starterCode": starter_code,
     }
 
