@@ -1,6 +1,7 @@
 from gpu.host import DeviceContext
 from memory import UnsafePointer
 
+
 # x, weight, bias, output are device pointers
 @export
 def solve(
