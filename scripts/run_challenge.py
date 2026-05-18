@@ -51,7 +51,7 @@ def submit_solution(
     file_name: str,
     content: str,
     language: str,
-    gpu: str,
+    accelerator: str,
     action: str,
     public: bool,
 ) -> bool:
@@ -64,7 +64,7 @@ def submit_solution(
             "submission": {
                 "files": [{"name": file_name, "content": content}],
                 "language": language,
-                "gpu": gpu,
+                "accelerator": accelerator,
                 "mode": "accelerated",
                 "public": public,
                 "challengeCode": challenge_code,
@@ -95,7 +95,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Submit a solution via WebSocket API.")
     parser.add_argument("challenge_path", type=Path, help="Path to the challenge directory")
     parser.add_argument("--language", default="cuda", help="Language (default: cuda)")
-    parser.add_argument("--gpu", default="T4", help="GPU name (default: T4)")
+    parser.add_argument("--accelerator", default="T4", help="Accelerator name (default: T4)")
     parser.add_argument(
         "--action", default="run", choices=["run", "submit"], help="Action (run or submit)"
     )
@@ -122,7 +122,7 @@ def main() -> int:
         file_name=file_name,
         content=content,
         language=args.language,
-        gpu=args.gpu,
+        accelerator=args.accelerator,
         action=args.action,
         public=False,
     )
