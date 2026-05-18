@@ -7,14 +7,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Decaying Causal Attention",
-            atol=1e-03,
-            rtol=1e-03,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Decaying Causal Attention"
+    atol = 0.001
+    rtol = 0.001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -31,10 +28,6 @@ class Challenge(ChallengeBase):
         assert V.shape == (seq_len, d_model)
         assert output.shape == (seq_len, d_model)
         assert Q.dtype == K.dtype == V.dtype == output.dtype == torch.float32
-        assert Q.device.type == "cuda"
-        assert K.device.type == "cuda"
-        assert V.device.type == "cuda"
-        assert output.device.type == "cuda"
 
         scale = math.sqrt(d_model)
         positions = torch.arange(seq_len, device=Q.device, dtype=Q.dtype)
@@ -59,7 +52,7 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         # Orthogonal K rows → QK^T / sqrt(4) = [[0.5, 0.5], [0.5, 0.5]].
         # With gamma=0.5 decay mask [[1, 0], [0.5, 1]], weighted attn = [[0.5, 0], [0.25, 0.5]].
         # Output row 0 = 0.5 * V[0]; row 1 = 0.25 * V[0] + 0.5 * V[1] = [3, 6, 9, 12].
@@ -80,7 +73,7 @@ class Challenge(ChallengeBase):
         negative: bool = False,
     ) -> Dict[str, Any]:
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         if zero_qk:
             Q = torch.zeros(seq_len, d_model, device=device, dtype=dtype)
             K = torch.zeros(seq_len, d_model, device=device, dtype=dtype)

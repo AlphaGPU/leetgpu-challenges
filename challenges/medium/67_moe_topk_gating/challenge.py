@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="MoE Top-K Gating", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "MoE Top-K Gating"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -29,7 +30,6 @@ class Challenge(ChallengeBase):
         assert logits.shape == (M, E)
         assert topk_weights.shape == (M, k)
         assert topk_indices.shape == (M, k)
-        assert logits.is_cuda and topk_weights.is_cuda and topk_indices.is_cuda
         assert topk_indices.dtype == torch.int32
 
         # 1. TopK Selection
@@ -62,10 +62,10 @@ class Challenge(ChallengeBase):
 
         # Example from problem description
         logits_data = torch.tensor(
-            [[1.0, 2.0, 3.0, 4.0], [4.0, 3.0, 2.0, 1.0]], device="cuda", dtype=dtype_float
+            [[1.0, 2.0, 3.0, 4.0], [4.0, 3.0, 2.0, 1.0]], device=self.device, dtype=dtype_float
         )
-        topk_weights_data = torch.zeros((M, k), device="cuda", dtype=dtype_float)
-        topk_indices_data = torch.zeros((M, k), device="cuda", dtype=dtype_int)
+        topk_weights_data = torch.zeros((M, k), device=self.device, dtype=dtype_float)
+        topk_indices_data = torch.zeros((M, k), device=self.device, dtype=dtype_int)
 
         return {
             "logits": logits_data,
@@ -85,10 +85,12 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "logits": torch.tensor(
-                    [[1.0, 2.0, 3.0, 4.0], [4.0, 3.0, 2.0, 1.0]], device="cuda", dtype=dtype_float
+                    [[1.0, 2.0, 3.0, 4.0], [4.0, 3.0, 2.0, 1.0]],
+                    device=self.device,
+                    dtype=dtype_float,
                 ),
-                "topk_weights": torch.zeros((2, 2), device="cuda", dtype=dtype_float),
-                "topk_indices": torch.zeros((2, 2), device="cuda", dtype=dtype_int),
+                "topk_weights": torch.zeros((2, 2), device=self.device, dtype=dtype_float),
+                "topk_indices": torch.zeros((2, 2), device=self.device, dtype=dtype_int),
                 "M": 2,
                 "E": 4,
                 "k": 2,
@@ -100,11 +102,11 @@ class Challenge(ChallengeBase):
             {
                 "logits": torch.tensor(
                     [[5.0, 1.0, 3.0], [2.0, 8.0, 4.0], [6.0, 2.0, 9.0]],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype_float,
                 ),
-                "topk_weights": torch.zeros((3, 1), device="cuda", dtype=dtype_float),
-                "topk_indices": torch.zeros((3, 1), device="cuda", dtype=dtype_int),
+                "topk_weights": torch.zeros((3, 1), device=self.device, dtype=dtype_float),
+                "topk_indices": torch.zeros((3, 1), device=self.device, dtype=dtype_int),
                 "M": 3,
                 "E": 3,
                 "k": 1,
@@ -115,10 +117,10 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "logits": torch.tensor(
-                    [[1.0, 2.0, 3.0], [3.0, 1.0, 2.0]], device="cuda", dtype=dtype_float
+                    [[1.0, 2.0, 3.0], [3.0, 1.0, 2.0]], device=self.device, dtype=dtype_float
                 ),
-                "topk_weights": torch.zeros((2, 3), device="cuda", dtype=dtype_float),
-                "topk_indices": torch.zeros((2, 3), device="cuda", dtype=dtype_int),
+                "topk_weights": torch.zeros((2, 3), device=self.device, dtype=dtype_float),
+                "topk_indices": torch.zeros((2, 3), device=self.device, dtype=dtype_int),
                 "M": 2,
                 "E": 3,
                 "k": 3,
@@ -129,9 +131,9 @@ class Challenge(ChallengeBase):
         torch.manual_seed(42)
         test_cases.append(
             {
-                "logits": torch.randn((4, 8), device="cuda", dtype=dtype_float),
-                "topk_weights": torch.zeros((4, 2), device="cuda", dtype=dtype_float),
-                "topk_indices": torch.zeros((4, 2), device="cuda", dtype=dtype_int),
+                "logits": torch.randn((4, 8), device=self.device, dtype=dtype_float),
+                "topk_weights": torch.zeros((4, 2), device=self.device, dtype=dtype_float),
+                "topk_indices": torch.zeros((4, 2), device=self.device, dtype=dtype_int),
                 "M": 4,
                 "E": 8,
                 "k": 2,
@@ -142,9 +144,9 @@ class Challenge(ChallengeBase):
         torch.manual_seed(123)
         test_cases.append(
             {
-                "logits": torch.randn((8, 64), device="cuda", dtype=dtype_float),
-                "topk_weights": torch.zeros((8, 2), device="cuda", dtype=dtype_float),
-                "topk_indices": torch.zeros((8, 2), device="cuda", dtype=dtype_int),
+                "logits": torch.randn((8, 64), device=self.device, dtype=dtype_float),
+                "topk_weights": torch.zeros((8, 2), device=self.device, dtype=dtype_float),
+                "topk_indices": torch.zeros((8, 2), device=self.device, dtype=dtype_int),
                 "M": 8,
                 "E": 64,
                 "k": 2,
@@ -156,11 +158,11 @@ class Challenge(ChallengeBase):
             {
                 "logits": torch.tensor(
                     [[-1.0, -2.0, -3.0, -4.0], [-4.0, -1.0, -2.0, -3.0]],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype_float,
                 ),
-                "topk_weights": torch.zeros((2, 2), device="cuda", dtype=dtype_float),
-                "topk_indices": torch.zeros((2, 2), device="cuda", dtype=dtype_int),
+                "topk_weights": torch.zeros((2, 2), device=self.device, dtype=dtype_float),
+                "topk_indices": torch.zeros((2, 2), device=self.device, dtype=dtype_int),
                 "M": 2,
                 "E": 4,
                 "k": 2,
@@ -171,9 +173,9 @@ class Challenge(ChallengeBase):
         torch.manual_seed(456)
         test_cases.append(
             {
-                "logits": torch.randn((100, 16), device="cuda", dtype=dtype_float),
-                "topk_weights": torch.zeros((100, 4), device="cuda", dtype=dtype_float),
-                "topk_indices": torch.zeros((100, 4), device="cuda", dtype=dtype_int),
+                "logits": torch.randn((100, 16), device=self.device, dtype=dtype_float),
+                "topk_weights": torch.zeros((100, 4), device=self.device, dtype=dtype_float),
+                "topk_indices": torch.zeros((100, 4), device=self.device, dtype=dtype_int),
                 "M": 100,
                 "E": 16,
                 "k": 4,
@@ -191,9 +193,9 @@ class Challenge(ChallengeBase):
 
         torch.manual_seed(789)
         return {
-            "logits": torch.randn((M, E), device="cuda", dtype=dtype_float),
-            "topk_weights": torch.zeros((M, k), device="cuda", dtype=dtype_float),
-            "topk_indices": torch.zeros((M, k), device="cuda", dtype=dtype_int),
+            "logits": torch.randn((M, E), device=self.device, dtype=dtype_float),
+            "topk_weights": torch.zeros((M, k), device=self.device, dtype=dtype_float),
+            "topk_indices": torch.zeros((M, k), device=self.device, dtype=dtype_int),
             "M": M,
             "E": E,
             "k": k,

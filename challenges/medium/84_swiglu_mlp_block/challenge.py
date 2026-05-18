@@ -7,14 +7,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="SwiGLU MLP Block",
-            atol=1e-04,
-            rtol=1e-04,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "SwiGLU MLP Block"
+    atol = 0.0001
+    rtol = 0.0001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -35,11 +32,6 @@ class Challenge(ChallengeBase):
         assert (
             x.dtype == W_gate.dtype == W_up.dtype == W_down.dtype == output.dtype == torch.float32
         )
-        assert x.device.type == "cuda"
-        assert W_gate.device.type == "cuda"
-        assert W_up.device.type == "cuda"
-        assert W_down.device.type == "cuda"
-        assert output.device.type == "cuda"
 
         gate = x @ W_gate  # [M, d_ffn]
         up = x @ W_up  # [M, d_ffn]
@@ -59,7 +51,7 @@ class Challenge(ChallengeBase):
         }
 
     def _make_test_case(self, M, d_model, d_ffn, zero_x=False):
-        device = "cuda"
+        device = self.device
         dtype = torch.float32
         if zero_x:
             x = torch.zeros(M, d_model, device=device, dtype=dtype)
@@ -81,7 +73,7 @@ class Challenge(ChallengeBase):
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
-        device = "cuda"
+        device = self.device
         dtype = torch.float32
         M, d_model, d_ffn = 2, 2, 4
         # x: each row is a basis vector

@@ -6,8 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(name="Nearest Neighbor", atol=0, rtol=0, num_gpus=1, access_tier="free")
+    name = "Nearest Neighbor"
+    atol = 0
+    rtol = 0
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, points: torch.Tensor, indices: torch.Tensor, N: int):
         """
@@ -55,10 +58,10 @@ class Challenge(ChallengeBase):
         # Example: points = [(0,0,0), (1,0,0), (5,5,5)]
         points_data = torch.tensor(
             [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 5.0, 5.0, 5.0],  # point 0  # point 1  # point 2
-            device="cuda",
+            device=self.device,
             dtype=dtype_float,
         )
-        indices_data = torch.full((N,), -1, device="cuda", dtype=dtype_int)
+        indices_data = torch.full((N,), -1, device=self.device, dtype=dtype_int)
 
         return {
             "points": points_data,
@@ -76,10 +79,10 @@ class Challenge(ChallengeBase):
             {
                 "points": torch.tensor(
                     [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 5.0, 5.0, 5.0],  # point 0  # point 1  # point 2
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype_float,
                 ),
-                "indices": torch.full((3,), -1, device="cuda", dtype=dtype_int),
+                "indices": torch.full((3,), -1, device=self.device, dtype=dtype_int),
                 "N": 3,
             }
         )
@@ -89,10 +92,10 @@ class Challenge(ChallengeBase):
             {
                 "points": torch.tensor(
                     [0.0, 0.0, 0.0, 3.0, 4.0, 0.0],  # point 0  # point 1
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype_float,
                 ),
-                "indices": torch.full((2,), -1, device="cuda", dtype=dtype_int),
+                "indices": torch.full((2,), -1, device=self.device, dtype=dtype_int),
                 "N": 2,
             }
         )
@@ -115,10 +118,10 @@ class Challenge(ChallengeBase):
                         1.0,
                         0.0,
                     ],  # point 3
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype_float,
                 ),
-                "indices": torch.full((4,), -1, device="cuda", dtype=dtype_int),
+                "indices": torch.full((4,), -1, device=self.device, dtype=dtype_int),
                 "N": 4,
             }
         )
@@ -141,10 +144,10 @@ class Challenge(ChallengeBase):
                         2.0,
                         2.0,
                     ],  # point 3
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype_float,
                 ),
-                "indices": torch.full((4,), -1, device="cuda", dtype=dtype_int),
+                "indices": torch.full((4,), -1, device=self.device, dtype=dtype_int),
                 "N": 4,
             }
         )
@@ -170,10 +173,10 @@ class Challenge(ChallengeBase):
                         0.0,
                         0.0,
                     ],  # point 4
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype_float,
                 ),
-                "indices": torch.full((5,), -1, device="cuda", dtype=dtype_int),
+                "indices": torch.full((5,), -1, device=self.device, dtype=dtype_int),
                 "N": 5,
             }
         )
@@ -182,10 +185,10 @@ class Challenge(ChallengeBase):
         torch.manual_seed(42)
         test_cases.append(
             {
-                "points": torch.empty((100, 3), device="cuda", dtype=dtype_float)
+                "points": torch.empty((100, 3), device=self.device, dtype=dtype_float)
                 .uniform_(-100.0, 100.0)
                 .flatten(),
-                "indices": torch.full((100,), -1, device="cuda", dtype=dtype_int),
+                "indices": torch.full((100,), -1, device=self.device, dtype=dtype_int),
                 "N": 100,
             }
         )
@@ -194,10 +197,10 @@ class Challenge(ChallengeBase):
         torch.manual_seed(123)
         test_cases.append(
             {
-                "points": torch.empty((250, 3), device="cuda", dtype=dtype_float)
+                "points": torch.empty((250, 3), device=self.device, dtype=dtype_float)
                 .uniform_(-1000.0, 1000.0)
                 .flatten(),
-                "indices": torch.full((250,), -1, device="cuda", dtype=dtype_int),
+                "indices": torch.full((250,), -1, device=self.device, dtype=dtype_int),
                 "N": 250,
             }
         )
@@ -210,9 +213,9 @@ class Challenge(ChallengeBase):
         N = 10000
 
         return {
-            "points": torch.empty((N, 3), device="cuda", dtype=dtype_float)
+            "points": torch.empty((N, 3), device=self.device, dtype=dtype_float)
             .uniform_(-1000.0, 1000.0)
             .flatten(),
-            "indices": torch.full((N,), -1, device="cuda", dtype=dtype_int),
+            "indices": torch.full((N,), -1, device=self.device, dtype=dtype_int),
             "N": N,
         }

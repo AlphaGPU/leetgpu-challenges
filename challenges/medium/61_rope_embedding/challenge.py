@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Rotary Positional Embedding",
-            atol=1e-4,
-            rtol=1e-4,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Rotary Positional Embedding"
+    atol = 0.0001
+    rtol = 0.0001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -57,10 +54,10 @@ class Challenge(ChallengeBase):
         D = 64
         dtype = torch.float32
 
-        Q = torch.randn(M, D, device="cuda", dtype=dtype)
-        Cos = torch.randn(M, D, device="cuda", dtype=dtype)
-        Sin = torch.randn(M, D, device="cuda", dtype=dtype)
-        Output = torch.zeros(M, D, device="cuda", dtype=dtype)
+        Q = torch.randn(M, D, device=self.device, dtype=dtype)
+        Cos = torch.randn(M, D, device=self.device, dtype=dtype)
+        Sin = torch.randn(M, D, device=self.device, dtype=dtype)
+        Output = torch.zeros(M, D, device=self.device, dtype=dtype)
 
         return {
             "Q": Q,
@@ -80,10 +77,10 @@ class Challenge(ChallengeBase):
         D = 4
         tests.append(
             {
-                "Q": torch.randn(M, D, device="cuda", dtype=dtype),
-                "cos": torch.randn(M, D, device="cuda", dtype=dtype),
-                "sin": torch.randn(M, D, device="cuda", dtype=dtype),
-                "output": torch.zeros(M, D, device="cuda", dtype=dtype),
+                "Q": torch.randn(M, D, device=self.device, dtype=dtype),
+                "cos": torch.randn(M, D, device=self.device, dtype=dtype),
+                "sin": torch.randn(M, D, device=self.device, dtype=dtype),
+                "output": torch.zeros(M, D, device=self.device, dtype=dtype),
                 "M": M,
                 "D": D,
             }
@@ -94,10 +91,10 @@ class Challenge(ChallengeBase):
         D = 64
         tests.append(
             {
-                "Q": torch.randn(M, D, device="cuda", dtype=dtype),
-                "cos": torch.randn(M, D, device="cuda", dtype=dtype),
-                "sin": torch.randn(M, D, device="cuda", dtype=dtype),
-                "output": torch.zeros(M, D, device="cuda", dtype=dtype),
+                "Q": torch.randn(M, D, device=self.device, dtype=dtype),
+                "cos": torch.randn(M, D, device=self.device, dtype=dtype),
+                "sin": torch.randn(M, D, device=self.device, dtype=dtype),
+                "output": torch.zeros(M, D, device=self.device, dtype=dtype),
                 "M": M,
                 "D": D,
             }
@@ -106,10 +103,10 @@ class Challenge(ChallengeBase):
         # zero_matrices: outputs should remain zero when inputs are zero
         tests.append(
             {
-                "Q": torch.zeros((3, 6), device="cuda", dtype=dtype),
-                "cos": torch.zeros((3, 6), device="cuda", dtype=dtype),
-                "sin": torch.zeros((3, 6), device="cuda", dtype=dtype),
-                "output": torch.zeros(3, 6, device="cuda", dtype=dtype),
+                "Q": torch.zeros((3, 6), device=self.device, dtype=dtype),
+                "cos": torch.zeros((3, 6), device=self.device, dtype=dtype),
+                "sin": torch.zeros((3, 6), device=self.device, dtype=dtype),
+                "output": torch.zeros(3, 6, device=self.device, dtype=dtype),
                 "M": 3,
                 "D": 6,
             }
@@ -118,10 +115,10 @@ class Challenge(ChallengeBase):
         # minimal_dims: smallest even D that still allows rotation
         tests.append(
             {
-                "Q": torch.randn((1, 2), device="cuda", dtype=dtype),
-                "cos": torch.randn((1, 2), device="cuda", dtype=dtype),
-                "sin": torch.randn((1, 2), device="cuda", dtype=dtype),
-                "output": torch.zeros(1, 2, device="cuda", dtype=dtype),
+                "Q": torch.randn((1, 2), device=self.device, dtype=dtype),
+                "cos": torch.randn((1, 2), device=self.device, dtype=dtype),
+                "sin": torch.randn((1, 2), device=self.device, dtype=dtype),
+                "output": torch.zeros(1, 2, device=self.device, dtype=dtype),
                 "M": 1,
                 "D": 2,
             }
@@ -132,20 +129,20 @@ class Challenge(ChallengeBase):
             {
                 "Q": torch.tensor(
                     [[-1.0, 2.0, -3.0, 4.0], [5.0, -6.0, 7.0, -8.0]],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype,
                 ),
                 "cos": torch.tensor(
                     [[0.5, 0.5, 0.5, 0.5], [0.1, 0.2, 0.3, 0.4]],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype,
                 ),
                 "sin": torch.tensor(
                     [[0.5, -0.5, 0.5, -0.5], [0.4, -0.3, 0.2, -0.1]],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype,
                 ),
-                "output": torch.zeros(2, 4, device="cuda", dtype=dtype),
+                "output": torch.zeros(2, 4, device=self.device, dtype=dtype),
                 "M": 2,
                 "D": 4,
             }
@@ -154,10 +151,10 @@ class Challenge(ChallengeBase):
         # large_matrices: random uniform values for stress testing
         tests.append(
             {
-                "Q": torch.empty((256, 128), device="cuda", dtype=dtype).uniform_(-0.1, 0.1),
-                "cos": torch.empty((256, 128), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "sin": torch.empty((256, 128), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                "output": torch.zeros(256, 128, device="cuda", dtype=dtype),
+                "Q": torch.empty((256, 128), device=self.device, dtype=dtype).uniform_(-0.1, 0.1),
+                "cos": torch.empty((256, 128), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "sin": torch.empty((256, 128), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "output": torch.zeros(256, 128, device=self.device, dtype=dtype),
                 "M": 256,
                 "D": 128,
             }
@@ -170,10 +167,10 @@ class Challenge(ChallengeBase):
         D = 128
         dtype = torch.float32
         return {
-            "Q": torch.randn(M, D, device="cuda", dtype=dtype),
-            "cos": torch.randn(M, D, device="cuda", dtype=dtype),
-            "sin": torch.randn(M, D, device="cuda", dtype=dtype),
-            "output": torch.zeros(M, D, device="cuda", dtype=dtype),
+            "Q": torch.randn(M, D, device=self.device, dtype=dtype),
+            "cos": torch.randn(M, D, device=self.device, dtype=dtype),
+            "sin": torch.randn(M, D, device=self.device, dtype=dtype),
+            "output": torch.zeros(M, D, device=self.device, dtype=dtype),
             "M": M,
             "D": D,
         }

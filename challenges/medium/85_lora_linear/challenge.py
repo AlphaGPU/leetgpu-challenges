@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="LoRA Linear",
-            atol=1e-04,
-            rtol=1e-04,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "LoRA Linear"
+    atol = 0.0001
+    rtol = 0.0001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -34,11 +31,6 @@ class Challenge(ChallengeBase):
         assert B.shape == (d_out, rank)
         assert output.shape == (batch, d_out)
         assert x.dtype == W.dtype == A.dtype == B.dtype == output.dtype == torch.float32
-        assert x.device.type == "cuda"
-        assert W.device.type == "cuda"
-        assert A.device.type == "cuda"
-        assert B.device.type == "cuda"
-        assert output.device.type == "cuda"
 
         # Base linear: output = x @ W^T
         base = torch.mm(x, W.t())
@@ -65,7 +57,7 @@ class Challenge(ChallengeBase):
 
     def _make_test_case(self, batch, d_in, d_out, rank, lora_scale=0.5, zero_x=False):
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         if zero_x:
             x = torch.zeros(batch, d_in, device=device, dtype=dtype)
         else:
@@ -89,7 +81,7 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         x = torch.tensor([[1.0, 0.0, -1.0, 2.0], [0.0, 1.0, 1.0, -1.0]], device=device, dtype=dtype)
         W = torch.tensor(
             [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0]],
@@ -147,11 +139,11 @@ class Challenge(ChallengeBase):
         # Negative inputs
         tests.append(
             {
-                "x": torch.full((4, 32), -1.0, device="cuda", dtype=torch.float32),
-                "W": torch.randn(32, 32, device="cuda", dtype=torch.float32) * 0.02,
-                "A": torch.randn(8, 32, device="cuda", dtype=torch.float32) * 0.02,
-                "B": torch.randn(32, 8, device="cuda", dtype=torch.float32) * 0.02,
-                "output": torch.zeros(4, 32, device="cuda", dtype=torch.float32),
+                "x": torch.full((4, 32), -1.0, device=self.device, dtype=torch.float32),
+                "W": torch.randn(32, 32, device=self.device, dtype=torch.float32) * 0.02,
+                "A": torch.randn(8, 32, device=self.device, dtype=torch.float32) * 0.02,
+                "B": torch.randn(32, 8, device=self.device, dtype=torch.float32) * 0.02,
+                "output": torch.zeros(4, 32, device=self.device, dtype=torch.float32),
                 "batch": 4,
                 "d_in": 32,
                 "d_out": 32,

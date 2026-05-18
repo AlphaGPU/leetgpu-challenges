@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Ordinary Least Squares", atol=1e-02, rtol=1e-02, num_gpus=1, access_tier="free"
-        )
+    name = "Ordinary Least Squares"
+    atol = 0.01
+    rtol = 0.01
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self, X: torch.Tensor, y: torch.Tensor, beta: torch.Tensor, n_samples: int, n_features: int
@@ -67,10 +68,10 @@ class Challenge(ChallengeBase):
                 [-0.46, -0.47, 0.54],
             ],
             dtype=dtype,
-            device="cuda",
+            device=self.device,
         )
-        y = torch.tensor([83.01, 93.4, 47.33, -62.22, 13.06], dtype=dtype, device="cuda")
-        beta = torch.empty(n_features, dtype=dtype, device="cuda")
+        y = torch.tensor([83.01, 93.4, 47.33, -62.22, 13.06], dtype=dtype, device=self.device)
+        beta = torch.empty(n_features, dtype=dtype, device=self.device)
         return {
             "X": X.flatten(),
             "y": y,
@@ -81,7 +82,7 @@ class Challenge(ChallengeBase):
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         tests = []
 
         # Test 1: simple_1d
@@ -313,7 +314,7 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         n_samples = 32
         n_features = 32
         X = torch.eye(n_samples, dtype=dtype, device=device)

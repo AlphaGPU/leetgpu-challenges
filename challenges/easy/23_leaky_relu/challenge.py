@@ -6,8 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(name="Leaky ReLU", atol=1e-06, rtol=1e-06, num_gpus=1, access_tier="free")
+    name = "Leaky ReLU"
+    atol = 1e-06
+    rtol = 1e-06
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, input: torch.Tensor, output: torch.Tensor, N: int):
         assert input.shape == (N,)
@@ -28,8 +31,8 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        input_tensor = torch.tensor([1.0, -2.0, 3.0, -4.0], device="cuda", dtype=dtype)
-        output_tensor = torch.empty(4, device="cuda", dtype=dtype)
+        input_tensor = torch.tensor([1.0, -2.0, 3.0, -4.0], device=self.device, dtype=dtype)
+        output_tensor = torch.empty(4, device=self.device, dtype=dtype)
         return {
             "input": input_tensor,
             "output": output_tensor,
@@ -43,8 +46,8 @@ class Challenge(ChallengeBase):
         # Edge case: single element (N=1)
         test_cases.append(
             {
-                "input": torch.tensor([2.0], device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.tensor([2.0], device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 1,
             }
         )
@@ -52,8 +55,8 @@ class Challenge(ChallengeBase):
         # Edge case: N=2
         test_cases.append(
             {
-                "input": torch.tensor([-1.0, 1.0], device="cuda", dtype=dtype),
-                "output": torch.empty(2, device="cuda", dtype=dtype),
+                "input": torch.tensor([-1.0, 1.0], device=self.device, dtype=dtype),
+                "output": torch.empty(2, device=self.device, dtype=dtype),
                 "N": 2,
             }
         )
@@ -61,8 +64,8 @@ class Challenge(ChallengeBase):
         # Edge case: N=3
         test_cases.append(
             {
-                "input": torch.tensor([-2.0, 0.0, 2.0], device="cuda", dtype=dtype),
-                "output": torch.empty(3, device="cuda", dtype=dtype),
+                "input": torch.tensor([-2.0, 0.0, 2.0], device=self.device, dtype=dtype),
+                "output": torch.empty(3, device=self.device, dtype=dtype),
                 "N": 3,
             }
         )
@@ -70,8 +73,8 @@ class Challenge(ChallengeBase):
         # basic_example
         test_cases.append(
             {
-                "input": torch.tensor([1.0, -2.0, 3.0, -4.0], device="cuda", dtype=dtype),
-                "output": torch.zeros(4, device="cuda", dtype=dtype),
+                "input": torch.tensor([1.0, -2.0, 3.0, -4.0], device=self.device, dtype=dtype),
+                "output": torch.zeros(4, device=self.device, dtype=dtype),
                 "N": 4,
             }
         )
@@ -79,8 +82,8 @@ class Challenge(ChallengeBase):
         # all_positive
         test_cases.append(
             {
-                "input": torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device="cuda", dtype=dtype),
-                "output": torch.zeros(5, device="cuda", dtype=dtype),
+                "input": torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device=self.device, dtype=dtype),
+                "output": torch.zeros(5, device=self.device, dtype=dtype),
                 "N": 5,
             }
         )
@@ -88,8 +91,10 @@ class Challenge(ChallengeBase):
         # all_negative
         test_cases.append(
             {
-                "input": torch.tensor([-1.0, -2.0, -3.0, -4.0, -5.0], device="cuda", dtype=dtype),
-                "output": torch.zeros(5, device="cuda", dtype=dtype),
+                "input": torch.tensor(
+                    [-1.0, -2.0, -3.0, -4.0, -5.0], device=self.device, dtype=dtype
+                ),
+                "output": torch.zeros(5, device=self.device, dtype=dtype),
                 "N": 5,
             }
         )
@@ -97,8 +102,8 @@ class Challenge(ChallengeBase):
         # zeros
         test_cases.append(
             {
-                "input": torch.zeros(1024, device="cuda", dtype=dtype),
-                "output": torch.zeros(1024, device="cuda", dtype=dtype),
+                "input": torch.zeros(1024, device=self.device, dtype=dtype),
+                "output": torch.zeros(1024, device=self.device, dtype=dtype),
                 "N": 1024,
             }
         )
@@ -106,8 +111,10 @@ class Challenge(ChallengeBase):
         # medium_random
         test_cases.append(
             {
-                "input": torch.empty(10000, device="cuda", dtype=dtype).uniform_(-100.0, 100.0),
-                "output": torch.zeros(10000, device="cuda", dtype=dtype),
+                "input": torch.empty(10000, device=self.device, dtype=dtype).uniform_(
+                    -100.0, 100.0
+                ),
+                "output": torch.zeros(10000, device=self.device, dtype=dtype),
                 "N": 10000,
             }
         )
@@ -118,7 +125,7 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         N = 50000000  # Large vector for performance testing
         return {
-            "input": torch.empty(N, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0),
-            "output": torch.zeros(N, device="cuda", dtype=dtype),
+            "input": torch.empty(N, device=self.device, dtype=dtype).uniform_(-1000.0, 1000.0),
+            "output": torch.zeros(N, device=self.device, dtype=dtype),
             "N": N,
         }

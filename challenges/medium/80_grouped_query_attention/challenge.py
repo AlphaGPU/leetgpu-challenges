@@ -7,14 +7,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Grouped Query Attention",
-            atol=1e-04,
-            rtol=1e-04,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Grouped Query Attention"
+    atol = 0.0001
+    rtol = 0.0001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -32,10 +29,6 @@ class Challenge(ChallengeBase):
         assert V.shape == (num_kv_heads, seq_len, head_dim)
         assert output.shape == (num_q_heads, seq_len, head_dim)
         assert Q.dtype == K.dtype == V.dtype == output.dtype == torch.float32
-        assert Q.device.type == "cuda"
-        assert K.device.type == "cuda"
-        assert V.device.type == "cuda"
-        assert output.device.type == "cuda"
         assert num_q_heads % num_kv_heads == 0
 
         num_groups = num_q_heads // num_kv_heads
@@ -69,7 +62,7 @@ class Challenge(ChallengeBase):
 
     def _make_test_case(self, num_q_heads, num_kv_heads, seq_len, head_dim, zero_inputs=False):
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         if zero_inputs:
             Q = torch.zeros(num_q_heads, seq_len, head_dim, device=device, dtype=dtype)
             K = torch.zeros(num_kv_heads, seq_len, head_dim, device=device, dtype=dtype)
@@ -93,7 +86,7 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         torch.manual_seed(0)
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         num_q_heads = 4
         num_kv_heads = 2
         seq_len = 3

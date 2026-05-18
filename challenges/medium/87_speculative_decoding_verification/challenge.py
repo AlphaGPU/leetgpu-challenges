@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Speculative Decoding Verification",
-            atol=1e-05,
-            rtol=1e-05,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Speculative Decoding Verification"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -36,11 +33,6 @@ class Challenge(ChallengeBase):
         assert target_probs.dtype == torch.float32
         assert uniform_samples.dtype == torch.float32
         assert output_tokens.dtype == torch.int32
-        assert draft_tokens.device.type == "cuda"
-        assert draft_probs.device.type == "cuda"
-        assert target_probs.device.type == "cuda"
-        assert uniform_samples.device.type == "cuda"
-        assert output_tokens.device.type == "cuda"
 
         output_tokens.fill_(0)
 
@@ -107,7 +99,7 @@ class Challenge(ChallengeBase):
 
     def _make_test_case(self, B, T, V, seed=42):
         torch.manual_seed(seed)
-        device = "cuda"
+        device = self.device
 
         # K=64 active tokens per position: enough diversity while keeping the adjusted
         # distribution sparse (at most 128 nonzero entries), ensuring CDF sums are
@@ -139,7 +131,7 @@ class Challenge(ChallengeBase):
     def _make_accept_all_case(self, B, T, V, seed=42):
         """All draft tokens accepted: target_probs == draft_probs so alpha == 1 everywhere."""
         torch.manual_seed(seed)
-        device = "cuda"
+        device = self.device
 
         K = min(64, V)
         draft_probs, draft_idx = self._make_sparse_probs(B, T, V, K, device)
@@ -170,7 +162,7 @@ class Challenge(ChallengeBase):
     def _make_reject_first_case(self, B, T, V, seed=42):
         """First draft token always rejected: draft_probs high, target low for that token."""
         torch.manual_seed(seed)
-        device = "cuda"
+        device = self.device
 
         draft_probs = torch.softmax(torch.randn(B, T, V, device=device), dim=-1)
         target_probs = torch.softmax(torch.randn(B, T, V, device=device), dim=-1)
@@ -207,7 +199,7 @@ class Challenge(ChallengeBase):
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
-        device = "cuda"
+        device = self.device
 
         # B=1, T=3, V=4: position 0 accepted, position 1 rejected, token resampled
         draft_tokens = torch.tensor([[1, 2, 0]], device=device, dtype=torch.int32)

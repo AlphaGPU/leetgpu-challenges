@@ -1,6 +1,7 @@
 from gpu.host import DeviceContext
 from memory import UnsafePointer
 
+
 # draft_tokens, draft_probs, target_probs, uniform_samples, output_tokens are device pointers
 @export
 def solve(

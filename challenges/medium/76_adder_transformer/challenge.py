@@ -176,14 +176,11 @@ def _forward_pass(seq: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Adder Transformer Inference",
-            atol=1e-2,
-            rtol=1e-2,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Adder Transformer Inference"
+    atol = 0.01
+    rtol = 0.01
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -194,13 +191,10 @@ class Challenge(ChallengeBase):
     ):
         assert prompts.shape == (batch_size, PROMPT_LEN)
         assert prompts.dtype == torch.int32
-        assert prompts.device.type == "cuda"
         assert output.shape == (batch_size, OUTPUT_DIGITS, VOCAB_SIZE)
         assert output.dtype == torch.float32
-        assert output.device.type == "cuda"
         assert weights.shape == (TOTAL_WEIGHTS,)
         assert weights.dtype == torch.float32
-        assert weights.device.type == "cuda"
 
         seq = prompts.clone()
         for step in range(OUTPUT_DIGITS):
@@ -219,7 +213,7 @@ class Challenge(ChallengeBase):
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
-        device = "cuda"
+        device = self.device
         pairs = [(3, 5), (99, 1)]
         batch_size = len(pairs)
         prompts = torch.tensor(
@@ -239,7 +233,7 @@ class Challenge(ChallengeBase):
         }
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
-        device = "cuda"
+        device = self.device
         tests = []
 
         def _make_test(pairs):
@@ -329,7 +323,7 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        device = "cuda"
+        device = self.device
         batch_size = 100000
         torch.manual_seed(123)
         a_vals = torch.randint(0, 10**10, (batch_size,), dtype=torch.int64)

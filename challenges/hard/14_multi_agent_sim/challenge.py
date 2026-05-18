@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Multi-Agent Simulation", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Multi-Agent Simulation"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, agents: torch.Tensor, agents_next: torch.Tensor, N: int):
         assert agents.shape == (4 * N,)
@@ -48,8 +49,10 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         N = 2
-        agents = torch.tensor([0.0, 0.0, 1.0, 0.0, 5.0, 0.0, 0.0, 1.0], device="cuda", dtype=dtype)
-        agents_next = torch.empty(4 * N, device="cuda", dtype=dtype)
+        agents = torch.tensor(
+            [0.0, 0.0, 1.0, 0.0, 5.0, 0.0, 0.0, 1.0], device=self.device, dtype=dtype
+        )
+        agents_next = torch.empty(4 * N, device=self.device, dtype=dtype)
         return {
             "agents": agents,
             "agents_next": agents_next,
@@ -60,41 +63,45 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         test_cases = []
         # basic_example
-        agents = torch.tensor([0.0, 0.0, 1.0, 0.0, 3.0, 4.0, 0.0, -1.0], device="cuda", dtype=dtype)
-        agents_next = torch.empty(8, device="cuda", dtype=dtype)
+        agents = torch.tensor(
+            [0.0, 0.0, 1.0, 0.0, 3.0, 4.0, 0.0, -1.0], device=self.device, dtype=dtype
+        )
+        agents_next = torch.empty(8, device=self.device, dtype=dtype)
         test_cases.append({"agents": agents, "agents_next": agents_next, "N": 2})
         # single_agent
-        agents = torch.tensor([10.0, 15.0, 1.0, -1.0], device="cuda", dtype=dtype)
-        agents_next = torch.empty(4, device="cuda", dtype=dtype)
+        agents = torch.tensor([10.0, 15.0, 1.0, -1.0], device=self.device, dtype=dtype)
+        agents_next = torch.empty(4, device=self.device, dtype=dtype)
         test_cases.append({"agents": agents, "agents_next": agents_next, "N": 1})
         # two_agents_interacting
-        agents = torch.tensor([0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0], device="cuda", dtype=dtype)
-        agents_next = torch.empty(8, device="cuda", dtype=dtype)
+        agents = torch.tensor(
+            [0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0], device=self.device, dtype=dtype
+        )
+        agents_next = torch.empty(8, device=self.device, dtype=dtype)
         test_cases.append({"agents": agents, "agents_next": agents_next, "N": 2})
         # four_agents
         agents = torch.tensor(
             [0.0, 0.0, 1.0, 0.0, 2.0, 2.0, 0.0, 1.0, 4.0, 4.0, -1.0, 0.0, 6.0, 6.0, 0.0, -1.0],
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
-        agents_next = torch.empty(16, device="cuda", dtype=dtype)
+        agents_next = torch.empty(16, device=self.device, dtype=dtype)
         test_cases.append({"agents": agents, "agents_next": agents_next, "N": 4})
         # boundary_distance
         agents = torch.tensor(
-            [0.0, 0.0, 1.0, 1.0, 3.0, 4.0, -1.0, -1.0], device="cuda", dtype=dtype
+            [0.0, 0.0, 1.0, 1.0, 3.0, 4.0, -1.0, -1.0], device=self.device, dtype=dtype
         )
-        agents_next = torch.empty(8, device="cuda", dtype=dtype)
+        agents_next = torch.empty(8, device=self.device, dtype=dtype)
         test_cases.append({"agents": agents, "agents_next": agents_next, "N": 2})
         # medium_simulation (random)
-        agents = torch.empty(4096, device="cuda", dtype=dtype).uniform_(-100.0, 100.0)
-        agents_next = torch.empty(4096, device="cuda", dtype=dtype)
+        agents = torch.empty(4096, device=self.device, dtype=dtype).uniform_(-100.0, 100.0)
+        agents_next = torch.empty(4096, device=self.device, dtype=dtype)
         test_cases.append({"agents": agents, "agents_next": agents_next, "N": 1024})
         return test_cases
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        agents = torch.empty(40000, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0)
-        agents_next = torch.empty(40000, device="cuda", dtype=dtype)
+        agents = torch.empty(40000, device=self.device, dtype=dtype).uniform_(-1000.0, 1000.0)
+        agents_next = torch.empty(40000, device=self.device, dtype=dtype)
         return {
             "agents": agents,
             "agents_next": agents_next,

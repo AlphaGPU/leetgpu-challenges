@@ -6,8 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(name="Rainbow Table", atol=0, rtol=0, num_gpus=1, access_tier="free")
+    name = "Rainbow Table"
+    atol = 0
+    rtol = 0
+    num_gpus = 1
+    access_tier = "free"
 
     def fnv1a_hash(self, x: torch.Tensor) -> torch.Tensor:
         FNV_PRIME = 16777619
@@ -44,8 +47,8 @@ class Challenge(ChallengeBase):
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
-        input_tensor = torch.tensor([123, 456, 789], device="cuda", dtype=torch.int32)
-        output_tensor = torch.empty(3, device="cuda", dtype=torch.uint32)
+        input_tensor = torch.tensor([123, 456, 789], device=self.device, dtype=torch.int32)
+        output_tensor = torch.empty(3, device=self.device, dtype=torch.uint32)
         return {
             "input": input_tensor,
             "output": output_tensor,
@@ -61,8 +64,8 @@ class Challenge(ChallengeBase):
         # Force users to handle "0 chunks" logic
         test_cases.append(
             {
-                "input": torch.tensor([100], device="cuda", dtype=dtype),
-                "output": torch.zeros(1, device="cuda", dtype=torch.uint32),
+                "input": torch.tensor([100], device=self.device, dtype=dtype),
+                "output": torch.zeros(1, device=self.device, dtype=torch.uint32),
                 "N": 1,
                 "R": 1,
             }
@@ -70,8 +73,8 @@ class Challenge(ChallengeBase):
 
         test_cases.append(
             {
-                "input": torch.tensor([100, 200], device="cuda", dtype=dtype),
-                "output": torch.zeros(2, device="cuda", dtype=torch.uint32),
+                "input": torch.tensor([100, 200], device=self.device, dtype=dtype),
+                "output": torch.zeros(2, device=self.device, dtype=torch.uint32),
                 "N": 2,
                 "R": 1,
             }
@@ -80,8 +83,8 @@ class Challenge(ChallengeBase):
         # basic_example
         test_cases.append(
             {
-                "input": torch.tensor([123, 456, 789], device="cuda", dtype=dtype),
-                "output": torch.zeros(3, device="cuda", dtype=torch.uint32),
+                "input": torch.tensor([123, 456, 789], device=self.device, dtype=dtype),
+                "output": torch.zeros(3, device=self.device, dtype=torch.uint32),
                 "N": 3,
                 "R": 2,
             }
@@ -90,8 +93,8 @@ class Challenge(ChallengeBase):
         # zero_and_max
         test_cases.append(
             {
-                "input": torch.tensor([0, 1, 2147483647], device="cuda", dtype=dtype),
-                "output": torch.zeros(3, device="cuda", dtype=torch.uint32),
+                "input": torch.tensor([0, 1, 2147483647], device=self.device, dtype=dtype),
+                "output": torch.zeros(3, device=self.device, dtype=torch.uint32),
                 "N": 3,
                 "R": 3,
             }
@@ -100,8 +103,8 @@ class Challenge(ChallengeBase):
         # single_round
         test_cases.append(
             {
-                "input": torch.tensor([1, 2, 3, 4, 5], device="cuda", dtype=dtype),
-                "output": torch.zeros(5, device="cuda", dtype=torch.uint32),
+                "input": torch.tensor([1, 2, 3, 4, 5], device=self.device, dtype=dtype),
+                "output": torch.zeros(5, device=self.device, dtype=torch.uint32),
                 "N": 5,
                 "R": 1,
             }
@@ -110,8 +113,8 @@ class Challenge(ChallengeBase):
         # many_rounds
         test_cases.append(
             {
-                "input": torch.randint(0, 2147483647 + 1, (1024,), device="cuda", dtype=dtype),
-                "output": torch.zeros(1024, device="cuda", dtype=torch.uint32),
+                "input": torch.randint(0, 2147483647 + 1, (1024,), device=self.device, dtype=dtype),
+                "output": torch.zeros(1024, device=self.device, dtype=torch.uint32),
                 "N": 1024,
                 "R": 50,
             }
@@ -120,8 +123,10 @@ class Challenge(ChallengeBase):
         # large_size
         test_cases.append(
             {
-                "input": torch.randint(0, 2147483647 + 1, (10000,), device="cuda", dtype=dtype),
-                "output": torch.zeros(10000, device="cuda", dtype=torch.uint32),
+                "input": torch.randint(
+                    0, 2147483647 + 1, (10000,), device=self.device, dtype=dtype
+                ),
+                "output": torch.zeros(10000, device=self.device, dtype=torch.uint32),
                 "N": 10000,
                 "R": 10,
             }
@@ -132,8 +137,8 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         N, R = 5000000, 10  # Large array with moderate rounds for performance testing
         return {
-            "input": torch.randint(0, 2147483647 + 1, (N,), device="cuda", dtype=torch.int32),
-            "output": torch.zeros(N, device="cuda", dtype=torch.uint32),
+            "input": torch.randint(0, 2147483647 + 1, (N,), device=self.device, dtype=torch.int32),
+            "output": torch.zeros(N, device=self.device, dtype=torch.uint32),
             "N": N,
             "R": R,
         }

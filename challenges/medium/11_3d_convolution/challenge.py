@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="3D Convolution", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "3D Convolution"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -64,14 +65,14 @@ class Challenge(ChallengeBase):
                 [[19, 20, 21], [22, 23, 24], [25, 26, 27]],
             ],
             dtype=dtype,
-            device="cuda",
+            device=self.device,
         )
         kernel_tensor = torch.tensor(
             [[[1, 0, 0], [1, 1, 1], [0, 0, 0]], [[1, 1, 0], [1, 1, 0], [0, 0, 1]]],
             dtype=dtype,
-            device="cuda",
+            device=self.device,
         )
-        output_tensor = torch.empty((2, 1, 1), device="cuda", dtype=dtype)
+        output_tensor = torch.empty((2, 1, 1), device=self.device, dtype=dtype)
         return {
             "input": input_tensor,
             "kernel": kernel_tensor,
@@ -86,7 +87,7 @@ class Challenge(ChallengeBase):
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         tests = []
 
         # basic_example
@@ -245,16 +246,16 @@ class Challenge(ChallengeBase):
         input_depth, input_rows, input_cols = 256, 128, 128
         kernel_depth, kernel_rows, kernel_cols = 5, 5, 5
         input_tensor = torch.empty(
-            input_depth, input_rows, input_cols, device="cuda", dtype=dtype
+            input_depth, input_rows, input_cols, device=self.device, dtype=dtype
         ).uniform_(-1.0, 1.0)
         kernel_tensor = torch.empty(
-            kernel_depth, kernel_rows, kernel_cols, device="cuda", dtype=dtype
+            kernel_depth, kernel_rows, kernel_cols, device=self.device, dtype=dtype
         ).uniform_(-1.0, 1.0)
         output_tensor = torch.zeros(
             input_depth - kernel_depth + 1,
             input_rows - kernel_rows + 1,
             input_cols - kernel_cols + 1,
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
         return {

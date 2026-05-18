@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Gaussian Blur", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Gaussian Blur"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -71,15 +72,15 @@ class Challenge(ChallengeBase):
                 24.0,
                 25.0,
             ],
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
         kernel = torch.tensor(
             [0.0625, 0.125, 0.0625, 0.125, 0.25, 0.125, 0.0625, 0.125, 0.0625],
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
-        output = torch.empty(input_rows * input_cols, device="cuda", dtype=dtype)
+        output = torch.empty(input_rows * input_cols, device=self.device, dtype=dtype)
         return {
             "input": input,
             "kernel": kernel,
@@ -92,7 +93,7 @@ class Challenge(ChallengeBase):
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         tests = []
 
         # basic_example
@@ -186,13 +187,13 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         input_rows, input_cols = 512, 512
         kernel_rows, kernel_cols = 7, 7
-        input = torch.empty(input_rows * input_cols, device="cuda", dtype=dtype).uniform_(
+        input = torch.empty(input_rows * input_cols, device=self.device, dtype=dtype).uniform_(
             0.0, 255.0
         )
-        kernel = torch.empty(kernel_rows * kernel_cols, device="cuda", dtype=dtype).uniform_(
+        kernel = torch.empty(kernel_rows * kernel_cols, device=self.device, dtype=dtype).uniform_(
             0.0001, 0.02
         )
-        output = torch.empty(input_rows * input_cols, device="cuda", dtype=dtype)
+        output = torch.empty(input_rows * input_cols, device=self.device, dtype=dtype)
         return {
             "input": input,
             "kernel": kernel,

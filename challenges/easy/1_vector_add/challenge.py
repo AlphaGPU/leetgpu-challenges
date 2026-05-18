@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Vector Addition", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Vector Addition"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, A: torch.Tensor, B: torch.Tensor, C: torch.Tensor, N: int):
         assert A.shape == B.shape == C.shape
@@ -29,9 +30,9 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         N = 4
-        A = torch.tensor([1.0, 2.0, 3.0, 4.0], device="cuda", dtype=dtype)
-        B = torch.tensor([5.0, 6.0, 7.0, 8.0], device="cuda", dtype=dtype)
-        C = torch.empty(N, device="cuda", dtype=dtype)
+        A = torch.tensor([1.0, 2.0, 3.0, 4.0], device=self.device, dtype=dtype)
+        B = torch.tensor([5.0, 6.0, 7.0, 8.0], device=self.device, dtype=dtype)
+        C = torch.empty(N, device=self.device, dtype=dtype)
         return {
             "A": A,
             "B": B,
@@ -67,9 +68,9 @@ class Challenge(ChallengeBase):
             n = len(a_vals)
             test_cases.append(
                 {
-                    "A": torch.tensor(a_vals, device="cuda", dtype=dtype),
-                    "B": torch.tensor(b_vals, device="cuda", dtype=dtype),
-                    "C": torch.zeros(n, device="cuda", dtype=dtype),
+                    "A": torch.tensor(a_vals, device=self.device, dtype=dtype),
+                    "B": torch.tensor(b_vals, device=self.device, dtype=dtype),
+                    "C": torch.zeros(n, device=self.device, dtype=dtype),
                     "N": n,
                 }
             )
@@ -82,9 +83,9 @@ class Challenge(ChallengeBase):
         ]:
             test_cases.append(
                 {
-                    "A": torch.empty(size, device="cuda", dtype=dtype).uniform_(*a_range),
-                    "B": torch.empty(size, device="cuda", dtype=dtype).uniform_(*b_range),
-                    "C": torch.zeros(size, device="cuda", dtype=dtype),
+                    "A": torch.empty(size, device=self.device, dtype=dtype).uniform_(*a_range),
+                    "B": torch.empty(size, device=self.device, dtype=dtype).uniform_(*b_range),
+                    "C": torch.zeros(size, device=self.device, dtype=dtype),
                     "N": size,
                 }
             )
@@ -95,8 +96,8 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         N = 25000000
         return {
-            "A": torch.empty(N, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0),
-            "B": torch.empty(N, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0),
-            "C": torch.zeros(N, device="cuda", dtype=dtype),
+            "A": torch.empty(N, device=self.device, dtype=dtype).uniform_(-1000.0, 1000.0),
+            "B": torch.empty(N, device=self.device, dtype=dtype).uniform_(-1000.0, 1000.0),
+            "C": torch.zeros(N, device=self.device, dtype=dtype),
             "N": N,
         }

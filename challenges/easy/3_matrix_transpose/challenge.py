@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Matrix Transpose", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Matrix Transpose"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, input: torch.Tensor, output: torch.Tensor, rows: int, cols: int):
         assert input.shape == (rows, cols)
@@ -30,8 +31,10 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         rows, cols = 2, 3
-        input_tensor = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device="cuda", dtype=dtype)
-        output_tensor = torch.empty(cols, rows, device="cuda", dtype=dtype)
+        input_tensor = torch.tensor(
+            [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], device=self.device, dtype=dtype
+        )
+        output_tensor = torch.empty(cols, rows, device=self.device, dtype=dtype)
         return {
             "input": input_tensor,
             "output": output_tensor,
@@ -54,8 +57,8 @@ class Challenge(ChallengeBase):
         for _, r, c, input_vals in test_specs:
             test_cases.append(
                 {
-                    "input": torch.tensor(input_vals, device="cuda", dtype=dtype),
-                    "output": torch.empty(c, r, device="cuda", dtype=dtype),
+                    "input": torch.tensor(input_vals, device=self.device, dtype=dtype),
+                    "output": torch.empty(c, r, device=self.device, dtype=dtype),
                     "rows": r,
                     "cols": c,
                 }
@@ -71,10 +74,10 @@ class Challenge(ChallengeBase):
         ]:
             test_cases.append(
                 {
-                    "input": torch.empty(rows, cols, device="cuda", dtype=dtype).uniform_(
+                    "input": torch.empty(rows, cols, device=self.device, dtype=dtype).uniform_(
                         -10.0, 10.0
                     ),
-                    "output": torch.empty(cols, rows, device="cuda", dtype=dtype),
+                    "output": torch.empty(cols, rows, device=self.device, dtype=dtype),
                     "rows": rows,
                     "cols": cols,
                 }
@@ -87,10 +90,10 @@ class Challenge(ChallengeBase):
         ]:
             test_cases.append(
                 {
-                    "input": torch.empty(rows, cols, device="cuda", dtype=dtype).uniform_(
+                    "input": torch.empty(rows, cols, device=self.device, dtype=dtype).uniform_(
                         -1.0, 1.0
                     ),
-                    "output": torch.empty(cols, rows, device="cuda", dtype=dtype),
+                    "output": torch.empty(cols, rows, device=self.device, dtype=dtype),
                     "rows": rows,
                     "cols": cols,
                 }
@@ -102,8 +105,8 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         rows, cols = 7000, 6000
         return {
-            "input": torch.empty(rows, cols, device="cuda", dtype=dtype).uniform_(-10.0, 10.0),
-            "output": torch.zeros(cols, rows, device="cuda", dtype=dtype),
+            "input": torch.empty(rows, cols, device=self.device, dtype=dtype).uniform_(-10.0, 10.0),
+            "output": torch.zeros(cols, rows, device=self.device, dtype=dtype),
             "rows": rows,
             "cols": cols,
         }

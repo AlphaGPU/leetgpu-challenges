@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Linear Recurrence",
-            atol=1e-05,
-            rtol=1e-05,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Linear Recurrence"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -27,9 +24,6 @@ class Challenge(ChallengeBase):
         assert x.shape == (B, L)
         assert h.shape == (B, L)
         assert a.dtype == x.dtype == h.dtype == torch.float32
-        assert a.device.type == "cuda"
-        assert x.device.type == "cuda"
-        assert h.device.type == "cuda"
 
         out = torch.empty_like(x)
         out[:, 0] = x[:, 0]
@@ -47,7 +41,7 @@ class Challenge(ChallengeBase):
         }
 
     def _make_test_case(self, B, L, zero_inputs=False, zero_a=False, unit_a=False):
-        device = "cuda"
+        device = self.device
         dtype = torch.float32
         if zero_inputs:
             a = torch.zeros(B, L, device=device, dtype=dtype)
@@ -65,7 +59,7 @@ class Challenge(ChallengeBase):
         return {"a": a, "x": x, "h": h, "B": B, "L": L}
 
     def generate_example_test(self) -> Dict[str, Any]:
-        device = "cuda"
+        device = self.device
         dtype = torch.float32
         a = torch.tensor(
             [[0.5, 0.5, 0.5, 0.5], [1.0, 1.0, 1.0, 1.0]],

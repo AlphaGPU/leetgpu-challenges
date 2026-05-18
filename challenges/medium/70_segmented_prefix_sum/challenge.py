@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Segmented Exclusive Prefix Sum",
-            atol=1e-03,
-            rtol=1e-03,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Segmented Exclusive Prefix Sum"
+    atol = 0.001
+    rtol = 0.001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -27,10 +24,9 @@ class Challenge(ChallengeBase):
         assert output.shape == (N,)
         assert values.dtype == torch.float32
         assert flags.dtype == torch.int32
-        assert values.device.type == "cuda"
 
         # Global exclusive prefix sum (use float64 for accuracy in reference).
-        excl = torch.empty(N, dtype=torch.float64, device="cuda")
+        excl = torch.empty(N, dtype=torch.float64, device=self.device)
         excl[0] = 0.0
         if N > 1:
             excl[1:] = torch.cumsum(values[:-1].double(), dim=0)
@@ -60,9 +56,9 @@ class Challenge(ChallengeBase):
         dtype_i = torch.int32
         # Three segments: [1,2,3], [4,5], [6]
         # exclusive prefix sums: [0,1,3], [0,4], [0]
-        values = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], device="cuda", dtype=dtype_f)
-        flags = torch.tensor([1, 0, 0, 1, 0, 1], device="cuda", dtype=dtype_i)
-        output = torch.empty(6, device="cuda", dtype=dtype_f)
+        values = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], device=self.device, dtype=dtype_f)
+        flags = torch.tensor([1, 0, 0, 1, 0, 1], device=self.device, dtype=dtype_i)
+        output = torch.empty(6, device=self.device, dtype=dtype_f)
         return {
             "values": values,
             "flags": flags,
@@ -82,9 +78,9 @@ class Challenge(ChallengeBase):
             for s in segs:
                 flags[s] = 1
             return {
-                "values": torch.tensor(vals, device="cuda", dtype=dtype_f),
-                "flags": flags.cuda(),
-                "output": torch.empty(N, device="cuda", dtype=dtype_f),
+                "values": torch.tensor(vals, device=self.device, dtype=dtype_f),
+                "flags": flags.to(self.device),
+                "output": torch.empty(N, device=self.device, dtype=dtype_f),
                 "N": N,
             }
 
@@ -99,9 +95,9 @@ class Challenge(ChallengeBase):
                 flags[i] = 1
                 i += max(1, int(torch.randint(1, 2 * avg_seg_len + 1, (1,)).item()))
             return {
-                "values": vals.cuda(),
-                "flags": flags.cuda(),
-                "output": torch.empty(N, device="cuda", dtype=dtype_f),
+                "values": vals.to(self.device),
+                "flags": flags.to(self.device),
+                "output": torch.empty(N, device=self.device, dtype=dtype_f),
                 "N": N,
             }
 
@@ -164,8 +160,8 @@ class Challenge(ChallengeBase):
         seg_starts = torch.arange(256, N, 256, dtype=torch.long)
         flags[seg_starts] = 1
         return {
-            "values": vals.cuda(),
-            "flags": flags.cuda(),
-            "output": torch.empty(N, device="cuda", dtype=dtype_f),
+            "values": vals.to(self.device),
+            "flags": flags.to(self.device),
+            "output": torch.empty(N, device=self.device, dtype=dtype_f),
             "N": N,
         }

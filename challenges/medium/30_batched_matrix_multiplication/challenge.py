@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Batched Matrix Multiplication",
-            atol=1e-5,
-            rtol=1e-5,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Batched Matrix Multiplication"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self, A: torch.Tensor, B: torch.Tensor, C: torch.Tensor, BATCH: int, M: int, N: int, K: int
@@ -39,20 +36,20 @@ class Challenge(ChallengeBase):
         BATCH, M, K, N = 2, 2, 3, 2
         A = torch.tensor(
             [[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], [[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]]],
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
         B = torch.tensor(
             [[[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], [[6.0, 5.0], [4.0, 3.0], [2.0, 1.0]]],
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
-        C = torch.empty(BATCH, M, N, device="cuda", dtype=dtype)
+        C = torch.empty(BATCH, M, N, device=self.device, dtype=dtype)
         return {"A": A, "B": B, "C": C, "BATCH": BATCH, "M": M, "N": N, "K": K}
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         tests = []
 
         # 1. basic_example
@@ -108,11 +105,11 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         BATCH, M, N, K = 32, 256, 256, 256  # Match speed_test.json
-        A = torch.empty(BATCH, M, K, device="cuda", dtype=dtype).uniform_(
+        A = torch.empty(BATCH, M, K, device=self.device, dtype=dtype).uniform_(
             -10.0, 10.0
         )  # Match range
-        B = torch.empty(BATCH, K, N, device="cuda", dtype=dtype).uniform_(
+        B = torch.empty(BATCH, K, N, device=self.device, dtype=dtype).uniform_(
             -10.0, 10.0
         )  # Match range
-        C = torch.empty(BATCH, M, N, device="cuda", dtype=dtype)
+        C = torch.empty(BATCH, M, N, device=self.device, dtype=dtype)
         return {"A": A, "B": B, "C": C, "BATCH": BATCH, "M": M, "N": N, "K": K}

@@ -7,14 +7,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Causal Depthwise Conv1d",
-            atol=1e-04,
-            rtol=1e-04,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Causal Depthwise Conv1d"
+    atol = 0.0001
+    rtol = 0.0001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -32,10 +29,6 @@ class Challenge(ChallengeBase):
         assert bias.shape == (D,)
         assert output.shape == (B, L, D)
         assert x.dtype == weight.dtype == bias.dtype == output.dtype == torch.float32
-        assert x.device.type == "cuda"
-        assert weight.device.type == "cuda"
-        assert bias.device.type == "cuda"
-        assert output.device.type == "cuda"
 
         # Reshape to (B, D, L) for conv1d
         x_t = x.permute(0, 2, 1).contiguous()  # (B, D, L)
@@ -69,14 +62,14 @@ class Challenge(ChallengeBase):
         B, L, D, K = 1, 4, 2, 3
         x = torch.tensor(
             [[[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0]]],
-            device="cuda",
+            device=self.device,
             dtype=torch.float32,
         )
         weight = torch.tensor(
-            [[1.0, 0.0, -1.0], [1.0, 1.0, 1.0]], device="cuda", dtype=torch.float32
+            [[1.0, 0.0, -1.0], [1.0, 1.0, 1.0]], device=self.device, dtype=torch.float32
         )
-        bias = torch.zeros(D, device="cuda", dtype=torch.float32)
-        output = torch.empty(B, L, D, device="cuda", dtype=torch.float32)
+        bias = torch.zeros(D, device=self.device, dtype=torch.float32)
+        output = torch.empty(B, L, D, device=self.device, dtype=torch.float32)
         return {
             "x": x,
             "weight": weight,
@@ -94,18 +87,18 @@ class Challenge(ChallengeBase):
 
         def make_case(B, L, D, K, x_vals=None, w_vals=None, b_vals=None):
             if x_vals is not None:
-                x = torch.tensor(x_vals, device="cuda", dtype=dtype)
+                x = torch.tensor(x_vals, device=self.device, dtype=dtype)
             else:
-                x = torch.randn(B, L, D, device="cuda", dtype=dtype)
+                x = torch.randn(B, L, D, device=self.device, dtype=dtype)
             if w_vals is not None:
-                weight = torch.tensor(w_vals, device="cuda", dtype=dtype)
+                weight = torch.tensor(w_vals, device=self.device, dtype=dtype)
             else:
-                weight = torch.randn(D, K, device="cuda", dtype=dtype)
+                weight = torch.randn(D, K, device=self.device, dtype=dtype)
             if b_vals is not None:
-                bias = torch.tensor(b_vals, device="cuda", dtype=dtype)
+                bias = torch.tensor(b_vals, device=self.device, dtype=dtype)
             else:
-                bias = torch.randn(D, device="cuda", dtype=dtype)
-            output = torch.empty(B, L, D, device="cuda", dtype=dtype)
+                bias = torch.randn(D, device=self.device, dtype=dtype)
+            output = torch.empty(B, L, D, device=self.device, dtype=dtype)
             return {
                 "x": x,
                 "weight": weight,
@@ -136,15 +129,15 @@ class Challenge(ChallengeBase):
         test_cases.append(make_case(2, 3, 4, 3))  # small batch, B=2
 
         # Zero inputs
-        x_zero = torch.zeros(1, 8, 4, device="cuda", dtype=dtype)
-        w_zero = torch.randn(4, 3, device="cuda", dtype=dtype)
-        b_zero = torch.randn(4, device="cuda", dtype=dtype)
+        x_zero = torch.zeros(1, 8, 4, device=self.device, dtype=dtype)
+        w_zero = torch.randn(4, 3, device=self.device, dtype=dtype)
+        b_zero = torch.randn(4, device=self.device, dtype=dtype)
         test_cases.append(
             {
                 "x": x_zero,
                 "weight": w_zero,
                 "bias": b_zero,
-                "output": torch.empty(1, 8, 4, device="cuda", dtype=dtype),
+                "output": torch.empty(1, 8, 4, device=self.device, dtype=dtype),
                 "B": 1,
                 "L": 8,
                 "D": 4,
@@ -171,10 +164,10 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         B, L, D, K = 8, 2048, 4096, 4
         dtype = torch.float32
-        x = torch.randn(B, L, D, device="cuda", dtype=dtype)
-        weight = torch.randn(D, K, device="cuda", dtype=dtype)
-        bias = torch.randn(D, device="cuda", dtype=dtype)
-        output = torch.empty(B, L, D, device="cuda", dtype=dtype)
+        x = torch.randn(B, L, D, device=self.device, dtype=dtype)
+        weight = torch.randn(D, K, device=self.device, dtype=dtype)
+        bias = torch.randn(D, device=self.device, dtype=dtype)
+        output = torch.empty(B, L, D, device=self.device, dtype=dtype)
         return {
             "x": x,
             "weight": weight,
