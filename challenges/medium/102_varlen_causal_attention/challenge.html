@@ -1,0 +1,172 @@
+<p>
+  Implement variable-length causal self-attention over a packed batch of sequences. The tensors
+  <code>Q</code>, <code>K</code>, and <code>V</code> each have shape
+  <code>T &times; d</code>, where <code>T</code> is the total number of tokens across all
+  sequences concatenated end-to-end. The 1D tensor <code>cu_seqlens</code> of shape
+  <code>S + 1</code> stores cumulative sequence lengths, so sequence <code>s</code> occupies
+  rows <code>[cu_seqlens[s], cu_seqlens[s+1])</code>.
+</p>
+<p>
+  For each token at packed position <code>t</code> belonging to sequence <code>s</code> with
+  in-sequence position <code>p = t &minus; cu_seqlens[s]</code>, attention is restricted to
+  tokens of the same sequence at positions <code>0, 1, &hellip;, p</code> (causal). Concretely:
+</p>
+<p>
+  \[
+    \text{scores}[t, u] =
+    \begin{cases}
+      \dfrac{Q[t] \cdot K[u]}{\sqrt{d}} & \text{if } u \text{ is in the same sequence as } t
+                                          \text{ and } u \text{ is at or before } t, \\[4pt]
+      -\infty & \text{otherwise.}
+    \end{cases}
+  \]
+  \[
+    \text{output}[t] = \sum_{u} \text{softmax}(\text{scores}[t])[u] \cdot V[u].
+  \]
+</p>
+<p>
+  This is the packed-sequence attention kernel used by inference engines such as vLLM and
+  FlashAttention&rsquo;s <code>varlen</code> path. By packing variable-length sequences into a
+  single tensor and indexing through <code>cu_seqlens</code>, a serving stack avoids padding
+  waste and amortizes kernel launch overhead across requests with very different lengths.
+</p>
+
+<svg width="680" height="240" viewBox="0 0 680 240" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;">
+  <rect width="680" height="240" fill="#222" rx="8"/>
+
+  <text x="340" y="22" text-anchor="middle" fill="#ccc" font-size="12" font-family="monospace">
+    Block-diagonal causal mask  (T = 6, cu_seqlens = [0, 3, 5, 6])
+  </text>
+
+  <!-- Column headers t = 0..5 -->
+  <text x="120" y="42" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">u=0</text>
+  <text x="155" y="42" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">u=1</text>
+  <text x="190" y="42" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">u=2</text>
+  <text x="225" y="42" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">u=3</text>
+  <text x="260" y="42" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">u=4</text>
+  <text x="295" y="42" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">u=5</text>
+
+  <!-- Row labels -->
+  <text x="80" y="72"  text-anchor="middle" fill="#888" font-size="10" font-family="monospace">t=0</text>
+  <text x="80" y="102" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">t=1</text>
+  <text x="80" y="132" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">t=2</text>
+  <text x="80" y="162" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">t=3</text>
+  <text x="80" y="192" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">t=4</text>
+  <text x="80" y="222" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">t=5</text>
+
+  <!-- Sequence 0: rows 0..2, cols 0..2 (lower triangular allowed) -->
+  <rect x="100"  y="52"  width="34" height="28" fill="#1a4a8a" stroke="#333"/>
+  <rect x="135"  y="52"  width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="170"  y="52"  width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="205"  y="52"  width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="240"  y="52"  width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="275"  y="52"  width="34" height="28" fill="#161616" stroke="#333"/>
+
+  <rect x="100"  y="82"  width="34" height="28" fill="#1a4a8a" stroke="#333"/>
+  <rect x="135"  y="82"  width="34" height="28" fill="#1a4a8a" stroke="#333"/>
+  <rect x="170"  y="82"  width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="205"  y="82"  width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="240"  y="82"  width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="275"  y="82"  width="34" height="28" fill="#161616" stroke="#333"/>
+
+  <rect x="100"  y="112" width="34" height="28" fill="#1a4a8a" stroke="#333"/>
+  <rect x="135"  y="112" width="34" height="28" fill="#1a4a8a" stroke="#333"/>
+  <rect x="170"  y="112" width="34" height="28" fill="#1a4a8a" stroke="#333"/>
+  <rect x="205"  y="112" width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="240"  y="112" width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="275"  y="112" width="34" height="28" fill="#161616" stroke="#333"/>
+
+  <!-- Sequence 1: rows 3..4, cols 3..4 -->
+  <rect x="100"  y="142" width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="135"  y="142" width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="170"  y="142" width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="205"  y="142" width="34" height="28" fill="#2a7ec0" stroke="#333"/>
+  <rect x="240"  y="142" width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="275"  y="142" width="34" height="28" fill="#161616" stroke="#333"/>
+
+  <rect x="100"  y="172" width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="135"  y="172" width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="170"  y="172" width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="205"  y="172" width="34" height="28" fill="#2a7ec0" stroke="#333"/>
+  <rect x="240"  y="172" width="34" height="28" fill="#2a7ec0" stroke="#333"/>
+  <rect x="275"  y="172" width="34" height="28" fill="#161616" stroke="#333"/>
+
+  <!-- Sequence 2: row 5, col 5 -->
+  <rect x="100"  y="202" width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="135"  y="202" width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="170"  y="202" width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="205"  y="202" width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="240"  y="202" width="34" height="28" fill="#161616" stroke="#333"/>
+  <rect x="275"  y="202" width="34" height="28" fill="#7ec8a0" stroke="#333"/>
+
+  <!-- Legend on the right -->
+  <rect x="370" y="60"  width="18" height="18" fill="#1a4a8a" stroke="#333"/>
+  <text x="395" y="74"  fill="#ccc" font-size="11" font-family="monospace">sequence 0 (length 3)</text>
+
+  <rect x="370" y="90"  width="18" height="18" fill="#2a7ec0" stroke="#333"/>
+  <text x="395" y="104" fill="#ccc" font-size="11" font-family="monospace">sequence 1 (length 2)</text>
+
+  <rect x="370" y="120" width="18" height="18" fill="#7ec8a0" stroke="#333"/>
+  <text x="395" y="134" fill="#ccc" font-size="11" font-family="monospace">sequence 2 (length 1)</text>
+
+  <rect x="370" y="150" width="18" height="18" fill="#161616" stroke="#333"/>
+  <text x="395" y="164" fill="#ccc" font-size="11" font-family="monospace">masked (set to &minus;&infin;)</text>
+
+  <text x="395" y="200" fill="#888" font-size="10" font-family="monospace">A query at packed row t only sees</text>
+  <text x="395" y="214" fill="#888" font-size="10" font-family="monospace">keys in its own sequence, up to t.</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the <code>solve</code> function; do not change its signature.</li>
+  <li>External libraries are not permitted.</li>
+  <li>Write the result into <code>output</code>.</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Example 1 &mdash; with <code>T</code> = 3, <code>d</code> = 4, <code>S</code> = 2 and
+  <code>cu_seqlens</code> = <code>[0, 2, 3]</code> (sequences of lengths 2 and 1):
+</p>
+<p>
+\[
+Q = \begin{bmatrix} 1 & 0 & 0 & 0 \\ 0 & 1 & 0 & 0 \\ 1 & 1 & 0 & 0 \end{bmatrix}, \quad
+K = \begin{bmatrix} 1 & 0 & 0 & 0 \\ 0 & 1 & 0 & 0 \\ 1 & 0 & 0 & 0 \end{bmatrix}, \quad
+V = \begin{bmatrix} 1 & 2 & 3 & 4 \\ 5 & 6 & 7 & 8 \\ 9 & 10 & 11 & 12 \end{bmatrix}
+\]
+</p>
+<p>
+  Scaled scores \(QK^\top / \sqrt{4}\) followed by the block-diagonal causal mask leave the
+  allowed (sequence, position) pairs only:
+  \[
+    \text{masked scores} = \begin{bmatrix}
+      0.5 & -\infty & -\infty \\
+      0   & 0.5 & -\infty \\
+      -\infty & -\infty & 0.5
+    \end{bmatrix}
+  \]
+  After per-row softmax and multiplication by \(V\):
+  \[
+    \text{output} \approx
+    \begin{bmatrix}
+      1.0000 & 2.0000 & 3.0000 & 4.0000 \\
+      3.4898 & 4.4898 & 5.4898 & 6.4898 \\
+      9.0000 & 10.0000 & 11.0000 & 12.0000
+    \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>S</code> &le; 256</li>
+  <li>1 &le; sequence length &le; 2,048 (each individual sequence)</li>
+  <li>1 &le; <code>T</code> &le; 16,384 (total packed tokens)</li>
+  <li>1 &le; <code>d</code> &le; 256</li>
+  <li><code>cu_seqlens</code> is monotonically non-decreasing with
+      <code>cu_seqlens[0]</code> = 0 and <code>cu_seqlens[S]</code> = <code>T</code>.</li>
+  <li><code>Q</code>, <code>K</code>, <code>V</code>, <code>output</code> are <code>float32</code>;
+      <code>cu_seqlens</code> is <code>int32</code>.</li>
+  <li>Performance is measured with <code>T</code> = 8,192, <code>d</code> = 64,
+      <code>S</code> = 32 (sequence lengths between 128 and 384).</li>
+</ul>
