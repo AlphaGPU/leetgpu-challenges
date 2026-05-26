@@ -1,0 +1,66 @@
+<p>
+  Implement a fused residual RMSNorm forward pass. Given two input tensors
+  <code>x</code> and <code>residual</code> of shape <code>(M, N)</code>, first add them
+  elementwise, then normalize each row by its root mean square and scale each column
+  by <code>weight</code>.
+</p>
+
+<p>
+  For each row \(m\) and column \(n\), compute:
+</p>
+
+\[
+\begin{aligned}
+h_{m,n} &= x_{m,n} + \text{residual}_{m,n} \\
+\text{rms}_m &= \sqrt{\frac{1}{N}\sum_{j=0}^{N-1} h_{m,j}^2 + \epsilon} \\
+\text{output}_{m,n} &= \frac{h_{m,n}}{\text{rms}_m} \cdot \text{weight}_n
+\end{aligned}
+\]
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>output</code> tensor</li>
+  <li>Compute one independent RMS value per row</li>
+</ul>
+
+<h2>Example</h2>
+<p>With <code>M</code> = 2, <code>N</code> = 4, and <code>eps</code> = 1e-5:</p>
+
+\[
+\begin{aligned}
+x &=
+\begin{bmatrix}
+1.0 & 2.0 & 3.0 & 4.0 \\
+-1.0 & 0.0 & 1.0 & 2.0
+\end{bmatrix},
+&
+\text{residual} &=
+\begin{bmatrix}
+0.5 & -0.5 & 1.0 & -1.0 \\
+1.0 & 2.0 & -1.0 & 0.0
+\end{bmatrix}, \\[8pt]
+\text{weight} &=
+\begin{bmatrix}
+1.0 & 0.5 & 2.0 & -1.0
+\end{bmatrix},
+&
+\text{output} &\approx
+\begin{bmatrix}
+0.5523 & 0.2762 & 2.9458 & -1.1047 \\
+0.0000 & 0.7071 & 0.0000 & -1.4142
+\end{bmatrix}
+\end{aligned}
+\]
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code> &le; 4,096</li>
+  <li>1 &le; <code>N</code> &le; 1,024</li>
+  <li>All tensors use 32-bit floating point</li>
+  <li><code>eps</code> = 1e-5</li>
+  <li><code>x</code> and <code>residual</code> values are in [-3.0, 3.0]</li>
+  <li><code>weight</code> values are in [0.5, 1.5]</li>
+  <li>Performance is measured with <code>M</code> = 4,096, <code>N</code> = 1,024</li>
+</ul>
