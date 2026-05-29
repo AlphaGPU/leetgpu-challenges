@@ -1,0 +1,77 @@
+<p>
+Implement the repetition penalty logit processor used by LLM samplers in production
+inference engines such as Hugging Face Transformers, vLLM, and TGI. Given a batch of raw
+<code>logits</code> from a language model and the <code>input_ids</code> already seen by
+each sequence in the batch, downweight the logits of tokens that appeared in the prompt
+or prior generation so the model is less likely to repeat them. The processor modifies
+<code>logits</code> in place.
+</p>
+
+<p>
+For each batch <code>b</code> and for every token id <code>v</code> that occurs in
+<code>input_ids[b]</code>, update <code>logits[b, v]</code> as follows:
+</p>
+
+<p>
+\[
+\text{logits}[b, v] \leftarrow
+\begin{cases}
+\text{logits}[b, v] / \text{penalty} & \text{if } \text{logits}[b, v] \ge 0 \\
+\text{logits}[b, v] \times \text{penalty} & \text{if } \text{logits}[b, v] < 0
+\end{cases}
+\]
+</p>
+
+<p>
+The penalty is applied <strong>once per unique token id</strong>: if the same token id
+appears multiple times in <code>input_ids[b]</code>, the corresponding logit is still
+scaled by <code>penalty</code> only once. Logits at indices that never appear in
+<code>input_ids[b]</code> remain unchanged.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the function <code>solve(logits, input_ids, penalty, B, V, T)</code>.</li>
+  <li>Do not change the function signature or use external libraries beyond the standard GPU frameworks.</li>
+  <li>Modify the <code>logits</code> buffer in place.</li>
+  <li><code>logits</code> is <code>float32</code> with shape <code>(B, V)</code>; <code>input_ids</code> is <code>int32</code> with shape <code>(B, T)</code>.</li>
+  <li>Each batch is independent: token ids in <code>input_ids[b]</code> only affect <code>logits[b, :]</code>.</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  With <code>B</code> = 1, <code>V</code> = 5, <code>T</code> = 3, <code>penalty</code> = 2.0:
+</p>
+<p>
+  <strong>Input:</strong><br>
+  \(\text{logits}\) (1&times;5):
+  \[
+  \begin{bmatrix} 2.0 & -1.0 & 0.5 & -3.0 & 1.0 \end{bmatrix}
+  \]
+  \(\text{input\_ids}\) (1&times;3):
+  \[
+  \begin{bmatrix} 0 & 3 & 3 \end{bmatrix}
+  \]
+</p>
+<p>
+  Token id 0 appears in <code>input_ids</code>: \(\text{logits}[0, 0] = 2.0 \ge 0\), so it becomes \(2.0 / 2.0 = 1.0\).<br>
+  Token id 3 appears in <code>input_ids</code> (twice, but the penalty is applied only once): \(\text{logits}[0, 3] = -3.0 < 0\), so it becomes \(-3.0 \times 2.0 = -6.0\).<br>
+  Token ids 1, 2, 4 do not appear in <code>input_ids</code>, so their logits are unchanged.
+</p>
+<p>
+  <strong>Output</strong> (in <code>logits</code>, 1&times;5):
+  \[
+  \begin{bmatrix} 1.0 & -1.0 & 0.5 & -6.0 & 1.0 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 128</li>
+  <li>1 &le; <code>V</code> &le; 200,000</li>
+  <li>1 &le; <code>T</code> &le; 8,192</li>
+  <li>1.0 &le; <code>penalty</code> &le; 4.0</li>
+  <li>Each <code>input_ids[b, t]</code> is in <code>[0, V)</code></li>
+  <li>-100.0 &le; <code>logits[b, v]</code> &le; 100.0</li>
+  <li>Performance is measured with <code>B</code> = 64, <code>V</code> = 131,072, <code>T</code> = 4,096</li>
+</ul>
