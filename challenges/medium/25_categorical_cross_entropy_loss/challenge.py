@@ -2,7 +2,7 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandIntTensor, RandTensor
 
 
 class Challenge(ChallengeBase):
@@ -32,6 +32,20 @@ class Challenge(ChallengeBase):
             loss_i = log_sum_exp - log_probs[true_label]
             total_loss += loss_i.item()
         loss[0] = total_loss / N
+
+    def reference_impl_jax(self, logits, true_labels, N, C):
+        import jax.numpy as jnp
+
+        logits = jnp.asarray(logits, dtype=jnp.float32)  # (N, C)
+        true_labels = jnp.asarray(true_labels, dtype=jnp.int32)  # (N,)
+
+        # Per-row: log_sum_exp - logit[true_label], stable via max subtraction.
+        max_logit = jnp.max(logits, axis=1)  # (N,)
+        log_sum_exp = max_logit + jnp.log(jnp.sum(jnp.exp(logits - max_logit[:, None]), axis=1))
+        true_logit = jnp.take_along_axis(logits, true_labels[:, None], axis=1)[:, 0]  # (N,)
+        loss_per = log_sum_exp - true_logit  # (N,)
+        mean_loss = jnp.sum(loss_per) / N  # mean over N
+        return mean_loss.reshape(1)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -153,13 +167,9 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        dtype_logits = torch.float32
-        dtype_labels = torch.int32
-        logits = torch.empty(10000, 1000, device=self.device, dtype=dtype_logits).uniform_(
-            -10.0, 10.0
-        )
-        true_labels = torch.randint(0, 1000, (10000,), device=self.device, dtype=dtype_labels)
-        loss = torch.zeros(1, device=self.device, dtype=dtype_logits)
+        logits = RandTensor((10000, 1000), -10.0, 10.0)
+        true_labels = RandIntTensor((10000,), 0, 1000, dtype="int32")
+        loss = OutTensor((1,))
         return {
             "logits": logits,
             "true_labels": true_labels,

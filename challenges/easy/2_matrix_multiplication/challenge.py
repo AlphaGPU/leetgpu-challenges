@@ -2,7 +2,7 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandTensor
 
 
 class Challenge(ChallengeBase):
@@ -22,6 +22,11 @@ class Challenge(ChallengeBase):
         assert A.device == B.device == C.device
 
         torch.matmul(A, B, out=C)
+
+    def reference_impl_jax(self, A, B, M, N, K):
+        import jax.numpy as jnp
+
+        return jnp.matmul(A, B)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -126,12 +131,11 @@ class Challenge(ChallengeBase):
         return test_cases
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        dtype = torch.float32
         M, N, K = 8192, 6144, 4096
         return {
-            "A": torch.empty(M, N, device=self.device, dtype=dtype).uniform_(-10.0, 10.0),
-            "B": torch.empty(N, K, device=self.device, dtype=dtype).uniform_(-10.0, 10.0),
-            "C": torch.empty(M, K, device=self.device, dtype=dtype),
+            "A": RandTensor((M, N), -10.0, 10.0),
+            "B": RandTensor((N, K), -10.0, 10.0),
+            "C": OutTensor((M, K)),
             "M": M,
             "N": N,
             "K": K,

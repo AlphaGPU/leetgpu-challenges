@@ -3,7 +3,7 @@ import math
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandnTensor
 
 
 class Challenge(ChallengeBase):
@@ -38,6 +38,18 @@ class Challenge(ChallengeBase):
         decay_mask = torch.pow(gamma, distances.clamp(min=0)) * causal
         attn = torch.matmul(Q, K.T) / scale
         output.copy_(torch.matmul(attn * decay_mask, V))
+
+    def reference_impl_jax(self, Q, K, V, seq_len, d_model, gamma):
+        import jax
+        import jax.numpy as jnp
+
+        scale = math.sqrt(d_model)
+        positions = jnp.arange(seq_len, dtype=Q.dtype)
+        distances = positions.reshape(seq_len, 1) - positions.reshape(1, seq_len)
+        causal = (distances >= 0).astype(Q.dtype)
+        decay_mask = jnp.power(gamma, jnp.maximum(distances, 0)) * causal
+        attn = jnp.matmul(Q, K.T, precision=jax.lax.Precision.HIGHEST) / scale
+        return jnp.matmul(attn * decay_mask, V, precision=jax.lax.Precision.HIGHEST)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -134,6 +146,14 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        torch.manual_seed(0)
         # Typical LLM head: seq_len=4096, head_dim=64
-        return self._make_test_case(4096, 64, gamma=0.9)
+        seq_len, d_model = 4096, 64
+        return {
+            "Q": RandnTensor((seq_len, d_model)),
+            "K": RandnTensor((seq_len, d_model)),
+            "V": RandnTensor((seq_len, d_model)),
+            "output": OutTensor((seq_len, d_model)),
+            "seq_len": seq_len,
+            "d_model": d_model,
+            "gamma": 0.9,
+        }

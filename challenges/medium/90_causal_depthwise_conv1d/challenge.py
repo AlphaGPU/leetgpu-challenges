@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 
 import torch
 import torch.nn.functional as F
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandnTensor
 
 
 class Challenge(ChallengeBase):
@@ -45,6 +45,31 @@ class Challenge(ChallengeBase):
         result = F.conv1d(x_padded, w, bias=bias, groups=D)  # (B, D, L)
 
         output.copy_(result.permute(0, 2, 1))  # (B, L, D)
+
+    def reference_impl_jax(self, x, weight, bias, B, L, D, K):
+        import jax
+        import jax.numpy as jnp
+
+        # x (B, L, D) -> (B, D, L) for conv
+        x_t = jnp.transpose(x, (0, 2, 1))  # (B, D, L)
+
+        # Causal padding: K-1 zeros on the left.
+        x_padded = jnp.pad(x_t, ((0, 0), (0, 0), (K - 1, 0)))  # (B, D, L + K - 1)
+
+        # Depthwise (groups=D) cross-correlation with flipped kernel,
+        # mirroring the torch reference. rhs shape (out=D, in/groups=1, K).
+        w = jnp.flip(weight, axis=1).reshape(D, 1, K)
+        result = jax.lax.conv_general_dilated(
+            x_padded,
+            w,
+            window_strides=(1,),
+            padding="VALID",
+            feature_group_count=D,
+            precision=jax.lax.Precision.HIGHEST,
+        )  # (B, D, L)
+        result = result + bias.reshape(1, D, 1)
+
+        return jnp.transpose(result, (0, 2, 1))  # (B, L, D)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -163,16 +188,11 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         B, L, D, K = 8, 2048, 4096, 4
-        dtype = torch.float32
-        x = torch.randn(B, L, D, device=self.device, dtype=dtype)
-        weight = torch.randn(D, K, device=self.device, dtype=dtype)
-        bias = torch.randn(D, device=self.device, dtype=dtype)
-        output = torch.empty(B, L, D, device=self.device, dtype=dtype)
         return {
-            "x": x,
-            "weight": weight,
-            "bias": bias,
-            "output": output,
+            "x": RandnTensor((B, L, D)),
+            "weight": RandnTensor((D, K)),
+            "bias": RandnTensor((D,)),
+            "output": OutTensor((B, L, D)),
             "B": B,
             "L": L,
             "D": D,

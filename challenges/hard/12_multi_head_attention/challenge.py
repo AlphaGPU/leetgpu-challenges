@@ -2,7 +2,7 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandTensor
 
 
 class Challenge(ChallengeBase):
@@ -39,6 +39,22 @@ class Challenge(ChallengeBase):
             head_output = torch.matmul(softmax, V_h)
             result[:, head * d_k : (head + 1) * d_k] = head_output
         output.copy_(result)
+
+    def reference_impl_jax(self, Q, K, V, N, d_model, h):
+        import jax
+        import jax.numpy as jnp
+
+        d_k = d_model // h
+        # Reshape (N, d_model) -> (N, h, d_k) -> (h, N, d_k)
+        Q_h = jnp.transpose(jnp.reshape(Q, (N, h, d_k)), (1, 0, 2))
+        K_h = jnp.transpose(jnp.reshape(K, (N, h, d_k)), (1, 0, 2))
+        V_h = jnp.transpose(jnp.reshape(V, (N, h, d_k)), (1, 0, 2))
+        scores = jnp.matmul(Q_h, jnp.transpose(K_h, (0, 2, 1))) / (d_k**0.5)
+        softmax = jax.nn.softmax(scores, axis=-1)
+        head_output = jnp.matmul(softmax, V_h)  # (h, N, d_k)
+        # (h, N, d_k) -> (N, h, d_k) -> (N, d_model)
+        result = jnp.reshape(jnp.transpose(head_output, (1, 0, 2)), (N, d_model))
+        return result
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -111,16 +127,11 @@ class Challenge(ChallengeBase):
         return test_cases
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        dtype = torch.float32
-        Q = torch.empty(1024, 1024, device=self.device, dtype=dtype).uniform_(-10.0, 10.0)
-        K = torch.empty(1024, 1024, device=self.device, dtype=dtype).uniform_(-10.0, 10.0)
-        V = torch.empty(1024, 1024, device=self.device, dtype=dtype).uniform_(-10.0, 10.0)
-        output = torch.zeros(1024, 1024, device=self.device, dtype=dtype)
         return {
-            "Q": Q,
-            "K": K,
-            "V": V,
-            "output": output,
+            "Q": RandTensor((1024, 1024), -10.0, 10.0),
+            "K": RandTensor((1024, 1024), -10.0, 10.0),
+            "V": RandTensor((1024, 1024), -10.0, 10.0),
+            "output": OutTensor((1024, 1024)),
             "N": 1024,
             "d_model": 1024,
             "h": 16,

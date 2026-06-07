@@ -2,7 +2,7 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, RandTensor
 
 
 class Challenge(ChallengeBase):
@@ -32,6 +32,16 @@ class Challenge(ChallengeBase):
         matmul_result = torch.matmul(A_f32, B_f32)
         final_result = alpha * matmul_result + beta * C_f32
         C.copy_(final_result.to(torch.float16))
+
+    def reference_impl_jax(self, A, B, C, M, N, K, alpha, beta):
+        import jax.numpy as jnp
+
+        A_f32 = A.reshape(M, K).astype(jnp.float32)
+        B_f32 = B.reshape(K, N).astype(jnp.float32)
+        C_f32 = C.reshape(M, N).astype(jnp.float32)
+        matmul_result = jnp.matmul(A_f32, B_f32)
+        final_result = alpha * matmul_result + beta * C_f32
+        return final_result.astype(jnp.float16)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -138,13 +148,12 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        dtype = torch.float16
         M = 1024
         N = 1024
         K = 1024
-        A = torch.empty((M, K), device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
-        B = torch.empty((K, N), device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
-        C = torch.empty((M, N), device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+        A = RandTensor((M, K), -1.0, 1.0, dtype="float16")
+        B = RandTensor((K, N), -1.0, 1.0, dtype="float16")
+        C = RandTensor((M, N), -1.0, 1.0, dtype="float16")
         return {
             "A": A,
             "B": B,

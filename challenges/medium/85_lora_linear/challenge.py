@@ -2,7 +2,7 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, FullTensor, OutTensor, RandnTensor
 
 
 class Challenge(ChallengeBase):
@@ -40,6 +40,17 @@ class Challenge(ChallengeBase):
         delta = torch.mm(lora_hidden, B.t())  # (batch, d_out)
 
         output.copy_(base + lora_scale * delta)
+
+    def reference_impl_jax(self, x, W, A, B, batch, d_in, d_out, rank, lora_scale):
+
+        # Base linear: output = x @ W^T
+        base = x @ W.T
+
+        # LoRA path: delta = lora_scale * (x @ A^T) @ B^T
+        lora_hidden = x @ A.T  # (batch, rank)
+        delta = lora_hidden @ B.T  # (batch, d_out)
+
+        return base + lora_scale * delta
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -158,6 +169,17 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        torch.manual_seed(0)
         # LLaMA-style: d_in=d_out=4096, rank=64, batch=256
-        return self._make_test_case(256, 4096, 4096, 64, lora_scale=0.015625)
+        batch, d_in, d_out, rank, lora_scale = 256, 4096, 4096, 64, 0.015625
+        return {
+            "x": RandnTensor((batch, d_in)),
+            "W": RandnTensor((d_out, d_in), std=0.02),
+            "A": RandnTensor((rank, d_in), std=0.02),
+            "B": FullTensor((d_out, rank), 0.0),
+            "output": OutTensor((batch, d_out)),
+            "batch": batch,
+            "d_in": d_in,
+            "d_out": d_out,
+            "rank": rank,
+            "lora_scale": lora_scale,
+        }

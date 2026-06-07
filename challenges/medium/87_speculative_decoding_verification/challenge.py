@@ -65,6 +65,62 @@ class Challenge(ChallengeBase):
                 bonus_tok = int(torch.searchsorted(cdf.contiguous(), r).item())
                 output_tokens[b, T] = min(bonus_tok, V - 1)
 
+    def reference_impl_jax(self, draft_tokens, draft_probs, target_probs, uniform_samples, B, T, V):
+        import jax.numpy as jnp
+
+        draft_tokens = jnp.asarray(draft_tokens, dtype=jnp.int32)
+        draft_probs = jnp.asarray(draft_probs, dtype=jnp.float32)
+        target_probs = jnp.asarray(target_probs, dtype=jnp.float32)
+        uniform_samples = jnp.asarray(uniform_samples, dtype=jnp.float32)
+
+        # Gather p = draft_probs[b, i, tok] and q = target_probs[b, i, tok].
+        tok = draft_tokens.astype(jnp.int32)  # [B, T]
+        p = jnp.take_along_axis(draft_probs, tok[..., None], axis=2)[..., 0]  # [B, T]
+        q = jnp.take_along_axis(target_probs, tok[..., None], axis=2)[..., 0]  # [B, T]
+        alpha = jnp.minimum(1.0, q / p)  # [B, T]
+
+        accept = uniform_samples[:, :T] < alpha  # [B, T] True where accepted
+        reject = ~accept
+
+        # First rejection position per batch (T if none rejected -> all accepted).
+        any_reject = jnp.any(reject, axis=1)  # [B]
+        first_reject = jnp.argmax(reject.astype(jnp.int32), axis=1)  # [B], 0 if none
+        first_reject = jnp.where(any_reject, first_reject, T)  # [B]
+
+        # Resampled token at every (b, i): clamp(target - draft, 0), normalize, cdf,
+        # searchsorted(cdf, uniform_samples[b, T]). Uniform fallback when total == 0.
+        adjusted = jnp.clip(target_probs - draft_probs, a_min=0.0)  # [B, T, V]
+        total = jnp.sum(adjusted, axis=2, keepdims=True)  # [B, T, 1]
+        uniform_dist = jnp.ones_like(adjusted) / V
+        normalized = jnp.where(total > 0.0, adjusted / total, uniform_dist)  # [B, T, V]
+        cdf = jnp.cumsum(normalized, axis=2)  # [B, T, V]
+        r = uniform_samples[:, T]  # [B]
+        # searchsorted (side='left') over the last axis for scalar r per batch.
+        resample_tok = jnp.sum((cdf < r[:, None, None]).astype(jnp.int32), axis=2)  # [B, T]
+        resample_tok = jnp.minimum(resample_tok, V - 1)  # [B, T]
+
+        # Bonus token (all accepted): cumsum(target_probs[b, T-1]) searchsorted r.
+        cdf_bonus = jnp.cumsum(target_probs[:, T - 1, :], axis=1)  # [B, V]
+        bonus_tok = jnp.sum((cdf_bonus < r[:, None]).astype(jnp.int32), axis=1)  # [B]
+        bonus_tok = jnp.minimum(bonus_tok, V - 1)  # [B]
+
+        # Assemble output_tokens [B, T+1], all zeros by default.
+        positions = jnp.arange(T)[None, :]  # [1, T]
+        fr = first_reject[:, None]  # [B, 1]
+
+        out_first_T = jnp.zeros((B, T), dtype=jnp.int32)
+        # Accepted positions i < first_reject -> draft token.
+        out_first_T = jnp.where(positions < fr, tok, out_first_T)
+        # Exactly the first-reject position -> resampled token (only when one exists).
+        is_reject_pos = (positions == fr) & any_reject[:, None]
+        out_first_T = jnp.where(is_reject_pos, resample_tok, out_first_T)
+
+        # Position T column: bonus token only when all accepted, else 0.
+        out_last = jnp.where(any_reject, 0, bonus_tok).astype(jnp.int32)[:, None]  # [B, 1]
+
+        output_tokens = jnp.concatenate([out_first_T, out_last], axis=1)  # [B, T+1]
+        return output_tokens.astype(jnp.int32)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "draft_tokens": (ctypes.POINTER(ctypes.c_int), "in"),

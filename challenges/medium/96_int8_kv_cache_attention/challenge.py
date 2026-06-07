@@ -52,6 +52,26 @@ class Challenge(ChallengeBase):
         out = torch.bmm(weights, V_float)  # [num_heads, 1, head_dim]
         output.copy_(out.squeeze(1))
 
+    def reference_impl_jax(self, Q, K_int8, V_int8, k_scale, v_scale, num_heads, seq_len, head_dim):
+        import jax
+        import jax.numpy as jnp
+
+        K_float = K_int8.astype(jnp.float32) * jnp.expand_dims(k_scale, axis=-1)
+        V_float = V_int8.astype(jnp.float32) * jnp.expand_dims(v_scale, axis=-1)
+
+        scale = 1.0 / math.sqrt(head_dim)
+        scores = (
+            jnp.matmul(
+                jnp.expand_dims(Q, axis=1),
+                jnp.transpose(K_float, (0, 2, 1)),
+                precision=jax.lax.Precision.HIGHEST,
+            )
+            * scale
+        )
+        weights = jax.nn.softmax(scores, axis=-1)
+        out = jnp.matmul(weights, V_float, precision=jax.lax.Precision.HIGHEST)
+        return jnp.squeeze(out, axis=1)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "Q": (ctypes.POINTER(ctypes.c_float), "in"),

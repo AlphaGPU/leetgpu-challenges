@@ -2,7 +2,7 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandTensor
 
 
 class Challenge(ChallengeBase):
@@ -32,6 +32,22 @@ class Challenge(ChallengeBase):
         # Use einsum for explicit cross-correlation
         # 'ij,j->i' means: for each window i, multiply with kernel j and sum over j
         output.copy_(torch.einsum("ij,j->i", windows, kernel))
+
+    def reference_impl_jax(self, input, kernel, input_size, kernel_size):
+        import jax
+
+        # Cross-correlation, valid padding, stride 1.
+        # Shapes: input (N=1, C=1, W), kernel (O=1, I=1, W).
+        lhs = input.reshape(1, 1, input_size)
+        rhs = kernel.reshape(1, 1, kernel_size)
+        result = jax.lax.conv_general_dilated(
+            lhs,
+            rhs,
+            window_strides=(1,),
+            padding="VALID",
+            precision=jax.lax.Precision.HIGHEST,
+        )
+        return result.reshape(-1)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -128,13 +144,12 @@ class Challenge(ChallengeBase):
         return test_cases
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        dtype = torch.float32
         input_size, kernel_size = 1500000, 2047  # Large convolution for performance testing
         output_size = input_size - kernel_size + 1
         return {
-            "input": torch.empty(input_size, device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
-            "kernel": torch.empty(kernel_size, device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
-            "output": torch.empty(output_size, device=self.device, dtype=dtype),
+            "input": RandTensor((input_size,), -1.0, 1.0),
+            "kernel": RandTensor((kernel_size,), -1.0, 1.0),
+            "output": OutTensor((output_size,)),
             "input_size": input_size,
             "kernel_size": kernel_size,
         }

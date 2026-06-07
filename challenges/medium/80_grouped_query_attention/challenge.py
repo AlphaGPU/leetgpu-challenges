@@ -3,7 +3,7 @@ import math
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandnTensor
 
 
 class Challenge(ChallengeBase):
@@ -47,6 +47,23 @@ class Challenge(ChallengeBase):
 
         # Weighted sum of values: (num_q_heads, seq_len, head_dim)
         output.copy_(torch.bmm(attn_weights, V_expanded))
+
+    def reference_impl_jax(self, Q, K, V, num_q_heads, num_kv_heads, seq_len, head_dim):
+        import jax
+        import jax.numpy as jnp
+
+        num_groups = num_q_heads // num_kv_heads
+        scale = 1.0 / math.sqrt(head_dim)
+
+        K_expanded = jnp.repeat(K, num_groups, axis=0)
+        V_expanded = jnp.repeat(V, num_groups, axis=0)
+
+        scores = (
+            jnp.matmul(Q, jnp.transpose(K_expanded, (0, 2, 1)), precision=jax.lax.Precision.HIGHEST)
+            * scale
+        )
+        attn_weights = jax.nn.softmax(scores, axis=-1)
+        return jnp.matmul(attn_weights, V_expanded, precision=jax.lax.Precision.HIGHEST)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -167,6 +184,15 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        torch.manual_seed(0)
         # LLaMA-3 8B style: 32 Q heads, 8 KV heads, head_dim=128
-        return self._make_test_case(32, 8, 1024, 128)
+        num_q_heads, num_kv_heads, seq_len, head_dim = 32, 8, 1024, 128
+        return {
+            "Q": RandnTensor((num_q_heads, seq_len, head_dim)),
+            "K": RandnTensor((num_kv_heads, seq_len, head_dim)),
+            "V": RandnTensor((num_kv_heads, seq_len, head_dim)),
+            "output": OutTensor((num_q_heads, seq_len, head_dim)),
+            "num_q_heads": num_q_heads,
+            "num_kv_heads": num_kv_heads,
+            "seq_len": seq_len,
+            "head_dim": head_dim,
+        }

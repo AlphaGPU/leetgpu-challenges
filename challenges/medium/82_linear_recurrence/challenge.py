@@ -2,7 +2,7 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandnTensor, RandTensor
 
 
 class Challenge(ChallengeBase):
@@ -30,6 +30,27 @@ class Challenge(ChallengeBase):
         for t in range(1, L):
             out[:, t] = a[:, t] * out[:, t - 1] + x[:, t]
         h.copy_(out)
+
+    def reference_impl_jax(self, a, x, B, L):
+        import jax
+        import jax.numpy as jnp
+
+        a = jnp.asarray(a, dtype=jnp.float32)
+        x = jnp.asarray(x, dtype=jnp.float32)
+
+        # out[:, 0] = x[:, 0]; out[:, t] = a[:, t] * out[:, t-1] + x[:, t]
+        # Scan over time dimension (axis 1). a_t, x_t are (B,).
+        def step(carry, inp):
+            a_t, x_t = inp
+            new = a_t * carry + x_t
+            return new, new
+
+        a_T = jnp.transpose(a, (1, 0))  # (L, B)
+        x_T = jnp.transpose(x, (1, 0))  # (L, B)
+        init = x_T[0]  # out[:, 0]
+        _, ys = jax.lax.scan(step, init, (a_T[1:], x_T[1:]))  # ys: (L-1, B)
+        out = jnp.concatenate([init[None, :], ys], axis=0)  # (L, B)
+        return jnp.transpose(out, (1, 0))  # (B, L)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -111,6 +132,12 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        torch.manual_seed(0)
         # B=64 sequences, L=16384 tokens — typical long-context SSM workload
-        return self._make_test_case(64, 16384)
+        B, L = 64, 16384
+        return {
+            "a": RandTensor((B, L), 0.0, 1.0),
+            "x": RandnTensor((B, L)),
+            "h": OutTensor((B, L)),
+            "B": B,
+            "L": L,
+        }

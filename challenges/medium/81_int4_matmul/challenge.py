@@ -52,6 +52,25 @@ class Challenge(ChallengeBase):
         # MatMul: x [M, K] @ w_dequant.T [K, N] = y [M, N]
         y.copy_((x.float() @ w_dequant.T).half())
 
+    def reference_impl_jax(self, x, w_q, scales, M, N, K, group_size):
+        import jax.numpy as jnp
+
+        # Unpack INT4 weights from packed uint8 bytes.
+        w_high = ((w_q >> 4) & 0xF).astype(jnp.int32) - 8  # [N, K//2]
+        w_low = (w_q & 0xF).astype(jnp.int32) - 8  # [N, K//2]
+
+        # Interleave high and low nibbles to reconstruct [N, K]
+        w_int = jnp.stack([w_high, w_low], axis=-1).reshape(N, K)  # [N, K]
+
+        # Apply group-wise scales: dequantize each group
+        n_groups = K // group_size
+        w_groups = w_int.reshape(N, n_groups, group_size).astype(jnp.float32)
+        scales_f = scales.astype(jnp.float32)[..., None]  # [N, n_groups, 1]
+        w_dequant = (w_groups * scales_f).reshape(N, K)  # [N, K]
+
+        # MatMul: x [M, K] @ w_dequant.T [K, N] = y [M, N]
+        return (x.astype(jnp.float32) @ w_dequant.T).astype(jnp.float16)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "x": (ctypes.POINTER(ctypes.c_uint16), "in"),

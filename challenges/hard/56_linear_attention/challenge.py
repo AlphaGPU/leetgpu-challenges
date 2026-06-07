@@ -2,7 +2,7 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandTensor
 
 
 class Challenge(ChallengeBase):
@@ -37,6 +37,23 @@ class Challenge(ChallengeBase):
         denominator = phi_Q @ z  # (M,d) @ (d,) = (M,)
 
         output.copy_(numerator / denominator.unsqueeze(-1))  # (M, d)
+
+    def reference_impl_jax(self, Q, K, V, M, d):
+        import jax.numpy as jnp
+
+        # φ(x) = ELU(x) + 1
+        phi_Q = jnp.where(Q > 0, Q + 1, jnp.exp(Q))
+        phi_K = jnp.where(K > 0, K + 1, jnp.exp(K))
+
+        # S = φ(K)^T V  → (d, d)
+        S = phi_K.T @ V
+        # z = sum_j φ(K_j)  → (d,)
+        z = phi_K.sum(axis=0)
+
+        numerator = phi_Q @ S  # (M, d)
+        denominator = phi_Q @ z  # (M,)
+
+        return numerator / denominator[:, None]  # (M, d)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -147,10 +164,12 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        dtype = torch.float32
         M, d = 10000, 128
-        Q = torch.empty((M, d), device=self.device, dtype=dtype).uniform_(-100, 100)
-        K = torch.empty((M, d), device=self.device, dtype=dtype).uniform_(-100, 100)
-        V = torch.empty((M, d), device=self.device, dtype=dtype).uniform_(-100, 100)
-        output = torch.empty(M, d, device=self.device, dtype=dtype)
-        return {"Q": Q, "K": K, "V": V, "output": output, "M": M, "d": d}
+        return {
+            "Q": RandTensor((M, d), -100, 100),
+            "K": RandTensor((M, d), -100, 100),
+            "V": RandTensor((M, d), -100, 100),
+            "output": OutTensor((M, d)),
+            "M": M,
+            "d": d,
+        }

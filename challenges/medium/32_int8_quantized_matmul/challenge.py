@@ -37,6 +37,21 @@ class Challenge(ChallengeBase):
         C_q = torch.clamp(C_q, -128, 127).to(torch.int8)
         C.view(M, N).copy_(C_q)
 
+    def reference_impl_jax(
+        self, A, B, M, N, K, scale_A, scale_B, scale_C, zero_point_A, zero_point_B, zero_point_C
+    ):
+        import jax.numpy as jnp
+
+        A = A.reshape(M, K).astype(jnp.int32)
+        B = B.reshape(K, N).astype(jnp.int32)
+        A_f = (A - zero_point_A).astype(jnp.float32)
+        B_f = (B - zero_point_B).astype(jnp.float32)
+        C_f = jnp.round(jnp.matmul(A_f, B_f)).astype(jnp.int32)
+        C_f = C_f * scale_A * scale_B / scale_C
+        C_q = jnp.round(C_f).astype(jnp.int32) + zero_point_C
+        C_q = jnp.clip(C_q, -128, 127).astype(jnp.int8)
+        return C_q
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "A": (ctypes.POINTER(ctypes.c_int8), "in"),

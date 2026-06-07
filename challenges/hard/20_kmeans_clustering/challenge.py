@@ -45,6 +45,31 @@ class Challenge(ChallengeBase):
                     final_centroid_x[i] = data_x[mask].mean()
                     final_centroid_y[i] = data_y[mask].mean()
 
+    def reference_impl_jax(
+        self, data_x, data_y, initial_centroid_x, initial_centroid_y, sample_size, k, max_iterations
+    ):
+        import jax
+        import jax.numpy as jnp
+
+        final_centroid_x = initial_centroid_x
+        final_centroid_y = initial_centroid_y
+        labels = jnp.zeros((sample_size,), dtype=jnp.int32)
+        for _ in range(max_iterations):
+            expanded_x = data_x.reshape(-1, 1) - final_centroid_x.reshape(1, -1)
+            expanded_y = data_y.reshape(-1, 1) - final_centroid_y.reshape(1, -1)
+            distances = expanded_x**2 + expanded_y**2
+            labels = jnp.argmin(distances, axis=1).astype(jnp.int32)
+            onehot = jax.nn.one_hot(labels, k, dtype=data_x.dtype)
+            counts = onehot.sum(axis=0)
+            sum_x = jnp.matmul(data_x, onehot, precision=jax.lax.Precision.HIGHEST)
+            sum_y = jnp.matmul(data_y, onehot, precision=jax.lax.Precision.HIGHEST)
+            safe_counts = jnp.where(counts == 0, 1, counts)
+            mean_x = sum_x / safe_counts
+            mean_y = sum_y / safe_counts
+            final_centroid_x = jnp.where(counts > 0, mean_x, final_centroid_x)
+            final_centroid_y = jnp.where(counts > 0, mean_y, final_centroid_y)
+        return labels, final_centroid_x, final_centroid_y
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "data_x": (ctypes.POINTER(ctypes.c_float), "in"),

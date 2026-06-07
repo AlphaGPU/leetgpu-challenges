@@ -2,7 +2,7 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandTensor
 
 
 class Challenge(ChallengeBase):
@@ -29,6 +29,18 @@ class Challenge(ChallengeBase):
         attn = attn.masked_fill(mask, float("-inf"))
         attn = torch.softmax(attn, dim=1)
         torch.matmul(attn, V, out=output)
+
+    def reference_impl_jax(self, Q, K, V, M, d):
+        import jax
+        import jax.numpy as jnp
+
+        scale = d**0.5
+        attn = jnp.matmul(Q, K.T) / scale
+
+        mask = jnp.triu(jnp.ones((M, M), dtype=bool), k=1)
+        attn = jnp.where(mask, -jnp.inf, attn)
+        attn = jax.nn.softmax(attn, axis=1)
+        return jnp.matmul(attn, V)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -127,10 +139,12 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        dtype = torch.float32
         M, d = 5000, 128
-        Q = torch.empty((M, d), device=self.device, dtype=dtype).uniform_(-100, 100)
-        K = torch.empty((M, d), device=self.device, dtype=dtype).uniform_(-100, 100)
-        V = torch.empty((M, d), device=self.device, dtype=dtype).uniform_(-100, 100)
-        output = torch.empty(M, d, device=self.device, dtype=dtype)
-        return {"Q": Q, "K": K, "V": V, "output": output, "M": M, "d": d}
+        return {
+            "Q": RandTensor((M, d), -100.0, 100.0),
+            "K": RandTensor((M, d), -100.0, 100.0),
+            "V": RandTensor((M, d), -100.0, 100.0),
+            "output": OutTensor((M, d)),
+            "M": M,
+            "d": d,
+        }
