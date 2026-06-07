@@ -34,6 +34,19 @@ class Challenge(ChallengeBase):
 
         torch.matmul(attn, V, out=output)
 
+    def reference_impl_jax(self, Q, K, V, M, d, window_size):
+        import jax
+        import jax.numpy as jnp
+
+        scores = (Q @ K.T) / (d**0.5)
+
+        idxs = jnp.arange(M)
+        mask = jnp.abs(idxs[None, :] - idxs[:, None]) > window_size
+        scores = jnp.where(mask, -jnp.inf, scores)
+        attn = jax.nn.softmax(scores, axis=1)
+
+        return jnp.matmul(attn, V)
+
     def get_solve_signature(self) -> Dict[str, Any]:
         return {
             "Q": (ctypes.POINTER(ctypes.c_float), "in"),

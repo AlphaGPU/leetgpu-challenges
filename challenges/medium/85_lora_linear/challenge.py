@@ -41,6 +41,17 @@ class Challenge(ChallengeBase):
 
         output.copy_(base + lora_scale * delta)
 
+    def reference_impl_jax(self, x, W, A, B, batch, d_in, d_out, rank, lora_scale):
+
+        # Base linear: output = x @ W^T
+        base = x @ W.T
+
+        # LoRA path: delta = lora_scale * (x @ A^T) @ B^T
+        lora_hidden = x @ A.T  # (batch, rank)
+        delta = lora_hidden @ B.T  # (batch, d_out)
+
+        return base + lora_scale * delta
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "x": (ctypes.POINTER(ctypes.c_float), "in"),

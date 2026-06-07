@@ -43,6 +43,32 @@ class Challenge(ChallengeBase):
 
         output.copy_(result.squeeze(0).squeeze(0))
 
+    def reference_impl_jax(
+        self,
+        input,
+        kernel,
+        input_depth,
+        input_rows,
+        input_cols,
+        kernel_depth,
+        kernel_rows,
+        kernel_cols,
+    ):
+        import jax
+
+        # Cross-correlation (matches F.conv3d), valid padding, stride 1.
+        # Shapes: input (N=1, C=1, D, H, W), kernel (O=1, I=1, D, H, W).
+        lhs = input.reshape(1, 1, input_depth, input_rows, input_cols)
+        rhs = kernel.reshape(1, 1, kernel_depth, kernel_rows, kernel_cols)
+        result = jax.lax.conv_general_dilated(
+            lhs,
+            rhs,
+            window_strides=(1, 1, 1),
+            padding="VALID",
+            precision=jax.lax.Precision.HIGHEST,
+        )
+        return result.reshape(result.shape[2:])
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "input": (ctypes.POINTER(ctypes.c_float), "in"),

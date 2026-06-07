@@ -48,6 +48,23 @@ class Challenge(ChallengeBase):
         # Weighted sum of values: (num_q_heads, seq_len, head_dim)
         output.copy_(torch.bmm(attn_weights, V_expanded))
 
+    def reference_impl_jax(self, Q, K, V, num_q_heads, num_kv_heads, seq_len, head_dim):
+        import jax
+        import jax.numpy as jnp
+
+        num_groups = num_q_heads // num_kv_heads
+        scale = 1.0 / math.sqrt(head_dim)
+
+        K_expanded = jnp.repeat(K, num_groups, axis=0)
+        V_expanded = jnp.repeat(V, num_groups, axis=0)
+
+        scores = (
+            jnp.matmul(Q, jnp.transpose(K_expanded, (0, 2, 1)), precision=jax.lax.Precision.HIGHEST)
+            * scale
+        )
+        attn_weights = jax.nn.softmax(scores, axis=-1)
+        return jnp.matmul(attn_weights, V_expanded, precision=jax.lax.Precision.HIGHEST)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "Q": (ctypes.POINTER(ctypes.c_float), "in"),

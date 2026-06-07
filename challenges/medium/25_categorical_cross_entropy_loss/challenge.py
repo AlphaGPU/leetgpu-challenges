@@ -33,6 +33,20 @@ class Challenge(ChallengeBase):
             total_loss += loss_i.item()
         loss[0] = total_loss / N
 
+    def reference_impl_jax(self, logits, true_labels, N, C):
+        import jax.numpy as jnp
+
+        logits = jnp.asarray(logits, dtype=jnp.float32)  # (N, C)
+        true_labels = jnp.asarray(true_labels, dtype=jnp.int32)  # (N,)
+
+        # Per-row: log_sum_exp - logit[true_label], stable via max subtraction.
+        max_logit = jnp.max(logits, axis=1)  # (N,)
+        log_sum_exp = max_logit + jnp.log(jnp.sum(jnp.exp(logits - max_logit[:, None]), axis=1))
+        true_logit = jnp.take_along_axis(logits, true_labels[:, None], axis=1)[:, 0]  # (N,)
+        loss_per = log_sum_exp - true_logit  # (N,)
+        mean_loss = jnp.sum(loss_per) / N  # mean over N
+        return mean_loss.reshape(1)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "logits": (ctypes.POINTER(ctypes.c_float), "in"),

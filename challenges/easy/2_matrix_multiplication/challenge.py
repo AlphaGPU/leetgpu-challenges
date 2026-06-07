@@ -23,6 +23,11 @@ class Challenge(ChallengeBase):
 
         torch.matmul(A, B, out=C)
 
+    def reference_impl_jax(self, A, B, M, N, K):
+        import jax.numpy as jnp
+
+        return jnp.matmul(A, B)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "A": (ctypes.POINTER(ctypes.c_float), "in"),

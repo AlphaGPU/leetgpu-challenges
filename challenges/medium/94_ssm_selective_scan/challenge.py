@@ -62,6 +62,43 @@ class Challenge(ChallengeBase):
             y_t = torch.einsum("bn,bdn->bd", C_t, h) + skip * u_t  # (batch, d_model)
             y[:, t, :] = y_t
 
+    def reference_impl_jax(self, u, delta, A, B, C, skip, batch, seq_len, d_model, d_state):
+        import jax
+        import jax.numpy as jnp
+
+        u = jnp.asarray(u, dtype=jnp.float32)  # (batch, seq_len, d_model)
+        delta = jnp.asarray(delta, dtype=jnp.float32)  # (batch, seq_len, d_model)
+        A = jnp.asarray(A, dtype=jnp.float32)  # (d_model, d_state)
+        B = jnp.asarray(B, dtype=jnp.float32)  # (batch, seq_len, d_state)
+        C = jnp.asarray(C, dtype=jnp.float32)  # (batch, seq_len, d_state)
+        skip = jnp.asarray(skip, dtype=jnp.float32)  # (d_model,)
+
+        batch = u.shape[0]
+        d_model = u.shape[2]
+        d_state = A.shape[1]
+
+        # Move sequence axis to front for scanning.
+        u_t = jnp.transpose(u, (1, 0, 2))  # (seq_len, batch, d_model)
+        delta_t = jnp.transpose(delta, (1, 0, 2))  # (seq_len, batch, d_model)
+        B_t = jnp.transpose(B, (1, 0, 2))  # (seq_len, batch, d_state)
+        C_t = jnp.transpose(C, (1, 0, 2))  # (seq_len, batch, d_state)
+
+        A_b = A[None, :, :]  # (1, d_model, d_state)
+
+        def step(h, inp):
+            dt, ut, bt, ct = inp  # dt,ut:(batch,d_model) bt,ct:(batch,d_state)
+            A_bar = jnp.exp(dt[:, :, None] * A_b)  # (batch, d_model, d_state)
+            B_bar = dt[:, :, None] * bt[:, None, :]  # (batch, d_model, d_state)
+            h = A_bar * h + B_bar * ut[:, :, None]  # (batch, d_model, d_state)
+            y_t = (
+                jnp.einsum("bn,bdn->bd", ct, h, precision=jax.lax.Precision.HIGHEST) + skip * ut
+            )  # (batch, d_model)
+            return h, y_t
+
+        h0 = jnp.zeros((batch, d_model, d_state), dtype=jnp.float32)
+        _, ys = jax.lax.scan(step, h0, (delta_t, u_t, B_t, C_t))  # (seq_len, batch, d_model)
+        return jnp.transpose(ys, (1, 0, 2))  # (batch, seq_len, d_model)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "u": (ctypes.POINTER(ctypes.c_float), "in"),

@@ -31,6 +31,27 @@ class Challenge(ChallengeBase):
             out[:, t] = a[:, t] * out[:, t - 1] + x[:, t]
         h.copy_(out)
 
+    def reference_impl_jax(self, a, x, B, L):
+        import jax
+        import jax.numpy as jnp
+
+        a = jnp.asarray(a, dtype=jnp.float32)
+        x = jnp.asarray(x, dtype=jnp.float32)
+
+        # out[:, 0] = x[:, 0]; out[:, t] = a[:, t] * out[:, t-1] + x[:, t]
+        # Scan over time dimension (axis 1). a_t, x_t are (B,).
+        def step(carry, inp):
+            a_t, x_t = inp
+            new = a_t * carry + x_t
+            return new, new
+
+        a_T = jnp.transpose(a, (1, 0))  # (L, B)
+        x_T = jnp.transpose(x, (1, 0))  # (L, B)
+        init = x_T[0]  # out[:, 0]
+        _, ys = jax.lax.scan(step, init, (a_T[1:], x_T[1:]))  # ys: (L-1, B)
+        out = jnp.concatenate([init[None, :], ys], axis=0)  # (L, B)
+        return jnp.transpose(out, (1, 0))  # (B, L)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "a": (ctypes.POINTER(ctypes.c_float), "in"),

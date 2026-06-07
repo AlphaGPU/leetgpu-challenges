@@ -46,6 +46,13 @@ class Challenge(ChallengeBase):
         result = torch.matmul(A_matrix, B_matrix)
         C.copy_(result.view(C.shape))
 
+    def reference_impl_jax(self, A, B, M, N, K, nnz):
+        import jax.numpy as jnp
+
+        A_matrix = A.reshape(M, N)
+        B_matrix = B.reshape(N, K)
+        return jnp.matmul(A_matrix, B_matrix)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "A": (ctypes.POINTER(ctypes.c_float), "in"),

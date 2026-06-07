@@ -39,6 +39,18 @@ class Challenge(ChallengeBase):
         attn = torch.matmul(Q, K.T) / scale
         output.copy_(torch.matmul(attn * decay_mask, V))
 
+    def reference_impl_jax(self, Q, K, V, seq_len, d_model, gamma):
+        import jax
+        import jax.numpy as jnp
+
+        scale = math.sqrt(d_model)
+        positions = jnp.arange(seq_len, dtype=Q.dtype)
+        distances = positions.reshape(seq_len, 1) - positions.reshape(1, seq_len)
+        causal = (distances >= 0).astype(Q.dtype)
+        decay_mask = jnp.power(gamma, jnp.maximum(distances, 0)) * causal
+        attn = jnp.matmul(Q, K.T, precision=jax.lax.Precision.HIGHEST) / scale
+        return jnp.matmul(attn * decay_mask, V, precision=jax.lax.Precision.HIGHEST)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "Q": (ctypes.POINTER(ctypes.c_float), "in"),

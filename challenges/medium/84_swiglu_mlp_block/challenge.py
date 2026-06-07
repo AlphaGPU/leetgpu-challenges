@@ -38,6 +38,14 @@ class Challenge(ChallengeBase):
         hidden = F.silu(gate) * up  # [M, d_ffn]
         output.copy_(hidden @ W_down)  # [M, d_model]
 
+    def reference_impl_jax(self, x, W_gate, W_up, W_down, M, d_model, d_ffn):
+        import jax
+
+        gate = x @ W_gate  # [M, d_ffn]
+        up = x @ W_up  # [M, d_ffn]
+        hidden = jax.nn.silu(gate) * up  # [M, d_ffn]
+        return hidden @ W_down  # [M, d_model]
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "x": (ctypes.POINTER(ctypes.c_float), "in"),

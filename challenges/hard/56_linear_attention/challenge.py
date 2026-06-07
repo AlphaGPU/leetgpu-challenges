@@ -38,6 +38,23 @@ class Challenge(ChallengeBase):
 
         output.copy_(numerator / denominator.unsqueeze(-1))  # (M, d)
 
+    def reference_impl_jax(self, Q, K, V, M, d):
+        import jax.numpy as jnp
+
+        # φ(x) = ELU(x) + 1
+        phi_Q = jnp.where(Q > 0, Q + 1, jnp.exp(Q))
+        phi_K = jnp.where(K > 0, K + 1, jnp.exp(K))
+
+        # S = φ(K)^T V  → (d, d)
+        S = phi_K.T @ V
+        # z = sum_j φ(K_j)  → (d,)
+        z = phi_K.sum(axis=0)
+
+        numerator = phi_Q @ S  # (M, d)
+        denominator = phi_Q @ z  # (M,)
+
+        return numerator / denominator[:, None]  # (M, d)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "Q": (ctypes.POINTER(ctypes.c_float), "in"),

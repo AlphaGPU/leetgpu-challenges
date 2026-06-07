@@ -43,6 +43,16 @@ class Challenge(ChallengeBase):
         # Find nearest neighbor indices
         indices.copy_(torch.argmin(dist_sq, dim=1).int())
 
+    def reference_impl_jax(self, points, N):
+        import jax.numpy as jnp
+
+        pts = points.reshape(N, 3)
+        diff = pts[:, None, :] - pts[None, :, :]
+        dist_sq = jnp.sum(diff * diff, axis=2)
+        mask = jnp.eye(N, dtype=bool)
+        dist_sq = jnp.where(mask, jnp.inf, dist_sq)
+        return jnp.argmin(dist_sq, axis=1).astype(jnp.int32)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "points": (ctypes.POINTER(ctypes.c_float), "in"),

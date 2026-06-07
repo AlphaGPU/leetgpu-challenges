@@ -37,6 +37,22 @@ class Challenge(ChallengeBase):
             d = torch.minimum(d, d[:, k : k + 1] + d[k : k + 1, :])
         output.copy_(d.view(-1))
 
+    def reference_impl_jax(self, dist, N):
+        import jax
+        import jax.numpy as jnp
+
+        d = jnp.asarray(dist, dtype=jnp.float32).reshape(N, N)
+
+        # Floyd-Warshall: for each k, d = min(d, d[:, k] + d[k, :]).
+        # inf for unreachable preserved (inf + x = inf, min stays inf).
+        def body(k, d):
+            col = jax.lax.dynamic_slice_in_dim(d, k, 1, axis=1)  # (N, 1)
+            row = jax.lax.dynamic_slice_in_dim(d, k, 1, axis=0)  # (1, N)
+            return jnp.minimum(d, col + row)
+
+        d = jax.lax.fori_loop(0, N, body, d)
+        return d.reshape(-1)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "dist": (ctypes.POINTER(ctypes.c_float), "in"),

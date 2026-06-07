@@ -30,6 +30,18 @@ class Challenge(ChallengeBase):
         attn = torch.softmax(attn, dim=1)
         torch.matmul(attn, V, out=output)
 
+    def reference_impl_jax(self, Q, K, V, M, d):
+        import jax
+        import jax.numpy as jnp
+
+        scale = d**0.5
+        attn = jnp.matmul(Q, K.T) / scale
+
+        mask = jnp.triu(jnp.ones((M, M), dtype=bool), k=1)
+        attn = jnp.where(mask, -jnp.inf, attn)
+        attn = jax.nn.softmax(attn, axis=1)
+        return jnp.matmul(attn, V)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "Q": (ctypes.POINTER(ctypes.c_float), "in"),

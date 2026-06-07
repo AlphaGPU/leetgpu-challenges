@@ -33,6 +33,22 @@ class Challenge(ChallengeBase):
         # 'ij,j->i' means: for each window i, multiply with kernel j and sum over j
         output.copy_(torch.einsum("ij,j->i", windows, kernel))
 
+    def reference_impl_jax(self, input, kernel, input_size, kernel_size):
+        import jax
+
+        # Cross-correlation, valid padding, stride 1.
+        # Shapes: input (N=1, C=1, W), kernel (O=1, I=1, W).
+        lhs = input.reshape(1, 1, input_size)
+        rhs = kernel.reshape(1, 1, kernel_size)
+        result = jax.lax.conv_general_dilated(
+            lhs,
+            rhs,
+            window_strides=(1,),
+            padding="VALID",
+            precision=jax.lax.Precision.HIGHEST,
+        )
+        return result.reshape(-1)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "input": (ctypes.POINTER(ctypes.c_float), "in"),

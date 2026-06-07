@@ -204,6 +204,125 @@ class Challenge(ChallengeBase):
             next_token = last_logits.argmax(dim=-1).to(torch.int32)
             seq = torch.cat([seq, next_token.unsqueeze(1)], dim=1)
 
+    def reference_impl_jax(self, prompts, weights, batch_size):
+        import jax
+        import jax.numpy as jnp
+
+        prompts = jnp.asarray(prompts, dtype=jnp.int32)
+        weights = jnp.asarray(weights, dtype=jnp.float32)
+
+        max_len = PROMPT_LEN + OUTPUT_DIGITS
+
+        embed_w = weights[O_EMBED : O_EMBED + 2]
+        q_w = weights[O_QPROJ : O_QPROJ + 2]
+        v_w = weights[O_VPROJ]
+        gate_w = weights[O_GATE : O_GATE + 2]
+        carry_w = weights[O_CARRY]
+        norm_w = weights[O_NORM : O_NORM + 2]
+
+        digits = jnp.arange(VOCAB_SIZE, dtype=jnp.float32)
+        embed_table = jnp.stack(
+            [embed_w[0] - embed_w[1] * digits * digits, -digits], axis=-1
+        )  # [10, 2]
+
+        positions = jnp.arange(max_len, dtype=jnp.float32)
+        angles = positions * OMEGA
+        cos_a = jnp.cos(angles)
+        sin_a = jnp.sin(angles)
+
+        def unit_rms_norm(x):
+            return x * jax.lax.rsqrt(jnp.mean(x * x, axis=-1, keepdims=True) + RMS_EPS)
+
+        def forward_last(seq, cur_len):
+            # seq: [batch, max_len] int32 (padded); cur_len: scalar valid length.
+            h = embed_table[seq.astype(jnp.int32)]  # [batch, max_len, 2]
+
+            h_norm = unit_rms_norm(h)
+
+            q = jnp.stack([h_norm[..., 0] * q_w[0], h_norm[..., 0] * q_w[1]], axis=-1)
+            k = jnp.stack([h_norm[..., 0], jnp.zeros_like(h_norm[..., 0])], axis=-1)
+            v = jnp.stack([h_norm[..., 1] * v_w, jnp.zeros_like(h_norm[..., 1])], axis=-1)
+
+            q = unit_rms_norm(q)
+            k = unit_rms_norm(k)
+
+            q_rot = jnp.stack(
+                [
+                    q[..., 0] * cos_a - q[..., 1] * sin_a,
+                    q[..., 0] * sin_a + q[..., 1] * cos_a,
+                ],
+                axis=-1,
+            )
+            k_rot = jnp.stack(
+                [
+                    k[..., 0] * cos_a - k[..., 1] * sin_a,
+                    k[..., 0] * sin_a + k[..., 1] * cos_a,
+                ],
+                axis=-1,
+            )
+
+            q_rot = q_rot[:, None, :, :]
+            k_rot = k_rot[:, None, :, :]
+            v = v[:, None, :, :]
+
+            attn_scores = (
+                jnp.matmul(q_rot, jnp.swapaxes(k_rot, -2, -1), precision="highest") * ATTN_SCALE
+            )
+            row = jnp.arange(max_len)[:, None]
+            col = jnp.arange(max_len)[None, :]
+            # Causal mask plus padding: queries/keys at index >= cur_len excluded.
+            mask = (col > row) | (col >= cur_len)
+            attn_scores = jnp.where(mask[None, None, :, :], -jnp.inf, attn_scores)
+            attn_probs = jax.nn.softmax(attn_scores, axis=-1)
+            attn_out = jnp.matmul(attn_probs, v, precision="highest")[
+                :, 0, :, :
+            ]  # [batch, max_len, 2]
+
+            o = jnp.stack([jnp.zeros_like(attn_out[..., 0]), attn_out[..., 0]], axis=-1)
+            h = h + o
+
+            h_norm2 = unit_rms_norm(h)
+
+            a_gate = gate_w[0]
+            c_gate = gate_w[1]
+            g0 = h_norm2[..., 0] * a_gate + h_norm2[..., 1] * c_gate
+            g1 = h_norm2[..., 0] * (a_gate - c_gate / EMBED_CONST) + h_norm2[..., 1] * c_gate
+            gate = jnp.stack([g0, g1], axis=-1)
+
+            base = h_norm2[..., 0]
+            up = jnp.broadcast_to(base[..., None], gate.shape)
+            mix = jax.nn.silu(gate) * up
+            mlp_out = jnp.stack(
+                [jnp.zeros_like(base), carry_w * (mix[..., 1] - mix[..., 0])], axis=-1
+            )
+            h = h + mlp_out
+
+            rms = jnp.sqrt(jnp.mean(h * h, axis=-1, keepdims=True) + RMS_EPS)
+            h = (h / rms) * norm_w
+
+            logits = jnp.matmul(h, embed_table.T, precision="highest")  # [batch, max_len, 10]
+            # Logits at the last valid position (cur_len - 1).
+            last = jnp.take_along_axis(
+                logits, jnp.full((logits.shape[0], 1, VOCAB_SIZE), cur_len - 1), axis=1
+            )[:, 0, :]
+            return last
+
+        bsz = prompts.shape[0]
+        seq0 = jnp.zeros((bsz, max_len), dtype=jnp.int32)
+        seq0 = seq0.at[:, :PROMPT_LEN].set(prompts)
+
+        def step(carry, step_idx):
+            seq, cur_len = carry
+            last_logits = forward_last(seq, cur_len)
+            next_token = jnp.argmax(last_logits, axis=-1).astype(jnp.int32)
+            seq = seq.at[:, cur_len].set(next_token)
+            return (seq, cur_len + 1), last_logits
+
+        (_, _), outputs = jax.lax.scan(step, (seq0, PROMPT_LEN), jnp.arange(OUTPUT_DIGITS))
+        # outputs: [OUTPUT_DIGITS, batch, VOCAB_SIZE] -> [batch, OUTPUT_DIGITS, VOCAB_SIZE]
+        output = jnp.transpose(outputs, (1, 0, 2)).astype(jnp.float32)
+        return output
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "prompts": (ctypes.POINTER(ctypes.c_int), "in"),

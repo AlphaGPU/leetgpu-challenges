@@ -34,6 +34,22 @@ class Challenge(ChallengeBase):
         # Copy result to output tensor (removing the extra dimensions and flattening)
         output.copy_(result.view(-1))
 
+    def reference_impl_jax(self, input, kernel, input_rows, input_cols, kernel_rows, kernel_cols):
+        import jax
+
+        # Cross-correlation (matches F.conv2d), valid padding, stride 1.
+        # Shapes: input (N=1, C=1, H, W), kernel (O=1, I=1, H, W).
+        lhs = input.reshape(1, 1, input_rows, input_cols)
+        rhs = kernel.reshape(1, 1, kernel_rows, kernel_cols)
+        result = jax.lax.conv_general_dilated(
+            lhs,
+            rhs,
+            window_strides=(1, 1),
+            padding="VALID",
+            precision=jax.lax.Precision.HIGHEST,
+        )
+        return result.reshape(-1)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "input": (ctypes.POINTER(ctypes.c_float), "in"),

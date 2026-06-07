@@ -122,6 +122,80 @@ class Challenge(ChallengeBase):
         # Residual 2
         output.copy_(hidden + ffn_out)
 
+    def reference_impl_jax(self, x, weights, cos, sin, seq_len):
+        import jax
+        import jax.numpy as jnp
+
+        def rms_norm(z, w):
+            return z * jax.lax.rsqrt(jnp.mean(z**2, axis=-1, keepdims=True) + 1e-5) * w
+
+        def apply_rope(qk, c, s):
+            # qk: (seq_len, num_heads, head_dim)
+            q1, q2 = qk[..., : HEAD_DIM // 2], qk[..., HEAD_DIM // 2 :]
+            c = c[:, None, :]  # (seq_len, 1, head_dim//2)
+            s = s[:, None, :]
+            return jnp.concatenate([q1 * c - q2 * s, q1 * s + q2 * c], axis=-1)
+
+        # unpack weights
+        rms1_w = weights[O_RMS1_W:O_WQ]
+        W_Q = weights[O_WQ:O_WK].reshape(Q_DIM, D)
+        W_K = weights[O_WK:O_WV].reshape(KV_DIM, D)
+        W_V = weights[O_WV:O_WO].reshape(KV_DIM, D)
+        W_O = weights[O_WO:O_RMS2_W].reshape(D, D)
+        rms2_w = weights[O_RMS2_W:O_WGATE]
+        W_gate = weights[O_WGATE:O_WUP].reshape(FFN_HIDDEN, D)
+        W_up = weights[O_WUP:O_WDOWN].reshape(FFN_HIDDEN, D)
+        W_down = weights[O_WDOWN:TOTAL_WEIGHTS].reshape(D, FFN_HIDDEN)
+
+        # --- Attention sub-block ---
+        x_norm = rms_norm(x, rms1_w)
+
+        # QKV projections
+        q = (x_norm @ W_Q.T).reshape(seq_len, NUM_Q_HEADS, HEAD_DIM)
+        k = (x_norm @ W_K.T).reshape(seq_len, NUM_KV_HEADS, HEAD_DIM)
+        v = (x_norm @ W_V.T).reshape(seq_len, NUM_KV_HEADS, HEAD_DIM)
+
+        # Apply RoPE to Q and K
+        q = apply_rope(q, cos, sin)
+        k = apply_rope(k, cos, sin)
+
+        # Reshape for batched matmul: (num_heads, seq_len, head_dim)
+        q = q.transpose(1, 0, 2)  # (NUM_Q_HEADS, seq_len, HEAD_DIM)
+        k = k.transpose(1, 0, 2)  # (NUM_KV_HEADS, seq_len, HEAD_DIM)
+        v = v.transpose(1, 0, 2)  # (NUM_KV_HEADS, seq_len, HEAD_DIM)
+
+        # GQA: broadcast K and V to match Q heads
+        k = jnp.repeat(k, GQA_GROUPS, axis=0)  # (NUM_Q_HEADS, seq_len, HEAD_DIM)
+        v = jnp.repeat(v, GQA_GROUPS, axis=0)
+
+        # Causal scaled dot-product attention
+        scores = jnp.matmul(q, jnp.swapaxes(k, -2, -1)) / math.sqrt(HEAD_DIM)
+        causal_mask = jnp.triu(
+            jnp.full((seq_len, seq_len), -jnp.inf, dtype=x.dtype),
+            k=1,
+        )
+        scores = scores + causal_mask
+        attn_weights = jax.nn.softmax(scores, axis=-1)
+        attn_out = jnp.matmul(attn_weights, v)  # (NUM_Q_HEADS, seq_len, HEAD_DIM)
+
+        # Merge heads and project
+        attn_out = attn_out.transpose(1, 0, 2).reshape(seq_len, D)
+        attn_proj = attn_out @ W_O.T
+
+        # Residual 1
+        hidden = x + attn_proj
+
+        # --- FFN sub-block ---
+        h_norm = rms_norm(hidden, rms2_w)
+
+        # SwiGLU: gate * up, then project down
+        gate = jax.nn.silu(h_norm @ W_gate.T)
+        up = h_norm @ W_up.T
+        ffn_out = (gate * up) @ W_down.T
+
+        # Residual 2
+        return hidden + ffn_out
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "x": (ctypes.POINTER(ctypes.c_float), "in"),
