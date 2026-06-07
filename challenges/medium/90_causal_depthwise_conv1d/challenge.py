@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 
 import torch
 import torch.nn.functional as F
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandnTensor
 
 
 class Challenge(ChallengeBase):
@@ -188,16 +188,11 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         B, L, D, K = 8, 2048, 4096, 4
-        dtype = torch.float32
-        x = torch.randn(B, L, D, device=self.device, dtype=dtype)
-        weight = torch.randn(D, K, device=self.device, dtype=dtype)
-        bias = torch.randn(D, device=self.device, dtype=dtype)
-        output = torch.empty(B, L, D, device=self.device, dtype=dtype)
         return {
-            "x": x,
-            "weight": weight,
-            "bias": bias,
-            "output": output,
+            "x": RandnTensor((B, L, D)),
+            "weight": RandnTensor((D, K)),
+            "bias": RandnTensor((D,)),
+            "output": OutTensor((B, L, D)),
             "B": B,
             "L": L,
             "D": D,

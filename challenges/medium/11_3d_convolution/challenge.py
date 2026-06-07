@@ -2,7 +2,7 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandTensor
 
 
 class Challenge(ChallengeBase):
@@ -268,26 +268,18 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        dtype = torch.float32
         input_depth, input_rows, input_cols = 256, 128, 128
         kernel_depth, kernel_rows, kernel_cols = 5, 5, 5
-        input_tensor = torch.empty(
-            input_depth, input_rows, input_cols, device=self.device, dtype=dtype
-        ).uniform_(-1.0, 1.0)
-        kernel_tensor = torch.empty(
-            kernel_depth, kernel_rows, kernel_cols, device=self.device, dtype=dtype
-        ).uniform_(-1.0, 1.0)
-        output_tensor = torch.zeros(
-            input_depth - kernel_depth + 1,
-            input_rows - kernel_rows + 1,
-            input_cols - kernel_cols + 1,
-            device=self.device,
-            dtype=dtype,
-        )
         return {
-            "input": input_tensor,
-            "kernel": kernel_tensor,
-            "output": output_tensor,
+            "input": RandTensor((input_depth, input_rows, input_cols), -1.0, 1.0),
+            "kernel": RandTensor((kernel_depth, kernel_rows, kernel_cols), -1.0, 1.0),
+            "output": OutTensor(
+                (
+                    input_depth - kernel_depth + 1,
+                    input_rows - kernel_rows + 1,
+                    input_cols - kernel_cols + 1,
+                )
+            ),
             "input_depth": input_depth,
             "input_rows": input_rows,
             "input_cols": input_cols,

@@ -3,7 +3,7 @@ import math
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandnTensor
 
 
 class Challenge(ChallengeBase):
@@ -146,6 +146,14 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        torch.manual_seed(0)
         # Typical LLM head: seq_len=4096, head_dim=64
-        return self._make_test_case(4096, 64, gamma=0.9)
+        seq_len, d_model = 4096, 64
+        return {
+            "Q": RandnTensor((seq_len, d_model)),
+            "K": RandnTensor((seq_len, d_model)),
+            "V": RandnTensor((seq_len, d_model)),
+            "output": OutTensor((seq_len, d_model)),
+            "seq_len": seq_len,
+            "d_model": d_model,
+            "gamma": 0.9,
+        }

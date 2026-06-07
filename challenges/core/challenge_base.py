@@ -2,6 +2,54 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
 
+class RandTensor:
+    """Uniform random input in [low, high)."""
+
+    def __init__(self, shape, low=0.0, high=1.0, dtype="float32"):
+        self.shape = tuple(shape)
+        self.low = low
+        self.high = high
+        self.dtype = dtype
+
+
+class RandnTensor:
+    """Normal (Gaussian) random input."""
+
+    def __init__(self, shape, mean=0.0, std=1.0, dtype="float32"):
+        self.shape = tuple(shape)
+        self.mean = mean
+        self.std = std
+        self.dtype = dtype
+
+
+class RandIntTensor:
+    """Uniform integer random input in [low, high)."""
+
+    def __init__(self, shape, low, high, dtype="int32"):
+        self.shape = tuple(shape)
+        self.low = low
+        self.high = high
+        self.dtype = dtype
+
+
+class FullTensor:
+    """Constant-filled input (covers zeros / ones / full)."""
+
+    def __init__(self, shape, value=0.0, dtype="float32"):
+        self.shape = tuple(shape)
+        self.value = value
+        self.dtype = dtype
+
+
+class OutTensor:
+    """Output buffer (by shape): materialized empty where outputs are written in
+    place (torch), omitted where they're returned functionally (jax)."""
+
+    def __init__(self, shape, dtype="float32"):
+        self.shape = tuple(shape)
+        self.dtype = dtype
+
+
 class ChallengeBase(ABC):
     name: str
     atol: float

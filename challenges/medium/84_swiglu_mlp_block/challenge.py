@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 
 import torch
 import torch.nn.functional as F
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandnTensor
 
 
 class Challenge(ChallengeBase):
@@ -157,6 +157,15 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        torch.manual_seed(0)
         # LLaMA-3 8B style: d_model=4096, d_ffn=14336, M=512 (batch=4 x seq=128)
-        return self._make_test_case(512, 4096, 14336)
+        M, d_model, d_ffn = 512, 4096, 14336
+        return {
+            "x": RandnTensor((M, d_model), std=0.1),
+            "W_gate": RandnTensor((d_model, d_ffn), std=0.02),
+            "W_up": RandnTensor((d_model, d_ffn), std=0.02),
+            "W_down": RandnTensor((d_ffn, d_model), std=0.02),
+            "output": OutTensor((M, d_model)),
+            "M": M,
+            "d_model": d_model,
+            "d_ffn": d_ffn,
+        }

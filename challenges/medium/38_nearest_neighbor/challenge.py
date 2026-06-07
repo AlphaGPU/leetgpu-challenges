@@ -2,7 +2,7 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandTensor
 
 
 class Challenge(ChallengeBase):
@@ -218,14 +218,9 @@ class Challenge(ChallengeBase):
         return test_cases
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        dtype_float = torch.float32
-        dtype_int = torch.int32
         N = 10000
-
         return {
-            "points": torch.empty((N, 3), device=self.device, dtype=dtype_float)
-            .uniform_(-1000.0, 1000.0)
-            .flatten(),
-            "indices": torch.full((N,), -1, device=self.device, dtype=dtype_int),
+            "points": RandTensor((N * 3,), -1000.0, 1000.0),
+            "indices": OutTensor((N,), dtype="int32"),
             "N": N,
         }

@@ -2,7 +2,7 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandnTensor, RandTensor
 
 
 class Challenge(ChallengeBase):
@@ -132,6 +132,12 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        torch.manual_seed(0)
         # B=64 sequences, L=16384 tokens — typical long-context SSM workload
-        return self._make_test_case(64, 16384)
+        B, L = 64, 16384
+        return {
+            "a": RandTensor((B, L), 0.0, 1.0),
+            "x": RandnTensor((B, L)),
+            "h": OutTensor((B, L)),
+            "B": B,
+            "L": L,
+        }

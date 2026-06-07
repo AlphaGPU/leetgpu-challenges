@@ -2,7 +2,7 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandTensor
 
 
 class Challenge(ChallengeBase):
@@ -164,10 +164,12 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        dtype = torch.float32
         M, d = 10000, 128
-        Q = torch.empty((M, d), device=self.device, dtype=dtype).uniform_(-100, 100)
-        K = torch.empty((M, d), device=self.device, dtype=dtype).uniform_(-100, 100)
-        V = torch.empty((M, d), device=self.device, dtype=dtype).uniform_(-100, 100)
-        output = torch.empty(M, d, device=self.device, dtype=dtype)
-        return {"Q": Q, "K": K, "V": V, "output": output, "M": M, "d": d}
+        return {
+            "Q": RandTensor((M, d), -100, 100),
+            "K": RandTensor((M, d), -100, 100),
+            "V": RandTensor((M, d), -100, 100),
+            "output": OutTensor((M, d)),
+            "M": M,
+            "d": d,
+        }
