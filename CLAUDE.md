@@ -145,7 +145,7 @@ Each starter file must have exactly one comment describing the parameters, place
 | CUDA | `// <params> are device pointers` |
 | Mojo | `# <params> are device pointers` |
 | PyTorch, Triton, CuTe | `# <params> are tensors on the GPU` |
-| JAX | `# <params> are tensors on GPU` (+ `# return output tensor directly` inside body) |
+| JAX | `# <params> are tensors on device` (+ `# return output tensor directly` inside body) |
 
 **Rules:**
 - Easy challenges: include the parenthetical `(i.e. pointers to memory on the GPU)` for CUDA/Mojo (matches vector_add reference)
@@ -200,7 +200,7 @@ Verify every item before submitting. This is the single source of truth — work
 - [ ] All 6 files present: `.cu`, `.pytorch.py`, `.triton.py`, `.jax.py`, `.cute.py`, `.mojo`
 - [ ] Exactly 1 parameter description comment per file, no other comments
 - [ ] CUDA/Mojo use "device pointers"; easy challenges include `(i.e. pointers to memory on the GPU)`, medium/hard omit it
-- [ ] Python frameworks use "tensors on the GPU"; JAX also has `# return output tensor directly`
+- [ ] PyTorch/Triton/CuTe use "tensors on the GPU"; JAX uses "tensors on device" and also has `# return output tensor directly`
 - [ ] Starters compile/run but do NOT produce correct output
 
 ### General

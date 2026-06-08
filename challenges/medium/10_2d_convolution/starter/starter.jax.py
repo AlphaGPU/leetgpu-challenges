@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# input, kernel are tensors on the GPU
+# input, kernel are tensors on device
 @jax.jit
 def solve(
     input: jax.Array,

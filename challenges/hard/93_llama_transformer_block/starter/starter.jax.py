@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# x, weights, cos, sin are tensors on GPU
+# x, weights, cos, sin are tensors on device
 @jax.jit
 def solve(
     x: jax.Array,

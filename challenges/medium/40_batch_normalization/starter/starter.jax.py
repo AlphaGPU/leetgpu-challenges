@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# input, gamma, beta are tensors on the GPU
+# input, gamma, beta are tensors on device
 @jax.jit
 def solve(
     input: jax.Array, gamma: jax.Array, beta: jax.Array, N: int, C: int, eps: float

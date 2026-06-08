@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# u, delta, A, B, C, skip are tensors on GPU
+# u, delta, A, B, C, skip are tensors on device
 @jax.jit
 def solve(
     u: jax.Array,
