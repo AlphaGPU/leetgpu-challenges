@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# X, S are tensors on the GPU
+# X, S are tensors on device
 @jax.jit
 def solve(X: jax.Array, S: jax.Array, M: int, N: int, TILE_SIZE: int) -> jax.Array:
     # return output tensor Y directly

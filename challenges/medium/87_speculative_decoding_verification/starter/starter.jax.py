@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# draft_tokens, draft_probs, target_probs, uniform_samples are tensors on GPU
+# draft_tokens, draft_probs, target_probs, uniform_samples are tensors on device
 @jax.jit
 def solve(
     draft_tokens: jax.Array,

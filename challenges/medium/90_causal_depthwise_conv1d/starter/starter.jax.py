@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# x, weight, bias are tensors on GPU
+# x, weight, bias are tensors on device
 @jax.jit
 def solve(
     x: jax.Array, weight: jax.Array, bias: jax.Array, B: int, L: int, D: int, K: int

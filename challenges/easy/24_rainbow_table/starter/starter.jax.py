@@ -16,7 +16,7 @@ def fnv1a_hash(x: jax.Array) -> jax.Array:
     return hash_val
 
 
-# input is a tensor on the GPU
+# input is a tensor on device
 def solve(input: jax.Array, N: int, R: int) -> jax.Array:
     # return output tensor directly
     pass

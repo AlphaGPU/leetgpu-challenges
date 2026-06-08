@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# grid is a tensor on the GPU
+# grid is a tensor on device
 @jax.jit
 def solve(
     grid: jax.Array,
