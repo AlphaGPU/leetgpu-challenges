@@ -1,0 +1,48 @@
+<p>
+  Given an input image of dimensions <code>H</code> &times; <code>W</code> (stored as 32-bit floats
+  in row-major order), produce a scaled output image of dimensions <code>H_out</code> &times;
+  <code>W_out</code> using bilinear interpolation with align-corners convention. For each output
+  pixel <code>(i, j)</code>, compute its corresponding source coordinate in the input image and
+  blend the four surrounding pixels with bilinearly-weighted coefficients.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>output</code></li>
+  <li>Read exclusively from <code>image</code> and write exclusively to <code>output</code></li>
+</ul>
+
+<h2>Example</h2>
+<p>
+Input <code>image</code> (<code>H</code> = 2, <code>W</code> = 2):
+\[
+\begin{bmatrix}
+1.0 & 3.0 \\
+7.0 & 9.0
+\end{bmatrix}
+\]
+<code>H_out</code> = 3, <code>W_out</code> = 3<br><br>
+Source coordinates (align-corners): \(\text{src\_y} = i \cdot \frac{H-1}{H_\text{out}-1}\), \(\text{src\_x} = j \cdot \frac{W-1}{W_\text{out}-1}\)<br>
+For output size 3 and input size 2 this gives a scale of 0.5, so each output step maps to 0.5 input steps.<br><br>
+Output (<code>H_out</code> = 3, <code>W_out</code> = 3):
+\[
+\begin{bmatrix}
+1.0 & 2.0 & 3.0 \\
+4.0 & 5.0 & 6.0 \\
+7.0 & 8.0 & 9.0
+\end{bmatrix}
+\]
+For example, output pixel \((1, 1)\): \(\text{src\_y} = 0.5\), \(\text{src\_x} = 0.5\), so
+\(0.25 \times (1.0 + 3.0 + 7.0 + 9.0) = 5.0\).
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>H</code>, <code>W</code> &le; 8,192</li>
+  <li>1 &le; <code>H_out</code>, <code>W_out</code> &le; 16,384</li>
+  <li>Input values are in the range [-10, 10]</li>
+  <li>All values are 32-bit floats</li>
+  <li>Performance is measured with <code>H</code> = 4,096, <code>W</code> = 4,096, <code>H_out</code> = 8,192, <code>W_out</code> = 8,192</li>
+</ul>
