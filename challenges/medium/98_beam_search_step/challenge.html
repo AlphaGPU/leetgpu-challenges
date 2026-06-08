@@ -1,0 +1,50 @@
+<p>
+  Implement one decoding step of beam search for autoregressive language models. Given the cumulative log-probabilities of <code>K</code> active beams in each of <code>B</code> independent sequences and the next-token log-probabilities for every token in the vocabulary from each beam, expand all <code>K &times; V</code> candidate continuations and select the top <code>K</code> candidates per sequence to form the next set of beams.
+</p>
+
+<p>
+  For each batch <code>b</code> and candidate <code>(k, v)</code>, the score is
+  \[
+  \text{cand}[b, k, v] = \text{beam\_scores}[b, k] + \text{token\_logprobs}[b, k, v]
+  \]
+  Per batch, the top <code>K</code> candidates by score are selected and written, sorted in descending order by score, into <code>new_beam_scores</code>. For each selected candidate, the originating beam index <code>k</code> is written to <code>parent_beam_indices</code> and the chosen vocabulary token <code>v</code> to <code>next_tokens</code>.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final results must be stored in <code>new_beam_scores</code>, <code>parent_beam_indices</code>, and <code>next_tokens</code></li>
+  <li>Within each batch, the <code>K</code> outputs must be sorted in descending order by score; <code>parent_beam_indices</code> and <code>next_tokens</code> must correspond positionally to <code>new_beam_scores</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:
+  beam_scores = [[-0.5, -1.0]]
+  token_logprobs = [[[-0.3, -1.2, -2.0, -2.5],
+                     [-0.4, -0.1, -1.6, -3.2]]]
+  B = 1, K = 2, V = 4
+
+Output:
+  new_beam_scores = [[-0.8, -1.1]]
+  parent_beam_indices = [[0, 1]]
+  next_tokens = [[0, 1]]
+
+Explanation:
+Candidate scores (cand[k, v] = beam_scores[k] + token_logprobs[k, v]):
+  from beam 0: [-0.8, -1.7, -2.5, -3.0]
+  from beam 1: [-1.4, -1.1, -2.6, -4.2]
+The two highest scores are -0.8 (beam 0, token 0) and -1.1 (beam 1, token 1).
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 64 (batch size)</li>
+  <li>1 &le; <code>K</code> &le; 32 (beam width)</li>
+  <li>1 &le; <code>V</code> &le; 100,000 (vocabulary size)</li>
+  <li><code>beam_scores</code>, <code>token_logprobs</code>, and <code>new_beam_scores</code> are 32-bit floats</li>
+  <li><code>parent_beam_indices</code> and <code>next_tokens</code> are 32-bit integers</li>
+  <li>All tensors are stored on the GPU in row-major order</li>
+  <li>Performance is measured with <code>B</code> = 16, <code>K</code> = 8, <code>V</code> = 50,000</li>
+</ul>
