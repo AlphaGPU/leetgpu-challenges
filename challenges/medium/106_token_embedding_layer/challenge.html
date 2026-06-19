@@ -1,0 +1,63 @@
+<p>
+  Implement the input embedding layer used at the start of transformer models such as BERT.
+  For each token in a batch, gather a row from the <code>token_embeddings</code> table using
+  <code>token_ids</code>, gather a row from the <code>position_embeddings</code> table using
+  <code>position_ids</code>, sum the two vectors, and apply Layer Normalization with learnable
+  scale and shift parameters along the embedding dimension.
+</p>
+
+<p>
+  Formally, for batch index \(b\) and time step \(t\), let
+  \[
+  s_{b,t} = E_T[\text{token\_ids}_{b,t}] + E_P[\text{position\_ids}_{t}] \in \mathbb{R}^{D}
+  \]
+  where \(E_T \in \mathbb{R}^{V \times D}\) and \(E_P \in \mathbb{R}^{P \times D}\) are the token
+  and positional embedding tables. The output is then
+  \[
+  \mu_{b,t} = \frac{1}{D} \sum_{d=1}^{D} s_{b,t,d}, \qquad
+  \sigma^2_{b,t} = \frac{1}{D} \sum_{d=1}^{D} (s_{b,t,d} - \mu_{b,t})^2,
+  \]
+  \[
+  y_{b,t,d} = \gamma_d \cdot \frac{s_{b,t,d} - \mu_{b,t}}{\sqrt{\sigma^2_{b,t} + \epsilon}} + \beta_d.
+  \]
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li><code>token_ids</code> has shape <code>(B, T)</code> and <code>position_ids</code> has shape <code>(T)</code>, both with <code>int32</code> values</li>
+  <li><code>token_embeddings</code> has shape <code>(V, D)</code> and <code>position_embeddings</code> has shape <code>(P, D)</code></li>
+  <li><code>gamma</code> and <code>beta</code> each have shape <code>(D)</code></li>
+  <li>The variance is computed without Bessel's correction (divide by <code>D</code>, not <code>D-1</code>)</li>
+  <li>The final result must be stored in the <code>output</code> tensor with shape <code>(B, T, D)</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:  B = 1, T = 2, V = 3, P = 2, D = 4, eps = 1e-5
+        token_ids        = [[2, 0]]
+        position_ids     = [0, 1]
+        token_embeddings = [[ 1.0,  2.0,  3.0,  4.0],
+                            [ 0.0,  1.0,  0.0, -1.0],
+                            [ 2.0,  0.0, -2.0,  0.0]]
+        position_embeddings = [[ 0.0,  0.0,  0.0,  0.0],
+                               [ 1.0,  0.0, -1.0,  0.0]]
+        gamma = [1.0, 1.0, 1.0, 1.0]
+        beta  = [0.0, 0.0, 0.0, 0.0]
+Output: output = [[[ 1.4142,  0.0000, -1.4142,  0.0000],
+                   [-0.5773, -0.5773, -0.5773,  1.7320]]]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 64</li>
+  <li>1 &le; <code>T</code> &le; 1,024</li>
+  <li>1 &le; <code>V</code> &le; 50,000</li>
+  <li>1 &le; <code>P</code> &le; 4,096</li>
+  <li>1 &le; <code>D</code> &le; 1,024</li>
+  <li>0 &le; <code>token_ids</code> values &lt; <code>V</code></li>
+  <li>0 &le; <code>position_ids</code> values &lt; <code>P</code></li>
+  <li><code>eps</code> = 1e-5</li>
+  <li>Performance is measured with <code>B</code> = 32, <code>T</code> = 512, <code>V</code> = 30,000, <code>P</code> = 2,048, <code>D</code> = 768</li>
+</ul>
