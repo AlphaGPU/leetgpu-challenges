@@ -1,0 +1,162 @@
+<p>
+  Implement the fused QKV projection used at the entrance of every transformer attention layer.
+  Given an input matrix <code>x</code> of shape <code>[M, D]</code> and a packed weight matrix
+  <code>W_qkv</code> of shape <code>[3D, D]</code> whose rows are the query, key, and value
+  projections stacked in that order, compute
+  <code>x &times; W_qkv&#x1D40;</code>, split the result into three <code>[M, D]</code> matrices, and
+  reshape each into <code>[num_heads, M, head_dim]</code> — the layout expected by multi-head
+  attention. Fusing the three projections into a single matmul reuses the input reads and cuts
+  launch overhead compared with three separate GEMMs. All tensors are <code>float32</code>.
+</p>
+
+<svg width="680" height="260" viewBox="0 0 680 260" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto; font-family:monospace;">
+  <rect width="680" height="260" fill="#222" rx="8"/>
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <!-- x box -->
+  <rect x="16" y="110" width="70" height="40" rx="4" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="51" y="134" fill="#ccc" font-size="12" text-anchor="middle">x</text>
+  <text x="51" y="164" fill="#666" font-size="9" text-anchor="middle">[M, D]</text>
+
+  <!-- Arrow x -> matmul -->
+  <line x1="86" y1="130" x2="128" y2="130" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- W_qkv matmul box -->
+  <rect x="130" y="100" width="120" height="60" rx="4" fill="#5a3a1a" stroke="#cc8844" stroke-width="1.5"/>
+  <text x="190" y="126" fill="#ccc" font-size="12" text-anchor="middle">x &#xb7; W_qkv&#x1D40;</text>
+  <text x="190" y="146" fill="#666" font-size="9" text-anchor="middle">[M, 3D]</text>
+  <text x="190" y="94" fill="#cc8844" font-size="9" text-anchor="middle">fused projection</text>
+
+  <!-- Arrow matmul -> split -->
+  <line x1="250" y1="130" x2="290" y2="130" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Split box -->
+  <rect x="292" y="100" width="70" height="60" rx="4" fill="#3a1a5a" stroke="#8844cc" stroke-width="1.5"/>
+  <text x="327" y="134" fill="#ccc" font-size="11" text-anchor="middle">split</text>
+  <text x="327" y="152" fill="#666" font-size="8" text-anchor="middle">along D</text>
+
+  <!-- Q branch -->
+  <line x1="362" y1="115" x2="404" y2="52" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="406" y="32" width="150" height="40" rx="4" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="481" y="52" fill="#ccc" font-size="11" text-anchor="middle">reshape + transpose</text>
+  <text x="481" y="66" fill="#666" font-size="8" text-anchor="middle">[M,D] &#x2192; [num_heads, M, head_dim]</text>
+
+  <!-- K branch -->
+  <line x1="362" y1="130" x2="404" y2="130" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="406" y="110" width="150" height="40" rx="4" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="481" y="130" fill="#ccc" font-size="11" text-anchor="middle">reshape + transpose</text>
+  <text x="481" y="144" fill="#666" font-size="8" text-anchor="middle">[M,D] &#x2192; [num_heads, M, head_dim]</text>
+
+  <!-- V branch -->
+  <line x1="362" y1="145" x2="404" y2="208" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="406" y="188" width="150" height="40" rx="4" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="481" y="208" fill="#ccc" font-size="11" text-anchor="middle">reshape + transpose</text>
+  <text x="481" y="222" fill="#666" font-size="8" text-anchor="middle">[M,D] &#x2192; [num_heads, M, head_dim]</text>
+
+  <!-- Output Q, K, V labels -->
+  <line x1="556" y1="52" x2="596" y2="52" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="600" y="32" width="60" height="40" rx="4" fill="#3a1a3a" stroke="#cc44cc" stroke-width="1.5"/>
+  <text x="630" y="56" fill="#ccc" font-size="14" text-anchor="middle">Q</text>
+
+  <line x1="556" y1="130" x2="596" y2="130" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="600" y="110" width="60" height="40" rx="4" fill="#3a1a3a" stroke="#cc44cc" stroke-width="1.5"/>
+  <text x="630" y="134" fill="#ccc" font-size="14" text-anchor="middle">K</text>
+
+  <line x1="556" y1="208" x2="596" y2="208" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="600" y="188" width="60" height="40" rx="4" fill="#3a1a3a" stroke="#cc44cc" stroke-width="1.5"/>
+  <text x="630" y="212" fill="#ccc" font-size="14" text-anchor="middle">V</text>
+
+  <!-- Weight layout label -->
+  <text x="190" y="182" fill="#666" font-size="9" text-anchor="middle">W_qkv rows: [W_Q; W_K; W_V]</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the <code>solve</code> function with the signature unchanged.</li>
+  <li>Do not use external libraries beyond the framework provided.</li>
+  <li>Write the results into <code>Q</code>, <code>K</code>, and <code>V</code> in-place.</li>
+  <li><code>D = num_heads &times; head_dim</code>.</li>
+  <li>
+    Row ranges of <code>W_qkv</code>: rows <code>[0, D)</code> project to <code>Q</code>, rows
+    <code>[D, 2D)</code> to <code>K</code>, rows <code>[2D, 3D)</code> to <code>V</code>.
+  </li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>M</code> = 2, <code>num_heads</code> = 2, <code>head_dim</code> = 2 (so
+  <code>D</code> = 4).
+</p>
+<p>
+  \(x\) (float32, \(2 \times 4\)):
+  \[
+  x = \begin{bmatrix} 1.0 & 0.0 & 0.0 & 0.0 \\ 0.0 & 1.0 & 0.0 & 0.0 \end{bmatrix}
+  \]
+  \(W_{qkv}\) (\(12 \times 4\), rows stacked as \(W_Q\); \(W_K\); \(W_V\)):
+  \[
+  W_{qkv} = \begin{bmatrix}
+    1.0 & 0.0 & 0.0 & 0.0 \\
+    0.0 & 1.0 & 0.0 & 0.0 \\
+    0.0 & 0.0 & 1.0 & 0.0 \\
+    0.0 & 0.0 & 0.0 & 1.0 \\
+    \hline
+    0.0 & 1.0 & 0.0 & 0.0 \\
+    1.0 & 0.0 & 0.0 & 0.0 \\
+    0.0 & 0.0 & 0.0 & 1.0 \\
+    0.0 & 0.0 & 1.0 & 0.0 \\
+    \hline
+    2.0 & 0.0 & 0.0 & 0.0 \\
+    0.0 & 2.0 & 0.0 & 0.0 \\
+    0.0 & 0.0 & 2.0 & 0.0 \\
+    0.0 & 0.0 & 0.0 & 2.0
+  \end{bmatrix}
+  \]
+</p>
+<p>
+  The packed projection gives \(x \cdot W_{qkv}^{\top}\) (\(2 \times 12\)):
+  \[
+  \begin{bmatrix} 1.0 & 0.0 & 0.0 & 0.0 & 0.0 & 1.0 & 0.0 & 0.0 & 2.0 & 0.0 & 0.0 & 0.0 \\
+                  0.0 & 1.0 & 0.0 & 0.0 & 1.0 & 0.0 & 0.0 & 0.0 & 0.0 & 2.0 & 0.0 & 0.0 \end{bmatrix}
+  \]
+  After splitting along the last axis into three \(2 \times 4\) blocks, reshaping each to
+  \((M, \text{num\_heads}, \text{head\_dim})\) = \((2, 2, 2)\), and transposing to
+  \((\text{num\_heads}, M, \text{head\_dim})\):
+  \[
+  Q =
+  \begin{bmatrix}
+  \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} \\
+  \begin{bmatrix} 0.0 & 0.0 \\ 0.0 & 0.0 \end{bmatrix}
+  \end{bmatrix}, \quad
+  K =
+  \begin{bmatrix}
+  \begin{bmatrix} 0.0 & 1.0 \\ 1.0 & 0.0 \end{bmatrix} \\
+  \begin{bmatrix} 0.0 & 0.0 \\ 0.0 & 0.0 \end{bmatrix}
+  \end{bmatrix}, \quad
+  V =
+  \begin{bmatrix}
+  \begin{bmatrix} 2.0 & 0.0 \\ 0.0 & 2.0 \end{bmatrix} \\
+  \begin{bmatrix} 0.0 & 0.0 \\ 0.0 & 0.0 \end{bmatrix}
+  \end{bmatrix}
+  \]
+  where the outer bracket indexes <code>num_heads</code> and each inner \(2 \times 2\) block is one
+  head's \((M, \text{head\_dim})\) slice.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code> &le; 8,192</li>
+  <li>1 &le; <code>num_heads</code> &le; 64</li>
+  <li>1 &le; <code>head_dim</code> &le; 256</li>
+  <li><code>D</code> = <code>num_heads</code> &times; <code>head_dim</code> &le; 8,192</li>
+  <li>All tensors are <code>float32</code> on the GPU.</li>
+  <li>Input values are in the range [-10, 10].</li>
+  <li>
+    Performance is measured with <code>M</code> = 512, <code>num_heads</code> = 32,
+    <code>head_dim</code> = 128
+  </li>
+</ul>
