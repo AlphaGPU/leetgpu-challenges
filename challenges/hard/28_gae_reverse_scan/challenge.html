@@ -16,24 +16,43 @@
   <text x="35" y="75" fill="#8ecae6" font-family="monospace" font-size="13">delta[t]</text>
   <text x="35" y="155" fill="#f4a261" font-family="monospace" font-size="13">advantage[t]</text>
   <g fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5">
-    <rect x="150" y="52" width="90" height="38" rx="5"/><rect x="275" y="52" width="90" height="38" rx="5"/>
-    <rect x="400" y="52" width="90" height="38" rx="5"/><rect x="525" y="52" width="90" height="38" rx="5"/>
+    <rect x="150" y="52" width="90" height="38" rx="5"/>
+    <rect x="275" y="52" width="90" height="38" rx="5"/>
+    <rect x="400" y="52" width="90" height="38" rx="5"/>
+    <rect x="525" y="52" width="90" height="38" rx="5"/>
   </g>
   <g fill="#4a9eff" font-family="monospace" font-size="13" text-anchor="middle">
-    <text x="195" y="76">delta[0]</text><text x="320" y="76">delta[1]</text><text x="445" y="76">delta[2]</text><text x="570" y="76">delta[3]</text>
+    <text x="195" y="76">delta[0]</text>
+    <text x="320" y="76">delta[1]</text>
+    <text x="445" y="76">delta[2]</text>
+    <text x="570" y="76">delta[3]</text>
   </g>
   <g fill="#4b2e22" stroke="#e76f51" stroke-width="1.5">
-    <rect x="150" y="132" width="90" height="38" rx="5"/><rect x="275" y="132" width="90" height="38" rx="5"/>
-    <rect x="400" y="132" width="90" height="38" rx="5"/><rect x="525" y="132" width="90" height="38" rx="5"/>
+    <rect x="150" y="132" width="90" height="38" rx="5"/>
+    <rect x="275" y="132" width="90" height="38" rx="5"/>
+    <rect x="400" y="132" width="90" height="38" rx="5"/>
+    <rect x="525" y="132" width="90" height="38" rx="5"/>
   </g>
   <g fill="#f4a261" font-family="monospace" font-size="13" text-anchor="middle">
-    <text x="195" y="156">A[0]</text><text x="320" y="156">A[1]</text><text x="445" y="156">A[2]</text><text x="570" y="156">A[3]</text>
+    <text x="195" y="156">A[0]</text>
+    <text x="320" y="156">A[1]</text>
+    <text x="445" y="156">A[2]</text>
+    <text x="570" y="156">A[3]</text>
   </g>
   <g stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#arrow)">
-    <line x1="525" y1="112" x2="525" y2="130"/><line x1="400" y1="112" x2="400" y2="130"/>
-    <line x1="275" y1="112" x2="275" y2="130"/><line x1="150" y1="112" x2="150" y2="130"/>
+    <line x1="195" y1="90" x2="195" y2="130"/>
+    <line x1="320" y1="90" x2="320" y2="130"/>
+    <line x1="445" y1="90" x2="445" y2="130"/>
+    <line x1="570" y1="90" x2="570" y2="130"/>
+    <line x1="525" y1="151" x2="490" y2="151"/>
+    <line x1="400" y1="151" x2="365" y2="151"/>
+    <line x1="275" y1="151" x2="240" y2="151"/>
   </g>
-  <path d="M615 151 L650 151 L650 111 L570 111" fill="none" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="508" y="143" text-anchor="middle" fill="#7ec8a0" font-family="monospace" font-size="10">carry</text>
+  <text x="383" y="143" text-anchor="middle" fill="#7ec8a0" font-family="monospace" font-size="10">carry</text>
+  <text x="258" y="143" text-anchor="middle" fill="#7ec8a0" font-family="monospace" font-size="10">carry</text>
+  <line x1="650" y1="151" x2="620" y2="151" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="650" y="143" text-anchor="middle" fill="#aaa" font-family="monospace" font-size="10">A[4]=0</text>
   <text x="350" y="202" text-anchor="middle" fill="#aaa" font-family="monospace" font-size="12">A[t] = delta[t] + (gamma × lambda) × A[t+1]</text>
 </svg>
 
