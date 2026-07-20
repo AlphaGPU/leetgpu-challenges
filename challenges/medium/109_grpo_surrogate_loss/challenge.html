@@ -3,7 +3,11 @@
   Group Relative Policy Optimization (GRPO) surrogate loss over <code>S</code> response tokens.
   Normalize rewards within each prompt's response group to obtain a sequence-level advantage,
   broadcast that advantage across the response tokens, apply the clipped policy objective, and add
-  the unbiased reference-policy KL estimator.
+  the non-negative reference-policy KL estimator.
+</p>
+<p>
+  At position <code>[b, g, s]</code>, every log probability refers to the same sampled token
+  <code>y[b,g,s]</code> conditioned on prompt <code>b</code> and its preceding response tokens.
 </p>
 
 <svg width="720" height="260" viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
@@ -37,7 +41,7 @@
   <g fill="#aaeebb" font-family="monospace" font-size="12" text-anchor="middle">
     <text x="612" y="94">A[b,g,0:S]</text>
     <text x="612" y="146">ratio + KL</text>
-    <text x="612" y="198">mean loss</text>
+    <text x="612" y="198">mean over B×G×S</text>
   </g>
   <text x="360" y="235" text-anchor="middle" fill="#aaa" font-family="monospace" font-size="12">one sequence advantage is broadcast across its S tokens</text>
 </svg>
@@ -49,6 +53,7 @@
   <li>Use only native features of the selected framework; external libraries are not permitted</li>
   <li>Rewards have shape <code>[B, G]</code>; all log-probability tensors have shape <code>[B, G, S]</code></li>
   <li>Token masks and padding handling are outside the scope of this challenge; all <code>S</code> positions participate in the reduction</li>
+  <li>Rewards, <code>log_pi_old</code>, and <code>log_ref</code> are fixed precomputed inputs; do not differentiate through them</li>
 </ul>
 
 <h2>Loss Calculation</h2>
@@ -75,7 +80,10 @@ r_{b,g,s}A_{b,g,s},
 \right)
 \]
 
-<p>Use the unbiased DeepSeek KL estimator:</p>
+<p>
+  Use the non-negative <code>k3</code> reference-policy KL sample estimator. Its expectation is
+  <code>KL(pi || pi_ref)</code> when tokens are sampled from the current policy.
+</p>
 
 \[
 d_{b,g,s} = \text{log_ref}_{b,g,s} - \text{log_pi}_{b,g,s}
@@ -111,6 +119,11 @@ and <code>beta</code> = 0.01:</p>
   <li>1 &le; <code>S</code> &le; 16,384</li>
   <li>All tensors contain 32-bit floating point values</li>
   <li><code>0 &le; clip_eps &lt; 1</code> and <code>0 &le; beta &le; 1</code></li>
-  <li>Log probabilities are finite and their differences are bounded so the KL exponential remains finite</li>
+  <li>Both <code>log_pi - log_pi_old</code> and <code>log_ref - log_pi</code> lie in [-16, 16], so every exponential is finite in float32</li>
   <li>Performance is measured with <code>B</code> = 64, <code>G</code> = 16, <code>S</code> = 4,096</li>
 </ul>
+
+<h2>Reference</h2>
+<p>
+  <a href="https://arxiv.org/abs/2402.03300">DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models (GRPO), Shao et al. (2024)</a>
+</p>

@@ -138,6 +138,9 @@ class Challenge(ChallengeBase):
         # Two groups with two responses each.
         tests.append(self._make_test_case(2, 2, 4))
 
+        # Single response token; the advantage broadcast still has to be correct.
+        tests.append(self._make_test_case(1, 2, 1, rewards=[[0.0, 2.0]]))
+
         # Equal rewards: advantages are zero while KL remains active.
         tests.append(
             self._make_test_case(
@@ -163,10 +166,20 @@ class Challenge(ChallengeBase):
         # Non-power-of-two dimensions.
         tests.append(self._make_test_case(3, 5, 27))
 
+        # Maximum group width exercises the group reduction boundary.
+        tests.append(self._make_test_case(2, 32, 3))
+
         # Extreme but finite KL differences.
         tests.append(
             self._make_test_case(
                 2, 4, 8, log_pi=[[[8.0] * 8] * 4] * 2, log_ref=[[[-8.0] * 8] * 4] * 2,
+            )
+        )
+
+        # Large positive, finite KL log-ratio exercises the exponential branch.
+        tests.append(
+            self._make_test_case(
+                2, 4, 8, log_pi=[[[-8.0] * 8] * 4] * 2, log_ref=[[[8.0] * 8] * 4] * 2,
             )
         )
 
