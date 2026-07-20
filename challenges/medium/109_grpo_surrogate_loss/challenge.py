@@ -2,7 +2,6 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-import torch.nn.functional as F
 from core.challenge_base import ChallengeBase, OutTensor, RandnTensor
 
 
