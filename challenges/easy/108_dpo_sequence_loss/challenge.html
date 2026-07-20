@@ -1,0 +1,64 @@
+<p>
+  Given the log probabilities of chosen and rejected responses under the current policy and a
+  reference policy, compute the Direct Preference Optimization (DPO) sequence loss. The sequence
+  log probabilities have already been summed over response tokens, so this kernel operates on four
+  one-dimensional tensors of shape <code>[B]</code> and produces one mean loss value.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement <code>solve(chosen_logps, rejected_logps, chosen_ref_logps, rejected_ref_logps, output, beta, B)</code> with the signature unchanged</li>
+  <li>Write the scalar mean loss into the preallocated <code>output</code> tensor at <code>output[0]</code></li>
+  <li>Use only native features of the selected framework; external libraries are not permitted</li>
+  <li>The input tensors contain sequence-level log probabilities of shape <code>[B]</code></li>
+  <li>Compute the loss stably as <code>softplus(-logits)</code> or an equivalent stable formulation; do not rely on <code>log(sigmoid(logits))</code> without numerical stabilization</li>
+</ul>
+
+<h2>Loss Calculation</h2>
+<p>For each sequence <code>i</code>, first compare the chosen and rejected responses under both policies:</p>
+
+\[
+m_i = \text{chosen_logps}_i - \text{rejected_logps}_i
+\]
+\[
+m_i^{\mathrm{ref}} = \text{chosen_ref_logps}_i - \text{rejected_ref_logps}_i
+\]
+\[
+z_i = \beta \left(m_i - m_i^{\mathrm{ref}}\right)
+\]
+
+<p>The DPO loss is the negative log-sigmoid of <code>z</code>, averaged over the batch:</p>
+
+\[
+\mathcal{L}_{\mathrm{DPO}} = -\frac{1}{B}\sum_{i=0}^{B-1} \log\!\left(\sigma(z_i)\right)
+= \frac{1}{B}\sum_{i=0}^{B-1} \operatorname{softplus}(-z_i)
+\]
+
+<p>The softplus form is mathematically equivalent but remains finite for very large positive or
+negative logits.</p>
+
+<h2>Examples</h2>
+<p>For <code>B</code> = 4 and <code>beta</code> = 0.1:</p>
+
+\[
+\text{chosen_logps} = \begin{bmatrix} 0.0 & 1.0 & -1.0 & 2.0 \end{bmatrix}, \quad
+\text{rejected_logps} = \begin{bmatrix} 0.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}
+\]
+\[
+\text{chosen_ref_logps} = \begin{bmatrix} 0.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}, \quad
+\text{rejected_ref_logps} = \begin{bmatrix} 0.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}
+\]
+\[
+z = \begin{bmatrix} 0.0 & 0.1 & -0.1 & 0.2 \end{bmatrix}, \qquad
+\text{output} = \begin{bmatrix} 0.67002 \end{bmatrix}
+\]
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 65,536</li>
+  <li>All input and output tensors contain 32-bit floating point values</li>
+  <li><code>0 &le; beta &le; 1</code></li>
+  <li>All input log probabilities are finite</li>
+  <li>Sequence-level log probabilities are precomputed; token masks and sequence reductions are outside the scope of this challenge</li>
+  <li>Performance is measured with <code>B</code> = 65,536</li>
+</ul>
