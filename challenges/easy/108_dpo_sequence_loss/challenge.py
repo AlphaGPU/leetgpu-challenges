@@ -119,6 +119,18 @@ class Challenge(ChallengeBase):
             )
         )
 
+        # Non-zero reference margins with positive and negative DPO logits.
+        tests.append(
+            self._make_test_case(
+                2,
+                chosen_logps=[2.0, -1.0],
+                rejected_logps=[0.0, 1.0],
+                chosen_ref_logps=[0.5, -0.5],
+                rejected_ref_logps=[-0.5, 0.5],
+                beta=0.7,
+            )
+        )
+
         # All zero inputs: loss is log(2).
         tests.append(
             self._make_test_case(

@@ -4,6 +4,11 @@
   log probabilities have already been summed over response tokens, so this kernel operates on four
   one-dimensional tensors of shape <code>[B]</code> and produces one mean loss value.
 </p>
+<p>
+  Each batch index represents one prompt and the same chosen/rejected response pair evaluated under
+  both policies. The sequence log probabilities must use identical tokenization and token masking
+  for the current and reference policies.
+</p>
 
 <h2>Implementation Requirements</h2>
 <ul>
@@ -12,6 +17,7 @@
   <li>Use only native features of the selected framework; external libraries are not permitted</li>
   <li>The input tensors contain sequence-level log probabilities of shape <code>[B]</code></li>
   <li>Compute the loss stably as <code>softplus(-logits)</code> or an equivalent stable formulation; do not rely on <code>log(sigmoid(logits))</code> without numerical stabilization</li>
+  <li>The reference-policy log probabilities are fixed precomputed inputs; do not differentiate through them</li>
 </ul>
 
 <h2>Loss Calculation</h2>
@@ -62,3 +68,8 @@ z = \begin{bmatrix} 0.0 & 0.1 & -0.1 & 0.2 \end{bmatrix}, \qquad
   <li>Sequence-level log probabilities are precomputed; token masks and sequence reductions are outside the scope of this challenge</li>
   <li>Performance is measured with <code>B</code> = 65,536</li>
 </ul>
+
+<h2>Reference</h2>
+<p>
+  <a href="https://arxiv.org/abs/2305.18290">Direct Preference Optimization: Your Language Model is Secretly a Reward Model, Rafailov et al. (2023)</a>
+</p>
