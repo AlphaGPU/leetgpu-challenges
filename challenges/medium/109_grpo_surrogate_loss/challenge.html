@@ -1,0 +1,116 @@
+<p>
+  Given rewards for <code>G</code> sampled responses to each of <code>B</code> prompts, compute the
+  Group Relative Policy Optimization (GRPO) surrogate loss over <code>S</code> response tokens.
+  Normalize rewards within each prompt's response group to obtain a sequence-level advantage,
+  broadcast that advantage across the response tokens, apply the clipped policy objective, and add
+  the unbiased reference-policy KL estimator.
+</p>
+
+<svg width="720" height="260" viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#7ec8a0"/>
+    </marker>
+  </defs>
+  <rect width="720" height="260" rx="8" fill="#222"/>
+  <text x="360" y="25" text-anchor="middle" fill="#ccc" font-family="monospace" font-size="14">GRPO: group rewards to token loss</text>
+  <g fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5">
+    <rect x="35" y="70" width="130" height="38" rx="5"/>
+    <rect x="35" y="122" width="130" height="38" rx="5"/>
+    <rect x="35" y="174" width="130" height="38" rx="5"/>
+  </g>
+  <g fill="#8ecae6" font-family="monospace" font-size="12" text-anchor="middle">
+    <text x="100" y="94">R[b,0]</text>
+    <text x="100" y="146">R[b,1]</text>
+    <text x="100" y="198">R[b,G-1]</text>
+  </g>
+  <line x1="180" y1="140" x2="270" y2="140" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="285" y="112" width="150" height="56" rx="5" fill="#4b2e22" stroke="#e76f51" stroke-width="1.5"/>
+  <text x="360" y="136" text-anchor="middle" fill="#f4a261" font-family="monospace" font-size="12">group mean/std</text>
+  <text x="360" y="153" text-anchor="middle" fill="#f4a261" font-family="monospace" font-size="12">A[b,g]</text>
+  <line x1="450" y1="140" x2="535" y2="140" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <g fill="#1e3d2d" stroke="#5cb85c" stroke-width="1.5">
+    <rect x="550" y="70" width="125" height="38" rx="5"/>
+    <rect x="550" y="122" width="125" height="38" rx="5"/>
+    <rect x="550" y="174" width="125" height="38" rx="5"/>
+  </g>
+  <g fill="#aaeebb" font-family="monospace" font-size="12" text-anchor="middle">
+    <text x="612" y="94">A[b,g,0:S]</text>
+    <text x="612" y="146">ratio + KL</text>
+    <text x="612" y="198">mean loss</text>
+  </g>
+  <text x="360" y="235" text-anchor="middle" fill="#aaa" font-family="monospace" font-size="12">one sequence advantage is broadcast across its S tokens</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement <code>solve(rewards, log_pi, log_pi_old, log_ref, output, clip_eps, beta, B, G, S)</code> with the signature unchanged</li>
+  <li>Write the scalar mean loss into <code>output[0]</code></li>
+  <li>Use only native features of the selected framework; external libraries are not permitted</li>
+  <li>Rewards have shape <code>[B, G]</code>; all log-probability tensors have shape <code>[B, G, S]</code></li>
+  <li>Token masks and padding handling are outside the scope of this challenge; all <code>S</code> positions participate in the reduction</li>
+</ul>
+
+<h2>Loss Calculation</h2>
+<p>Normalize rewards independently within each prompt group using the population standard deviation:</p>
+
+\[
+\mu_b = \frac{1}{G}\sum_{g=0}^{G-1} R_{b,g}, \qquad
+\sigma_b = \sqrt{\frac{1}{G}\sum_{g=0}^{G-1}(R_{b,g}-\mu_b)^2}
+\]
+\[
+A_{b,g} = \frac{R_{b,g}-\mu_b}{\sigma_b + 10^{-8}}, \qquad
+A_{b,g,s} = A_{b,g}
+\]
+
+<p>Broadcast the sequence advantage over tokens and compute the clipped policy objective:</p>
+
+\[
+r_{b,g,s} = \exp\!\left(\text{log_pi}_{b,g,s} - \text{log_pi_old}_{b,g,s}\right)
+\]
+\[
+L^{\mathrm{clip}}_{b,g,s} = \min\!\left(
+r_{b,g,s}A_{b,g,s},
+\operatorname{clip}(r_{b,g,s},1-\text{clip_eps},1+\text{clip_eps})A_{b,g,s}
+\right)
+\]
+
+<p>Use the unbiased DeepSeek KL estimator:</p>
+
+\[
+d_{b,g,s} = \text{log_ref}_{b,g,s} - \text{log_pi}_{b,g,s}
+\]
+\[
+K_{b,g,s} = \exp(d_{b,g,s}) - d_{b,g,s} - 1
+\]
+\[
+\text{output} = -\frac{1}{BGS}\sum_{b,g,s}
+\left(L^{\mathrm{clip}}_{b,g,s} - \text{beta}K_{b,g,s}\right)
+\]
+
+<h2>Examples</h2>
+<p>For <code>B</code> = 1, <code>G</code> = 2, <code>S</code> = 2, <code>clip_eps</code> = 0.2,
+and <code>beta</code> = 0.01:</p>
+
+\[
+\text{rewards} = \begin{bmatrix} 10.0 & 0.0 \end{bmatrix}, \quad
+\text{log_pi} = \begin{bmatrix} 0.1 & 0.2 \\ -0.5 & -0.4 \end{bmatrix}
+\]
+\[
+\text{log_pi_old} = \begin{bmatrix} 0.0 & 0.0 \\ 0.0 & 0.0 \end{bmatrix}, \quad
+\text{log_ref} = \begin{bmatrix} 0.0 & 0.0 \\ 0.0 & 0.0 \end{bmatrix}
+\]
+\[
+\text{output} \approx \begin{bmatrix} -0.17563 \end{bmatrix}
+\]
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 256</li>
+  <li>2 &le; <code>G</code> &le; 32</li>
+  <li>1 &le; <code>S</code> &le; 16,384</li>
+  <li>All tensors contain 32-bit floating point values</li>
+  <li><code>0 &le; clip_eps &lt; 1</code> and <code>0 &le; beta &le; 1</code></li>
+  <li>Log probabilities are finite and their differences are bounded so the KL exponential remains finite</li>
+  <li>Performance is measured with <code>B</code> = 64, <code>G</code> = 16, <code>S</code> = 4,096</li>
+</ul>
