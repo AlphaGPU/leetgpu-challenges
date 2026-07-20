@@ -56,6 +56,52 @@
   <text x="350" y="202" text-anchor="middle" fill="#aaa" font-family="monospace" font-size="12">A[t] = delta[t] + (gamma × lambda) × A[t+1]</text>
 </svg>
 
+<h2>How GAE Is Computed</h2>
+<p>
+  The calculation has two stages. First, compute the one-step temporal-difference error at every
+  position. The value after the final position is defined as zero:
+</p>
+
+\[
+ \widetilde{V}_{t+1} =
+\begin{cases}
+V_{t+1}, & t < S - 1 \\
+0, & t = S - 1
+\end{cases}
+\qquad
+\delta_t = r_t + \gamma \widetilde{V}_{t+1} - V_t
+\]
+
+<p>
+  Next, let <code>c = gamma &times; lambda</code>. The advantage at position <code>t</code> is the
+  current TD error plus the decayed advantage from the next position:
+</p>
+
+\[
+A_{S-1} = \delta_{S-1}, \qquad
+A_t = \delta_t + c A_{t+1} \quad \text{for } t = S-2, S-3, \ldots, 0
+\]
+
+<p>
+  Therefore, implementations can compute all <code>delta</code> values in parallel, then perform a
+  reverse scan over the sequence using the recurrence above. For long sequences, the reverse scan
+  can be split into blocks: each block computes its local scan, then receives the decayed carry from
+  the block to its right.
+</p>
+
+<p>For the example below, <code>gamma</code> = 0.9 and <code>lambda</code> = 0.5, so
+<code>c</code> = 0.45:</p>
+
+\[
+\delta = \begin{bmatrix} 1.4 & 2.35 & 3.3 & 2.0 \end{bmatrix}
+\]
+\[
+A_3 = 2.0, \quad
+A_2 = 3.3 + 0.45(2.0) = 4.2, \quad
+A_1 = 2.35 + 0.45(4.2) = 4.24, \quad
+A_0 = 1.4 + 0.45(4.24) = 3.308
+\]
+
 <h2>Implementation Requirements</h2>
 <ul>
   <li>Implement <code>solve(rewards, values, advantages, gamma, lam, B, S)</code> with the signature unchanged</li>
