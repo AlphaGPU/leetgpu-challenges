@@ -1,7 +1,8 @@
 <p>
   Given precomputed advantages and log probabilities from the current policy, previous policy,
-  and reference policy, compute the scalar PPO clipped surrogate loss. The operation combines a
-  clipped policy ratio with a KL penalty and reduces the result across a batch of sequences.
+  and reference policy, compute a scalar PPO-style clipped surrogate loss. The operation combines
+  a clipped policy ratio with a non-negative reference-policy KL regularizer and reduces the result
+  across a batch of sequences.
 </p>
 
 <h2>Implementation Requirements</h2>
@@ -10,6 +11,8 @@
   <li>Write the single scalar result into the preallocated <code>output</code> tensor</li>
   <li>Use only native features of the selected framework; external libraries are not permitted</li>
   <li>All input tensors have shape <code>[B, S]</code> and the output has shape <code>[1]</code></li>
+  <li>All <code>S</code> positions are valid response tokens; padding and token masks are outside the scope of this challenge</li>
+  <li><code>advantages</code>, <code>log_pi_old</code>, and <code>log_ref</code> are fixed precomputed inputs; do not differentiate through them</li>
 </ul>
 
 <p>For each batch element <code>b</code> and sequence position <code>s</code>, compute the policy ratio,
@@ -25,7 +28,10 @@ r_{b,s} A_{b,s},
 \right)
 \]
 \[
-K_{b,s} = \text{log_ref}_{b,s} - \text{log_pi}_{b,s}
+d_{b,s} = \text{log_ref}_{b,s} - \text{log_pi}_{b,s}
+\]
+\[
+K_{b,s} = \exp(d_{b,s}) - d_{b,s} - 1
 \]
 \[
 \text{output} = -\frac{1}{B S}\sum_{b=0}^{B-1}\sum_{s=0}^{S-1}
@@ -49,10 +55,10 @@ r = \begin{bmatrix} 1.3 & 0.7 & 1.1 & 0.8 \end{bmatrix}, \quad
 \]
 \[
 L^{\mathrm{clip}} = \begin{bmatrix} 1.2 & -1.6 & 3.3 & -3.2 \end{bmatrix}, \quad
-K = \begin{bmatrix} -0.16236 & 0.15667 & -0.04531 & 0.12314 \end{bmatrix}
+K \approx \begin{bmatrix} 0.01250 & 0.01294 & 0.00101 & 0.00790 \end{bmatrix}
 \]
 \[
-\text{output} = \begin{bmatrix} 0.07518 \end{bmatrix}
+\text{output} \approx \begin{bmatrix} 0.07509 \end{bmatrix}
 \]
 
 <h2>Constraints</h2>
@@ -61,6 +67,11 @@ K = \begin{bmatrix} -0.16236 & 0.15667 & -0.04531 & 0.12314 \end{bmatrix}
   <li>1 &le; <code>S</code> &le; 16,384</li>
   <li>All tensors contain 32-bit floating point values</li>
   <li><code>0 &le; clip_eps &lt; 1</code> and <code>0 &le; beta &le; 1</code></li>
-  <li>Policy log probabilities are finite, so the policy ratio is well-defined</li>
+  <li>Both <code>log_pi - log_pi_old</code> and <code>log_ref - log_pi</code> lie in [-16, 16], so every exponential is finite in float32</li>
   <li>Performance is measured with <code>B</code> = 128, <code>S</code> = 2,048</li>
 </ul>
+
+<h2>Reference</h2>
+<p>
+  <a href="https://arxiv.org/abs/1707.06347">Proximal Policy Optimization Algorithms, Schulman et al. (2017)</a>
+</p>

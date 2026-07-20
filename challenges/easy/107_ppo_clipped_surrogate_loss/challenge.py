@@ -42,7 +42,8 @@ class Challenge(ChallengeBase):
         ratio = torch.exp(log_pi - log_pi_old)
         clipped_ratio = torch.clamp(ratio, 1.0 - clip_eps, 1.0 + clip_eps)
         surrogate = torch.minimum(ratio * advantages, clipped_ratio * advantages)
-        kl_penalty = log_ref - log_pi
+        kl_diff = log_ref - log_pi
+        kl_penalty = torch.exp(kl_diff) - kl_diff - 1.0
         output[0] = -torch.mean(surrogate - beta * kl_penalty)
 
     def reference_impl_jax(
@@ -53,7 +54,8 @@ class Challenge(ChallengeBase):
         ratio = jnp.exp(log_pi - log_pi_old)
         clipped_ratio = jnp.clip(ratio, 1.0 - clip_eps, 1.0 + clip_eps)
         surrogate = jnp.minimum(ratio * advantages, clipped_ratio * advantages)
-        kl_penalty = log_ref - log_pi
+        kl_diff = log_ref - log_pi
+        kl_penalty = jnp.exp(kl_diff) - kl_diff - 1.0
         return -jnp.mean(surrogate - beta * kl_penalty)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
@@ -123,6 +125,19 @@ class Challenge(ChallengeBase):
         tests.append(
             self._make_test_case(
                 1, 1, advantages=[[2.5]], log_pi=[[0.0]], log_pi_old=[[0.0]], log_ref=[[0.0]],
+            )
+        )
+
+        # Zero advantages isolate the non-negative reference-policy KL regularizer.
+        tests.append(
+            self._make_test_case(
+                1,
+                1,
+                advantages=[[0.0]],
+                log_pi=[[-1.0]],
+                log_pi_old=[[-1.0]],
+                log_ref=[[-2.0]],
+                beta=1.0,
             )
         )
 
