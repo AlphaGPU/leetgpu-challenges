@@ -60,24 +60,32 @@
 <p>Normalize rewards independently within each prompt group using the population standard deviation:</p>
 
 \[
-\mu_b = \frac{1}{G}\sum_{g=0}^{G-1} R_{b,g}, \qquad
-\sigma_b = \sqrt{\frac{1}{G}\sum_{g=0}^{G-1}(R_{b,g}-\mu_b)^2}
-\]
-\[
-A_{b,g} = \frac{R_{b,g}-\mu_b}{\sigma_b + 10^{-8}}, \qquad
-A_{b,g,s} = A_{b,g}
+\begin{aligned}
+\mu_b
+&= \frac{1}{G}\sum_{g=0}^{G-1} R_{b,g}, \\
+\sigma_b
+&= \sqrt{\frac{1}{G}\sum_{g=0}^{G-1}(R_{b,g}-\mu_b)^2}, \\
+A_{b,g}
+&= \frac{R_{b,g}-\mu_b}{\sigma_b + 10^{-8}}, \\
+A_{b,g,s}
+&= A_{b,g}.
+\end{aligned}
 \]
 
 <p>Broadcast the sequence advantage over tokens and compute the clipped policy objective:</p>
 
 \[
-r_{b,g,s} = \exp\!\left(\text{log_pi}_{b,g,s} - \text{log_pi_old}_{b,g,s}\right)
-\]
-\[
-L^{\mathrm{clip}}_{b,g,s} = \min\!\left(
-r_{b,g,s}A_{b,g,s},
-\operatorname{clip}(r_{b,g,s},1-\text{clip_eps},1+\text{clip_eps})A_{b,g,s}
-\right)
+\begin{aligned}
+r_{b,g,s}
+&= \exp\!\left(\text{log_pi}_{b,g,s} - \text{log_pi_old}_{b,g,s}\right), \\
+L^{\mathrm{clip}}_{b,g,s}
+&= \min\!\Bigl(
+    r_{b,g,s}A_{b,g,s}, \\
+&\qquad
+    \operatorname{clip}\!\left(r_{b,g,s}, 1-\text{clip_eps}, 1+\text{clip_eps}\right)
+    A_{b,g,s}
+\Bigr).
+\end{aligned}
 \]
 
 <p>
@@ -86,14 +94,15 @@ r_{b,g,s}A_{b,g,s},
 </p>
 
 \[
-d_{b,g,s} = \text{log_ref}_{b,g,s} - \text{log_pi}_{b,g,s}
-\]
-\[
-K_{b,g,s} = \exp(d_{b,g,s}) - d_{b,g,s} - 1
-\]
-\[
-\text{output} = -\frac{1}{BGS}\sum_{b,g,s}
-\left(L^{\mathrm{clip}}_{b,g,s} - \text{beta}K_{b,g,s}\right)
+\begin{aligned}
+d_{b,g,s}
+&= \text{log_ref}_{b,g,s} - \text{log_pi}_{b,g,s}, \\
+K_{b,g,s}
+&= \exp(d_{b,g,s}) - d_{b,g,s} - 1, \\
+\text{output}
+&= -\frac{1}{BGS}\sum_{b,g,s}
+\left(L^{\mathrm{clip}}_{b,g,s} - \text{beta}K_{b,g,s}\right).
+\end{aligned}
 \]
 
 <h2>Examples</h2>
@@ -101,12 +110,16 @@ K_{b,g,s} = \exp(d_{b,g,s}) - d_{b,g,s} - 1
 and <code>beta</code> = 0.01:</p>
 
 \[
-\text{rewards} = \begin{bmatrix} 10.0 & 0.0 \end{bmatrix}, \quad
-\text{log_pi} = \begin{bmatrix} 0.1 & 0.2 \\ -0.5 & -0.4 \end{bmatrix}
-\]
-\[
-\text{log_pi_old} = \begin{bmatrix} 0.0 & 0.0 \\ 0.0 & 0.0 \end{bmatrix}, \quad
-\text{log_ref} = \begin{bmatrix} 0.0 & 0.0 \\ 0.0 & 0.0 \end{bmatrix}
+\begin{aligned}
+\text{rewards}
+&= \begin{bmatrix} 10.0 & 0.0 \end{bmatrix}, \\
+\text{log_pi}
+&= \begin{bmatrix} 0.1 & 0.2 \\ -0.5 & -0.4 \end{bmatrix}, \\
+\text{log_pi_old}
+&= \begin{bmatrix} 0.0 & 0.0 \\ 0.0 & 0.0 \end{bmatrix}, \\
+\text{log_ref}
+&= \begin{bmatrix} 0.0 & 0.0 \\ 0.0 & 0.0 \end{bmatrix}.
+\end{aligned}
 \]
 \[
 \text{output} \approx \begin{bmatrix} -0.17563 \end{bmatrix}
