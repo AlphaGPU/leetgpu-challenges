@@ -52,7 +52,7 @@
   <text x="383" y="143" text-anchor="middle" fill="#7ec8a0" font-family="monospace" font-size="10">carry</text>
   <text x="258" y="143" text-anchor="middle" fill="#7ec8a0" font-family="monospace" font-size="10">carry</text>
   <line x1="650" y1="151" x2="620" y2="151" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="650" y="143" text-anchor="middle" fill="#aaa" font-family="monospace" font-size="10">A[4]=0</text>
+  <text x="650" y="143" text-anchor="middle" fill="#aaa" font-family="monospace" font-size="10">A[S]=0</text>
   <text x="350" y="202" text-anchor="middle" fill="#aaa" font-family="monospace" font-size="12">A[t] = delta[t] + (gamma × lambda) × A[t+1]</text>
 </svg>
 
@@ -63,13 +63,13 @@
 </p>
 
 \[
- \widetilde{V}_{t+1} =
+ \widetilde{V}_{b,t+1} =
 \begin{cases}
-V_{t+1}, & t < S - 1 \\
+V_{b,t+1}, & t < S - 1 \\
 0, & t = S - 1
 \end{cases}
 \qquad
-\delta_t = r_t + \gamma \widetilde{V}_{t+1} - V_t
+\delta_{b,t} = r_{b,t} + \gamma \widetilde{V}_{b,t+1} - V_{b,t}
 \]
 
 <p>
@@ -78,8 +78,8 @@ V_{t+1}, & t < S - 1 \\
 </p>
 
 \[
-A_{S-1} = \delta_{S-1}, \qquad
-A_t = \delta_t + c A_{t+1} \quad \text{for } t = S-2, S-3, \ldots, 0
+A_{b,S} = 0, \qquad A_{b,S-1} = \delta_{b,S-1}, \qquad
+A_{b,t} = \delta_{b,t} + c A_{b,t+1} \quad \text{for } t = S-2, S-3, \ldots, 0
 \]
 
 <p>
@@ -109,6 +109,7 @@ A_0 = 1.4 + 0.45(4.24) = 3.308
   <li>Use only native features of the selected framework; external libraries are not permitted</li>
   <li>For the final timestep, use a bootstrap value of zero</li>
   <li>Use float32 arithmetic for all tensors</li>
+  <li>Every sequence terminates at <code>S</code>; padding, per-token terminal flags, and masks are outside the scope of this challenge</li>
 </ul>
 
 <h2>Examples</h2>
@@ -135,3 +136,8 @@ timesteps.</p>
   <li><code>gamma</code> and <code>lambda</code> are in the range [0, 1]</li>
   <li>Performance is measured with <code>B</code> = 64, <code>S</code> = 4,096</li>
 </ul>
+
+<h2>Reference</h2>
+<p>
+  <a href="https://arxiv.org/abs/1506.02438">High-Dimensional Continuous Control Using Generalized Advantage Estimation, Schulman et al. (2015)</a>
+</p>

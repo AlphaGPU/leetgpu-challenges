@@ -103,6 +103,31 @@ class Challenge(ChallengeBase):
         tests.append(
             self._make_test_case(2, 4, rewards=[[0.0] * 4, [0.0] * 4], values=[[0.0] * 4] * 2)
         )
+
+        # gamma=0 removes both the bootstrap value and the reverse-scan carry.
+        tests.append(
+            self._make_test_case(
+                1,
+                4,
+                rewards=[[1.0, -2.0, 3.0, -4.0]],
+                values=[[0.5, 1.0, -1.0, 2.0]],
+                gamma=0.0,
+                lam=0.95,
+            )
+        )
+
+        # lambda=0 keeps the one-step TD error but removes the reverse-scan carry.
+        tests.append(
+            self._make_test_case(
+                1,
+                4,
+                rewards=[[1.0, 2.0, 3.0, 4.0]],
+                values=[[0.5, 1.0, 1.5, 2.0]],
+                gamma=0.9,
+                lam=0.0,
+            )
+        )
+
         tests.append(
             self._make_test_case(
                 1, 4, rewards=[[-1.0, -2.0, 3.0, -4.0]], values=[[1.0, -1.0, 2.0, -2.0]],
@@ -112,6 +137,8 @@ class Challenge(ChallengeBase):
         tests.append(self._make_test_case(8, 64, gamma=1.0, lam=1.0))
         tests.append(self._make_test_case(2, 30))
         tests.append(self._make_test_case(4, 100, gamma=0.9, lam=0.8))
+        # A partial final block catches block-carry indexing bugs in parallel scans.
+        tests.append(self._make_test_case(2, 257))
         tests.append(self._make_test_case(16, 1024))
         tests.append(self._make_test_case(64, 4096))
         return tests
