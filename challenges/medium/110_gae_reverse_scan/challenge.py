@@ -91,7 +91,12 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         return self._make_test_case(
-            1, 4, rewards=[[1.0, 2.0, 3.0, 4.0]], values=[[0.5, 1.0, 1.5, 2.0]], gamma=0.9, lam=0.5,
+            1,
+            4,
+            rewards=[[1.0, 2.0, 3.0, 4.0]],
+            values=[[0.5, 1.0, 1.5, 2.0]],
+            gamma=0.9,
+            lam=0.5,
         )
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
@@ -130,7 +135,10 @@ class Challenge(ChallengeBase):
 
         tests.append(
             self._make_test_case(
-                1, 4, rewards=[[-1.0, -2.0, 3.0, -4.0]], values=[[1.0, -1.0, 2.0, -2.0]],
+                1,
+                4,
+                rewards=[[-1.0, -2.0, 3.0, -4.0]],
+                values=[[1.0, -1.0, 2.0, -2.0]],
             )
         )
         tests.append(self._make_test_case(4, 16))
