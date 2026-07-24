@@ -1,0 +1,60 @@
+<p>
+  When decoding a token against a long KV cache, Flash-Decoding splits the KV cache into
+  <code>num_splits</code> chunks and computes a partial attention output on each chunk in
+  parallel. Each partial output <code>partial_out[s]</code> is the softmax of that chunk's
+  scores applied to that chunk's values, and each <code>partial_lse[s]</code> is the
+  log-sum-exp of the chunk's scores. This kernel merges the per-chunk results into the
+  final attention output using the log-sum-exp trick, so no chunk's contribution overflows
+  when scores span very different magnitudes.
+</p>
+
+<p>
+  For each head \(h\) and each embedding dimension \(d\), given the split log-sum-exps
+  \(\ell_{s,h} = \text{partial\_lse}[s, h]\) and partial outputs
+  \(o_{s,h,d} = \text{partial\_out}[s, h, d]\), let
+  \[
+  m_h = \max_{s} \ell_{s,h}, \qquad
+  w_{s,h} = \exp\!\bigl(\ell_{s,h} - m_h\bigr).
+  \]
+  The merged attention output is the per-split-weighted average
+  \[
+  \text{output}[h, d] \;=\; \frac{\sum_{s=0}^{S-1} w_{s,h} \cdot o_{s,h,d}}{\sum_{s=0}^{S-1} w_{s,h}}.
+  \]
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li><code>partial_out</code> has shape <code>(num_splits, num_heads, head_dim)</code> with <code>float32</code> values</li>
+  <li><code>partial_lse</code> has shape <code>(num_splits, num_heads)</code> with <code>float32</code> values</li>
+  <li>Subtract \(m_h\) before exponentiating to keep the merge numerically stable</li>
+  <li>The final result must be stored in the <code>output</code> tensor with shape <code>(num_heads, head_dim)</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+  With <code>num_splits</code> = 2, <code>num_heads</code> = 2, <code>head_dim</code> = 2,
+  \[
+  \text{partial\_out} = \begin{bmatrix}
+    \begin{bmatrix} 1 & 2 \\ 4 & 0 \end{bmatrix} \\[6pt]
+    \begin{bmatrix} 3 & 4 \\ 0 & 8 \end{bmatrix}
+  \end{bmatrix}, \qquad
+  \text{partial\_lse} = \begin{bmatrix} 0 & \ln 3 \\ 0 & 0 \end{bmatrix}
+  \]
+  the two heads merge differently. Head 0 has equal log-sum-exps, so the weights are
+  \(\tfrac{1}{2},\tfrac{1}{2}\); head 1 has log-sum-exps of \(\ln 3\) and \(0\), so the
+  weights are \(\tfrac{3}{4},\tfrac{1}{4}\). The result is
+  \[
+  \text{output} = \begin{bmatrix} 2 & 3 \\ 3 & 2 \end{bmatrix}.
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>num_splits</code> &le; 256</li>
+  <li>1 &le; <code>num_heads</code> &le; 128</li>
+  <li>1 &le; <code>head_dim</code> &le; 256</li>
+  <li>All tensors are <code>float32</code></li>
+  <li>Performance is measured with <code>num_splits</code> = 128, <code>num_heads</code> = 64, <code>head_dim</code> = 128</li>
+</ul>
