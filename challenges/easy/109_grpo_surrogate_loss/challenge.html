@@ -10,40 +10,123 @@
   <code>y[b,g,s]</code> conditioned on prompt <code>b</code> and its preceding response tokens.
 </p>
 
-<svg width="720" height="260" viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+<svg width="720" height="366" viewBox="0 0 720 366" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
   <defs>
-    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+    <marker id="ga" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
       <path d="M0,0 L8,3 L0,6 Z" fill="#7ec8a0"/>
     </marker>
   </defs>
-  <rect width="720" height="260" rx="8" fill="#222"/>
-  <text x="360" y="25" text-anchor="middle" fill="#ccc" font-family="monospace" font-size="14">GRPO: group rewards to token loss</text>
+  <rect width="720" height="366" rx="8" fill="#222"/>
+
+  <text x="360" y="25" text-anchor="middle" fill="#ccc" font-family="monospace" font-size="13">group-normalized advantage &#8594; token-level surrogate</text>
+  <text x="360" y="43" text-anchor="middle" fill="#888" font-family="monospace" font-size="10">one prompt b shown; identical for all B prompts</text>
+
+  <!-- ============ LANE A: rewards -> group stats -> advantages -> broadcast ============ -->
+  <text x="72" y="72" text-anchor="middle" fill="#8ecae6" font-family="monospace" font-size="11">rewards [B,G]</text>
   <g fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5">
-    <rect x="35" y="70" width="130" height="38" rx="5"/>
-    <rect x="35" y="122" width="130" height="38" rx="5"/>
-    <rect x="35" y="174" width="130" height="38" rx="5"/>
+    <rect x="27" y="80" width="90" height="26" rx="4"/>
+    <rect x="27" y="110" width="90" height="26" rx="4"/>
+    <rect x="27" y="154" width="90" height="26" rx="4"/>
   </g>
-  <g fill="#8ecae6" font-family="monospace" font-size="12" text-anchor="middle">
-    <text x="100" y="94">R[b,0]</text>
-    <text x="100" y="146">R[b,1]</text>
-    <text x="100" y="198">R[b,G-1]</text>
+  <g fill="#8ecae6" font-family="monospace" font-size="11" text-anchor="middle">
+    <text x="72" y="98">R[b,0]</text>
+    <text x="72" y="128">R[b,1]</text>
+    <text x="72" y="148">&#8942;</text>
+    <text x="72" y="172">R[b,G-1]</text>
   </g>
-  <line x1="180" y1="140" x2="270" y2="140" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <rect x="285" y="112" width="150" height="56" rx="5" fill="#4b2e22" stroke="#e76f51" stroke-width="1.5"/>
-  <text x="360" y="136" text-anchor="middle" fill="#f4a261" font-family="monospace" font-size="12">group mean/std</text>
-  <text x="360" y="153" text-anchor="middle" fill="#f4a261" font-family="monospace" font-size="12">A[b,g]</text>
-  <line x1="450" y1="140" x2="535" y2="140" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <line x1="122" y1="130" x2="152" y2="130" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#ga)"/>
+
+  <rect x="158" y="102" width="156" height="56" rx="5" fill="#4b2e22" stroke="#e76f51" stroke-width="1.5"/>
+  <g fill="#f4a261" font-family="monospace" text-anchor="middle">
+    <text x="236" y="120" font-size="11">group mean / std</text>
+    <text x="236" y="136" font-size="10">&#956;[b] , &#963;[b]  over G</text>
+    <text x="236" y="151" font-size="10">A = (R&#8722;&#956;)/(&#963;+1e-8)</text>
+  </g>
+
+  <line x1="320" y1="130" x2="350" y2="130" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#ga)"/>
+
+  <text x="391" y="72" text-anchor="middle" fill="#aaeebb" font-family="monospace" font-size="11">advantage [B,G]</text>
   <g fill="#1e3d2d" stroke="#5cb85c" stroke-width="1.5">
-    <rect x="550" y="70" width="125" height="38" rx="5"/>
-    <rect x="550" y="122" width="125" height="38" rx="5"/>
-    <rect x="550" y="174" width="125" height="38" rx="5"/>
+    <rect x="356" y="80" width="80" height="26" rx="4"/>
+    <rect x="356" y="110" width="80" height="26" rx="4"/>
+    <rect x="356" y="154" width="80" height="26" rx="4"/>
   </g>
-  <g fill="#aaeebb" font-family="monospace" font-size="12" text-anchor="middle">
-    <text x="612" y="94">A[b,g,0:S]</text>
-    <text x="612" y="146">ratio + KL</text>
-    <text x="612" y="198">mean over B×G×S</text>
+  <g fill="#aaeebb" font-family="monospace" font-size="11" text-anchor="middle">
+    <text x="396" y="98">A[b,0]</text>
+    <text x="396" y="128">A[b,1]</text>
+    <text x="396" y="148">&#8942;</text>
+    <text x="396" y="172">A[b,G-1]</text>
   </g>
-  <text x="360" y="235" text-anchor="middle" fill="#aaa" font-family="monospace" font-size="12">one sequence advantage is broadcast across its S tokens</text>
+
+  <line x1="442" y1="130" x2="500" y2="130" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#ga)"/>
+  <text x="471" y="122" text-anchor="middle" fill="#7ec8a0" font-family="monospace" font-size="10">&#215;S</text>
+
+  <text x="612" y="72" text-anchor="middle" fill="#aaeebb" font-family="monospace" font-size="11">same A for all S tokens</text>
+  <g fill="#1e3d2d" stroke="#5cb85c" stroke-width="1.5">
+    <rect x="511" y="117" width="40" height="26" rx="4"/>
+    <rect x="557" y="117" width="40" height="26" rx="4"/>
+    <rect x="603" y="117" width="40" height="26" rx="4"/>
+    <rect x="671" y="117" width="40" height="26" rx="4"/>
+  </g>
+  <g fill="#aaeebb" font-family="monospace" font-size="11" text-anchor="middle">
+    <text x="531" y="135">A</text>
+    <text x="577" y="135">A</text>
+    <text x="623" y="135">A</text>
+    <text x="657" y="138" font-size="15">&#8943;</text>
+    <text x="691" y="135">A</text>
+    <text x="612" y="160" font-size="10">s = 0 &#8230; S&#8722;1</text>
+  </g>
+
+  <path d="M 691 145 L 691 192 L 477 192 L 477 212" fill="none" stroke="#7ec8a0" stroke-width="1.5"
+        stroke-dasharray="4 3" marker-end="url(#ga)"/>
+
+  <!-- ============ LANE B: policy ratio -> clipped surrogate ============ -->
+  <rect x="27" y="216" width="132" height="42" rx="5" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <g fill="#8ecae6" font-family="monospace" font-size="10" text-anchor="middle">
+    <text x="93" y="234">log &#960;  ,  log &#960;_old</text>
+    <text x="93" y="249">[B,G,S]</text>
+  </g>
+  <line x1="165" y1="237" x2="189" y2="237" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#ga)"/>
+  <rect x="195" y="216" width="176" height="42" rx="5" fill="#2b2b33" stroke="#777" stroke-width="1.5"/>
+  <g fill="#ddd" font-family="monospace" font-size="10" text-anchor="middle">
+    <text x="283" y="234">r = exp(log &#960; &#8722; log &#960;_old)</text>
+    <text x="283" y="249">clip(r, 1&#8722;&#949;, 1+&#949;)</text>
+  </g>
+  <line x1="377" y1="237" x2="397" y2="237" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#ga)"/>
+  <rect x="403" y="216" width="148" height="42" rx="5" fill="#1e3d2d" stroke="#5cb85c" stroke-width="1.5"/>
+  <g fill="#aaeebb" font-family="monospace" font-size="10" text-anchor="middle">
+    <text x="477" y="234">L_clip = min(r&#183;A,</text>
+    <text x="477" y="249">clip(r)&#183;A)</text>
+  </g>
+
+  <!-- ============ LANE C: reference KL ============ -->
+  <rect x="27" y="288" width="132" height="42" rx="5" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <g fill="#8ecae6" font-family="monospace" font-size="10" text-anchor="middle">
+    <text x="93" y="306">log &#960;  ,  log &#960;_ref</text>
+    <text x="93" y="321">[B,G,S]</text>
+  </g>
+  <line x1="165" y1="309" x2="189" y2="309" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#ga)"/>
+  <rect x="195" y="288" width="176" height="42" rx="5" fill="#2b2b33" stroke="#777" stroke-width="1.5"/>
+  <g fill="#ddd" font-family="monospace" font-size="10" text-anchor="middle">
+    <text x="283" y="306">d = log &#960;_ref &#8722; log &#960;</text>
+    <text x="283" y="321">K = e&#7496; &#8722; d &#8722; 1   (k&#8323;)</text>
+  </g>
+  <line x1="377" y1="309" x2="397" y2="309" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#ga)"/>
+  <rect x="403" y="288" width="148" height="42" rx="5" fill="#4b2e22" stroke="#e76f51" stroke-width="1.5"/>
+  <text x="477" y="314" text-anchor="middle" fill="#f4a261" font-family="monospace" font-size="12">&#8722; &#946; &#183; K</text>
+
+  <!-- ============ merge -> scalar ============ -->
+  <path d="M 553 237 L 577 253" fill="none" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#ga)"/>
+  <path d="M 553 309 L 577 293" fill="none" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#ga)"/>
+  <rect x="585" y="240" width="126" height="66" rx="5" fill="#3a2c50" stroke="#a78bfa" stroke-width="1.5"/>
+  <g fill="#d6c7ff" font-family="monospace" text-anchor="middle">
+    <text x="648" y="262" font-size="12">&#8466; = &#8722;mean</text>
+    <text x="648" y="279" font-size="10">over B&#183;G&#183;S</text>
+    <text x="648" y="296" font-size="10">&#8594; output[0]</text>
+  </g>
+
+  <text x="27" y="352" fill="#6b8fa8" font-family="monospace" font-size="10">blue = tensors passed to solve()</text>
 </svg>
 
 <h2>Implementation Requirements</h2>
@@ -57,6 +140,12 @@
 </ul>
 
 <h2>Loss Calculation</h2>
+<p>
+  Below, \( R_{b,g} \) are the entries of <code>rewards</code>; \( \log\pi_{b,g,s} \),
+  \( \log\pi^{\mathrm{old}}_{b,g,s} \), and \( \log\pi^{\mathrm{ref}}_{b,g,s} \) are the entries of
+  <code>log_pi</code>, <code>log_pi_old</code>, and <code>log_ref</code>; and \( \varepsilon \) and
+  \( \beta \) denote <code>clip_eps</code> and <code>beta</code>.
+</p>
 <p>Normalize rewards independently within each prompt group using the population standard deviation:</p>
 
 \[
@@ -66,9 +155,7 @@
 \sigma_b
 &= \sqrt{\frac{1}{G}\sum_{g=0}^{G-1}(R_{b,g}-\mu_b)^2}, \\
 A_{b,g}
-&= \frac{R_{b,g}-\mu_b}{\sigma_b + 10^{-8}}, \\
-A_{b,g,s}
-&= A_{b,g}.
+&= \frac{R_{b,g}-\mu_b}{\sigma_b + 10^{-8}}.
 \end{aligned}
 \]
 
@@ -77,33 +164,36 @@ A_{b,g,s}
 \[
 \begin{aligned}
 r_{b,g,s}
-&= \exp\!\left(\text{log_pi}_{b,g,s} - \text{log_pi_old}_{b,g,s}\right), \\
+&= \exp\!\left(\log\pi_{b,g,s} - \log\pi^{\mathrm{old}}_{b,g,s}\right), \\
 L^{\mathrm{clip}}_{b,g,s}
 &= \min\!\Bigl(
-    r_{b,g,s}A_{b,g,s}, \\
+    r_{b,g,s}A_{b,g}, \\
 &\qquad
-    \operatorname{clip}\!\left(r_{b,g,s}, 1-\text{clip_eps}, 1+\text{clip_eps}\right)
-    A_{b,g,s}
+    \operatorname{clip}\!\left(r_{b,g,s}, 1-\varepsilon, 1+\varepsilon\right)
+    A_{b,g}
 \Bigr).
 \end{aligned}
 \]
 
 <p>
-  Use the non-negative <code>k3</code> reference-policy KL sample estimator. Its expectation is
-  <code>KL(pi || pi_ref)</code> when tokens are sampled from the current policy.
+  Use the non-negative \( k_3 \) reference-policy KL sample estimator. Its expectation is
+  \( \mathrm{KL}\!\left(\pi \,\|\, \pi^{\mathrm{ref}}\right) \) when tokens are sampled from the
+  current policy.
 </p>
 
 \[
 \begin{aligned}
 d_{b,g,s}
-&= \text{log_ref}_{b,g,s} - \text{log_pi}_{b,g,s}, \\
+&= \log\pi^{\mathrm{ref}}_{b,g,s} - \log\pi_{b,g,s}, \\
 K_{b,g,s}
 &= \exp(d_{b,g,s}) - d_{b,g,s} - 1, \\
-\text{output}
+\mathcal{L}
 &= -\frac{1}{BGS}\sum_{b,g,s}
-\left(L^{\mathrm{clip}}_{b,g,s} - \text{beta}K_{b,g,s}\right).
+\left(L^{\mathrm{clip}}_{b,g,s} - \beta\,K_{b,g,s}\right).
 \end{aligned}
 \]
+
+<p>The scalar \( \mathcal{L} \) is the value written to <code>output[0]</code>.</p>
 
 <h2>Examples</h2>
 <p>For <code>B</code> = 1, <code>G</code> = 2, <code>S</code> = 2, <code>clip_eps</code> = 0.2,
