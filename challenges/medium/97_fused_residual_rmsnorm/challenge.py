@@ -25,10 +25,6 @@ class Challenge(ChallengeBase):
         assert x.shape == residual.shape == output.shape == (M, N)
         assert weight.shape == (N,)
         assert x.dtype == residual.dtype == weight.dtype == output.dtype == torch.float32
-        assert x.device.type == "cuda"
-        assert residual.device.type == "cuda"
-        assert weight.device.type == "cuda"
-        assert output.device.type == "cuda"
 
         hidden = x + residual
         inv_rms = torch.rsqrt(torch.mean(hidden * hidden, dim=1, keepdim=True) + eps)
