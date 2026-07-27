@@ -52,7 +52,16 @@ class Challenge(ChallengeBase):
         output[0] = -torch.mean(surrogate - beta * kl_penalty)
 
     def reference_impl_jax(
-        self, rewards, log_pi, log_pi_old, log_ref, clip_eps, beta, B, G, S,
+        self,
+        rewards,
+        log_pi,
+        log_pi_old,
+        log_ref,
+        clip_eps,
+        beta,
+        B,
+        G,
+        S,
     ):
         import jax.numpy as jnp
 
@@ -144,19 +153,33 @@ class Challenge(ChallengeBase):
         # Equal rewards: advantages are zero while KL remains active.
         tests.append(
             self._make_test_case(
-                2, 4, 8, rewards=[[3.0] * 4, [-2.0] * 4], log_pi_old=[[[0.0] * 8] * 4] * 2,
+                2,
+                4,
+                8,
+                rewards=[[3.0] * 4, [-2.0] * 4],
+                log_pi_old=[[[0.0] * 8] * 4] * 2,
             )
         )
 
         # Negative and mixed rewards.
         tests.append(
-            self._make_test_case(1, 5, 7, rewards=[[-4.0, -1.0, 0.0, 2.0, 5.0]], clip_eps=0.1,)
+            self._make_test_case(
+                1,
+                5,
+                7,
+                rewards=[[-4.0, -1.0, 0.0, 2.0, 5.0]],
+                clip_eps=0.1,
+            )
         )
 
         # Zero KL difference isolates the PPO surrogate.
         tests.append(
             self._make_test_case(
-                2, 4, 16, log_ref=[[[-0.2] * 16] * 4] * 2, log_pi=[[[-0.2] * 16] * 4] * 2,
+                2,
+                4,
+                16,
+                log_ref=[[[-0.2] * 16] * 4] * 2,
+                log_pi=[[[-0.2] * 16] * 4] * 2,
             )
         )
 
@@ -172,14 +195,22 @@ class Challenge(ChallengeBase):
         # Extreme but finite KL differences.
         tests.append(
             self._make_test_case(
-                2, 4, 8, log_pi=[[[8.0] * 8] * 4] * 2, log_ref=[[[-8.0] * 8] * 4] * 2,
+                2,
+                4,
+                8,
+                log_pi=[[[8.0] * 8] * 4] * 2,
+                log_ref=[[[-8.0] * 8] * 4] * 2,
             )
         )
 
         # Large positive, finite KL log-ratio exercises the exponential branch.
         tests.append(
             self._make_test_case(
-                2, 4, 8, log_pi=[[[-8.0] * 8] * 4] * 2, log_ref=[[[8.0] * 8] * 4] * 2,
+                2,
+                4,
+                8,
+                log_pi=[[[-8.0] * 8] * 4] * 2,
+                log_ref=[[[8.0] * 8] * 4] * 2,
             )
         )
 
