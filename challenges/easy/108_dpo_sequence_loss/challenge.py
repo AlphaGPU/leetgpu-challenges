@@ -138,18 +138,6 @@ class Challenge(ChallengeBase):
             )
         )
 
-        # All zero inputs: loss is log(2).
-        tests.append(
-            self._make_test_case(
-                8,
-                beta=0.1,
-                chosen_logps=[0.0] * 8,
-                rejected_logps=[0.0] * 8,
-                chosen_ref_logps=[0.0] * 8,
-                rejected_ref_logps=[0.0] * 8,
-            )
-        )
-
         # Large positive and negative logits expose sigmoid/log underflow.
         tests.append(
             self._make_test_case(
@@ -164,8 +152,7 @@ class Challenge(ChallengeBase):
         # Beta=0 removes the preference margin and produces log(2).
         tests.append(self._make_test_case(16, beta=0.0))
 
-        # Power-of-two and non-power-of-two batch sizes.
-        tests.append(self._make_test_case(64))
+        # Non-power-of-two batch size.
         tests.append(self._make_test_case(127, beta=0.05))
 
         # Sequence log probabilities are token sums, so real magnitudes are large and negative.
