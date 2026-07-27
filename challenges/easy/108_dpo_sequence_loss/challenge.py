@@ -43,7 +43,13 @@ class Challenge(ChallengeBase):
         output[0] = -F.logsigmoid(logits).mean()
 
     def reference_impl_jax(
-        self, chosen_logps, rejected_logps, chosen_ref_logps, rejected_ref_logps, beta, B,
+        self,
+        chosen_logps,
+        rejected_logps,
+        chosen_ref_logps,
+        rejected_ref_logps,
+        beta,
+        B,
     ):
         import jax
         import jax.numpy as jnp
