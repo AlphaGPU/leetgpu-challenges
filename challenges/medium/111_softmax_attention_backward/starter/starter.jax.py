@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# Q, K, V, dO are tensors on GPU
+# Q, K, V, dO are tensors on device
 @jax.jit
 def solve(
     Q: jax.Array, K: jax.Array, V: jax.Array, dO: jax.Array, M: int, N: int, d: int
