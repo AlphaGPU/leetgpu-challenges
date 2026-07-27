@@ -49,14 +49,19 @@ class Challenge(ChallengeBase):
             "D": (ctypes.c_int, "in"),
         }
 
+    def _half_split(self, table: torch.Tensor) -> torch.Tensor:
+        D = table.shape[1]
+        table[:, D // 2 :] = table[:, : D // 2]
+        return table
+
     def generate_example_test(self) -> Dict[str, Any]:
         M = 1024
         D = 64
         dtype = torch.float32
 
         Q = torch.randn(M, D, device=self.device, dtype=dtype)
-        Cos = torch.randn(M, D, device=self.device, dtype=dtype)
-        Sin = torch.randn(M, D, device=self.device, dtype=dtype)
+        Cos = self._half_split(torch.randn(M, D, device=self.device, dtype=dtype))
+        Sin = self._half_split(torch.randn(M, D, device=self.device, dtype=dtype))
         Output = torch.zeros(M, D, device=self.device, dtype=dtype)
 
         return {
@@ -78,8 +83,8 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "Q": torch.randn(M, D, device=self.device, dtype=dtype),
-                "cos": torch.randn(M, D, device=self.device, dtype=dtype),
-                "sin": torch.randn(M, D, device=self.device, dtype=dtype),
+                "cos": self._half_split(torch.randn(M, D, device=self.device, dtype=dtype)),
+                "sin": self._half_split(torch.randn(M, D, device=self.device, dtype=dtype)),
                 "output": torch.zeros(M, D, device=self.device, dtype=dtype),
                 "M": M,
                 "D": D,
@@ -92,8 +97,8 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "Q": torch.randn(M, D, device=self.device, dtype=dtype),
-                "cos": torch.randn(M, D, device=self.device, dtype=dtype),
-                "sin": torch.randn(M, D, device=self.device, dtype=dtype),
+                "cos": self._half_split(torch.randn(M, D, device=self.device, dtype=dtype)),
+                "sin": self._half_split(torch.randn(M, D, device=self.device, dtype=dtype)),
                 "output": torch.zeros(M, D, device=self.device, dtype=dtype),
                 "M": M,
                 "D": D,
@@ -116,8 +121,8 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "Q": torch.randn((1, 2), device=self.device, dtype=dtype),
-                "cos": torch.randn((1, 2), device=self.device, dtype=dtype),
-                "sin": torch.randn((1, 2), device=self.device, dtype=dtype),
+                "cos": self._half_split(torch.randn((1, 2), device=self.device, dtype=dtype)),
+                "sin": self._half_split(torch.randn((1, 2), device=self.device, dtype=dtype)),
                 "output": torch.zeros(1, 2, device=self.device, dtype=dtype),
                 "M": 1,
                 "D": 2,
@@ -133,12 +138,12 @@ class Challenge(ChallengeBase):
                     dtype=dtype,
                 ),
                 "cos": torch.tensor(
-                    [[0.5, 0.5, 0.5, 0.5], [0.1, 0.2, 0.3, 0.4]],
+                    [[0.5, 0.5, 0.5, 0.5], [0.1, 0.2, 0.1, 0.2]],
                     device=self.device,
                     dtype=dtype,
                 ),
                 "sin": torch.tensor(
-                    [[0.5, -0.5, 0.5, -0.5], [0.4, -0.3, 0.2, -0.1]],
+                    [[0.5, -0.5, 0.5, -0.5], [0.4, -0.3, 0.4, -0.3]],
                     device=self.device,
                     dtype=dtype,
                 ),
@@ -152,8 +157,12 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "Q": torch.empty((256, 128), device=self.device, dtype=dtype).uniform_(-0.1, 0.1),
-                "cos": torch.empty((256, 128), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
-                "sin": torch.empty((256, 128), device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "cos": self._half_split(
+                    torch.empty((256, 128), device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+                ),
+                "sin": self._half_split(
+                    torch.empty((256, 128), device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+                ),
                 "output": torch.zeros(256, 128, device=self.device, dtype=dtype),
                 "M": 256,
                 "D": 128,
@@ -168,8 +177,8 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         return {
             "Q": torch.randn(M, D, device=self.device, dtype=dtype),
-            "cos": torch.randn(M, D, device=self.device, dtype=dtype),
-            "sin": torch.randn(M, D, device=self.device, dtype=dtype),
+            "cos": self._half_split(torch.randn(M, D, device=self.device, dtype=dtype)),
+            "sin": self._half_split(torch.randn(M, D, device=self.device, dtype=dtype)),
             "output": torch.zeros(M, D, device=self.device, dtype=dtype),
             "M": M,
             "D": D,
