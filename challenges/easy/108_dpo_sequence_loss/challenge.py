@@ -78,13 +78,14 @@ class Challenge(ChallengeBase):
         chosen_ref_logps=None,
         rejected_ref_logps=None,
         beta=0.1,
+        base=0.0,
     ):
         dtype = torch.float32
         device = self.device
 
         def tensor_or_random(values):
             if values is None:
-                return torch.randn(B, device=device, dtype=dtype)
+                return base + torch.randn(B, device=device, dtype=dtype)
             return torch.tensor(values, device=device, dtype=dtype)
 
         return {
@@ -166,6 +167,34 @@ class Challenge(ChallengeBase):
         # Power-of-two and non-power-of-two batch sizes.
         tests.append(self._make_test_case(64))
         tests.append(self._make_test_case(127, beta=0.05))
+
+        # Sequence log probabilities are token sums, so real magnitudes are large and negative.
+        tests.append(self._make_test_case(32, base=-450.0))
+
+        # Policy barely moved from the reference, as at the start of DPO training: the
+        # margins are small differences between large-magnitude log probabilities.
+        tests.append(
+            self._make_test_case(
+                6,
+                chosen_logps=[-812.5, -1190.25, -415.75, -2033.0, -655.5, -978.25],
+                rejected_logps=[-820.0, -1183.5, -422.25, -2025.5, -661.0, -985.0],
+                chosen_ref_logps=[-812.0, -1191.0, -415.0, -2034.0, -655.0, -979.0],
+                rejected_ref_logps=[-819.5, -1184.0, -423.0, -2026.0, -660.5, -984.5],
+            )
+        )
+
+        # Short chosen responses against long rejected ones. The length gap dominates each
+        # policy margin but cancels against the reference, so dropping the reference term
+        # saturates the loss to zero instead of the correct value.
+        tests.append(
+            self._make_test_case(
+                4,
+                chosen_logps=[-118.0, -95.5, -140.25, -102.0],
+                rejected_logps=[-870.5, -1204.0, -655.75, -988.25],
+                chosen_ref_logps=[-120.0, -97.0, -138.5, -104.0],
+                rejected_ref_logps=[-865.0, -1210.5, -660.0, -983.0],
+            )
+        )
 
         # Realistic accumulated batch.
         tests.append(self._make_test_case(4096, beta=0.2))
