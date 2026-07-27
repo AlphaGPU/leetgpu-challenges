@@ -49,7 +49,8 @@ class Challenge(ChallengeBase):
             "D": (ctypes.c_int, "in"),
         }
 
-    def _enforce_half_split(self, table: torch.Tensor, D: int):
+    def _half_split(self, table: torch.Tensor) -> torch.Tensor:
+        D = table.shape[1]
         table[:, D // 2 :] = table[:, : D // 2]
         return table
 
@@ -59,8 +60,8 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
 
         Q = torch.randn(M, D, device=self.device, dtype=dtype)
-        Cos = self._enforce_half_split(torch.randn(M, D, device=self.device, dtype=dtype), D)
-        Sin = self._enforce_half_split(torch.randn(M, D, device=self.device, dtype=dtype), D)
+        Cos = self._half_split(torch.randn(M, D, device=self.device, dtype=dtype))
+        Sin = self._half_split(torch.randn(M, D, device=self.device, dtype=dtype))
         Output = torch.zeros(M, D, device=self.device, dtype=dtype)
 
         return {
@@ -82,8 +83,8 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "Q": torch.randn(M, D, device=self.device, dtype=dtype),
-                "cos": self._enforce_half_split(torch.randn(M, D, device=self.device, dtype=dtype), D),
-                "sin": self._enforce_half_split(torch.randn(M, D, device=self.device, dtype=dtype), D),
+                "cos": self._half_split(torch.randn(M, D, device=self.device, dtype=dtype)),
+                "sin": self._half_split(torch.randn(M, D, device=self.device, dtype=dtype)),
                 "output": torch.zeros(M, D, device=self.device, dtype=dtype),
                 "M": M,
                 "D": D,
@@ -96,8 +97,8 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "Q": torch.randn(M, D, device=self.device, dtype=dtype),
-                "cos": self._enforce_half_split(torch.randn(M, D, device=self.device, dtype=dtype), D),
-                "sin": self._enforce_half_split(torch.randn(M, D, device=self.device, dtype=dtype), D),
+                "cos": self._half_split(torch.randn(M, D, device=self.device, dtype=dtype)),
+                "sin": self._half_split(torch.randn(M, D, device=self.device, dtype=dtype)),
                 "output": torch.zeros(M, D, device=self.device, dtype=dtype),
                 "M": M,
                 "D": D,
@@ -120,8 +121,8 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "Q": torch.randn((1, 2), device=self.device, dtype=dtype),
-                "cos": self._enforce_half_split(torch.randn((1, 2), device=self.device, dtype=dtype), 2),
-                "sin": self._enforce_half_split(torch.randn((1, 2), device=self.device, dtype=dtype), 2),
+                "cos": self._half_split(torch.randn((1, 2), device=self.device, dtype=dtype)),
+                "sin": self._half_split(torch.randn((1, 2), device=self.device, dtype=dtype)),
                 "output": torch.zeros(1, 2, device=self.device, dtype=dtype),
                 "M": 1,
                 "D": 2,
@@ -156,11 +157,11 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "Q": torch.empty((256, 128), device=self.device, dtype=dtype).uniform_(-0.1, 0.1),
-                "cos": self._enforce_half_split(
-                    torch.empty((256, 128), device=self.device, dtype=dtype).uniform_(-1.0, 1.0), 128
+                "cos": self._half_split(
+                    torch.empty((256, 128), device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
                 ),
-                "sin": self._enforce_half_split(
-                    torch.empty((256, 128), device=self.device, dtype=dtype).uniform_(-1.0, 1.0), 128
+                "sin": self._half_split(
+                    torch.empty((256, 128), device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
                 ),
                 "output": torch.zeros(256, 128, device=self.device, dtype=dtype),
                 "M": 256,
@@ -176,8 +177,8 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         return {
             "Q": torch.randn(M, D, device=self.device, dtype=dtype),
-            "cos": self._enforce_half_split(torch.randn(M, D, device=self.device, dtype=dtype), D),
-            "sin": self._enforce_half_split(torch.randn(M, D, device=self.device, dtype=dtype), D),
+            "cos": self._half_split(torch.randn(M, D, device=self.device, dtype=dtype)),
+            "sin": self._half_split(torch.randn(M, D, device=self.device, dtype=dtype)),
             "output": torch.zeros(M, D, device=self.device, dtype=dtype),
             "M": M,
             "D": D,
