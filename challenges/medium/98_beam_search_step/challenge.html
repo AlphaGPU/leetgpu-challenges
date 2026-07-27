@@ -16,6 +16,7 @@
   <li>The <code>solve</code> function signature must remain unchanged</li>
   <li>The final results must be stored in <code>new_beam_scores</code>, <code>parent_beam_indices</code>, and <code>next_tokens</code></li>
   <li>Within each batch, the <code>K</code> outputs must be sorted in descending order by score; <code>parent_beam_indices</code> and <code>next_tokens</code> must correspond positionally to <code>new_beam_scores</code></li>
+  <li>All <code>K &times; V</code> candidate scores within a batch are distinct in the test data, so no tie-breaking is required; the behavior on exact ties is unspecified</li>
 </ul>
 
 <h2>Example 1:</h2>

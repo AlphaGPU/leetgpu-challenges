@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Beam Search Step",
-            atol=1e-05,
-            rtol=1e-05,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Beam Search Step"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -26,6 +23,14 @@ class Challenge(ChallengeBase):
         K: int,
         V: int,
     ):
+        """
+        Performs one decoding step of beam search.
+
+        For each batch, expands the K active beams over the whole vocabulary
+        (cand[b, k, v] = beam_scores[b, k] + token_logprobs[b, k, v]) and keeps the
+        top K candidates, writing their scores, originating beam and chosen token.
+        All candidate scores within a batch are distinct, so the selection is unambiguous.
+        """
         assert beam_scores.shape == (B, K)
         assert token_logprobs.shape == (B, K, V)
         assert new_beam_scores.shape == (B, K)
@@ -36,11 +41,6 @@ class Challenge(ChallengeBase):
         assert new_beam_scores.dtype == torch.float32
         assert parent_beam_indices.dtype == torch.int32
         assert next_tokens.dtype == torch.int32
-        assert beam_scores.device.type == "cuda"
-        assert token_logprobs.device.type == "cuda"
-        assert new_beam_scores.device.type == "cuda"
-        assert parent_beam_indices.device.type == "cuda"
-        assert next_tokens.device.type == "cuda"
 
         candidates = beam_scores.unsqueeze(-1) + token_logprobs
         flat = candidates.view(B, K * V)
@@ -61,6 +61,31 @@ class Challenge(ChallengeBase):
             "V": (ctypes.c_int, "in"),
         }
 
+    def _make_candidates_distinct(
+        self,
+        beam_scores: torch.Tensor,
+        token_logprobs: torch.Tensor,
+        logprob_scale: float,
+    ) -> torch.Tensor:
+        """
+        Resamples the few token log-probabilities whose candidate score collides with
+        another candidate in the same batch, so that all K * V candidate scores per batch
+        are distinct and the top-K selection has a single correct answer.
+        """
+        B, K, V = token_logprobs.shape
+        for _ in range(32):
+            candidates = (beam_scores.unsqueeze(-1) + token_logprobs).reshape(B, K * V)
+            ordered, order = torch.sort(candidates, dim=-1)
+            duplicate_ordered = torch.zeros_like(ordered, dtype=torch.bool)
+            duplicate_ordered[:, 1:] = ordered[:, 1:] == ordered[:, :-1]
+            if not bool(duplicate_ordered.any()):
+                break
+            duplicate = torch.zeros_like(duplicate_ordered)
+            duplicate.scatter_(-1, order, duplicate_ordered)
+            resampled = torch.randn_like(token_logprobs) * logprob_scale
+            token_logprobs = torch.where(duplicate.reshape(B, K, V), resampled, token_logprobs)
+        return token_logprobs
+
     def _make_test_case(
         self,
         B: int,
@@ -71,29 +96,30 @@ class Challenge(ChallengeBase):
         logprob_scale: float = 2.0,
         zero_beam_scores: bool = False,
     ) -> Dict[str, Any]:
-        device = "cuda"
         torch.manual_seed(seed)
         if zero_beam_scores:
-            beam_scores = torch.zeros((B, K), device=device, dtype=torch.float32)
+            beam_scores = torch.zeros((B, K), device=self.device, dtype=torch.float32)
         else:
-            beam_scores = torch.randn((B, K), device=device, dtype=torch.float32) * beam_scale
-        token_logprobs = torch.randn((B, K, V), device=device, dtype=torch.float32) * logprob_scale
+            beam_scores = torch.randn((B, K), device=self.device, dtype=torch.float32) * beam_scale
+        token_logprobs = (
+            torch.randn((B, K, V), device=self.device, dtype=torch.float32) * logprob_scale
+        )
+        token_logprobs = self._make_candidates_distinct(beam_scores, token_logprobs, logprob_scale)
         return {
             "beam_scores": beam_scores,
             "token_logprobs": token_logprobs,
-            "new_beam_scores": torch.zeros((B, K), device=device, dtype=torch.float32),
-            "parent_beam_indices": torch.zeros((B, K), device=device, dtype=torch.int32),
-            "next_tokens": torch.zeros((B, K), device=device, dtype=torch.int32),
+            "new_beam_scores": torch.zeros((B, K), device=self.device, dtype=torch.float32),
+            "parent_beam_indices": torch.zeros((B, K), device=self.device, dtype=torch.int32),
+            "next_tokens": torch.zeros((B, K), device=self.device, dtype=torch.int32),
             "B": B,
             "K": K,
             "V": V,
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
-        device = "cuda"
         beam_scores = torch.tensor(
             [[-0.5, -1.0]],
-            device=device,
+            device=self.device,
             dtype=torch.float32,
         )
         token_logprobs = torch.tensor(
@@ -103,15 +129,15 @@ class Challenge(ChallengeBase):
                     [-0.4, -0.1, -1.6, -3.2],
                 ]
             ],
-            device=device,
+            device=self.device,
             dtype=torch.float32,
         )
         return {
             "beam_scores": beam_scores,
             "token_logprobs": token_logprobs,
-            "new_beam_scores": torch.zeros((1, 2), device=device, dtype=torch.float32),
-            "parent_beam_indices": torch.zeros((1, 2), device=device, dtype=torch.int32),
-            "next_tokens": torch.zeros((1, 2), device=device, dtype=torch.int32),
+            "new_beam_scores": torch.zeros((1, 2), device=self.device, dtype=torch.float32),
+            "parent_beam_indices": torch.zeros((1, 2), device=self.device, dtype=torch.int32),
+            "next_tokens": torch.zeros((1, 2), device=self.device, dtype=torch.int32),
             "B": 1,
             "K": 2,
             "V": 4,

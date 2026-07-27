@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# beam_scores, token_logprobs are tensors on GPU
+# beam_scores, token_logprobs are tensors on device
 @jax.jit
 def solve(
     beam_scores: jax.Array,
@@ -11,5 +11,5 @@ def solve(
     K: int,
     V: int,
 ) -> tuple[jax.Array, jax.Array, jax.Array]:
-    # return output tensors directly
+    # return output tensor directly
     pass
