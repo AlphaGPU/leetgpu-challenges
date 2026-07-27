@@ -18,28 +18,37 @@
 <p>For each batch element <code>b</code> and sequence position <code>s</code>, compute the policy ratio,
 clipped surrogate, and reference-policy penalty:</p>
 
+<p>
+  Below, \( A_{b,s} \) are the entries of <code>advantages</code>; \( \log\pi_{b,s} \),
+  \( \log\pi^{\mathrm{old}}_{b,s} \), and \( \log\pi^{\mathrm{ref}}_{b,s} \) are the entries of
+  <code>log_pi</code>, <code>log_pi_old</code>, and <code>log_ref</code>; and \( \varepsilon \) and
+  \( \beta \) denote <code>clip_eps</code> and <code>beta</code>.
+</p>
+
 \[
 \begin{aligned}
 r_{b,s}
 &= \exp\!\left(
-    \text{log_pi}_{b,s} - \text{log_pi_old}_{b,s}
+    \log\pi_{b,s} - \log\pi^{\mathrm{old}}_{b,s}
 \right), \\
 L_{b,s}^{\mathrm{clip}}
 &= \min\!\Bigl(
     r_{b,s} A_{b,s}, \\
 &\qquad
-    \operatorname{clip}\!\left(r_{b,s}, 1 - \text{clip_eps}, 1 + \text{clip_eps}\right)
+    \operatorname{clip}\!\left(r_{b,s}, 1 - \varepsilon, 1 + \varepsilon\right)
     A_{b,s}
 \Bigr), \\
 d_{b,s}
-&= \text{log_ref}_{b,s} - \text{log_pi}_{b,s}, \\
+&= \log\pi^{\mathrm{ref}}_{b,s} - \log\pi_{b,s}, \\
 K_{b,s}
 &= \exp(d_{b,s}) - d_{b,s} - 1, \\
-\text{output}
+\mathcal{L}
 &= -\frac{1}{B S}\sum_{b=0}^{B-1}\sum_{s=0}^{S-1}
-\left(L_{b,s}^{\mathrm{clip}} - \text{beta}\,K_{b,s}\right).
+\left(L_{b,s}^{\mathrm{clip}} - \beta\,K_{b,s}\right).
 \end{aligned}
 \]
+
+<p>The scalar \( \mathcal{L} \) is the value written to <code>output[0]</code>.</p>
 
 <h2>Examples</h2>
 <p>For <code>B</code> = 1, <code>S</code> = 4, <code>clip_eps</code> = 0.2, and <code>beta</code> = 0.01:</p>
@@ -75,7 +84,7 @@ K
   <li>All tensors contain 32-bit floating point values</li>
   <li><code>0 &le; clip_eps &lt; 1</code> and <code>0 &le; beta &le; 1</code></li>
   <li>Both <code>log_pi - log_pi_old</code> and <code>log_ref - log_pi</code> lie in [-16, 16], so every exponential is finite in float32</li>
-  <li>Performance is measured with <code>B</code> = 128, <code>S</code> = 2,048</li>
+  <li>Performance is measured with <code>B</code> = 256, <code>S</code> = 16,384</li>
 </ul>
 
 <h2>Reference</h2>

@@ -8,8 +8,8 @@ from core.challenge_base import ChallengeBase, OutTensor, RandnTensor
 
 class Challenge(ChallengeBase):
     name = "PPO Clipped Surrogate Loss"
-    atol = 0.001
-    rtol = 0.001
+    atol = 1e-04
+    rtol = 1e-04
     num_gpus = 1
     access_tier = "free"
 
@@ -47,7 +47,15 @@ class Challenge(ChallengeBase):
         output[0] = -torch.mean(surrogate - beta * kl_penalty)
 
     def reference_impl_jax(
-        self, advantages, log_pi, log_pi_old, log_ref, clip_eps, beta, B, S,
+        self,
+        advantages,
+        log_pi,
+        log_pi_old,
+        log_ref,
+        clip_eps,
+        beta,
+        B,
+        S,
     ):
         import jax.numpy as jnp
 
@@ -124,7 +132,12 @@ class Challenge(ChallengeBase):
         # Single element with no policy or KL change.
         tests.append(
             self._make_test_case(
-                1, 1, advantages=[[2.5]], log_pi=[[0.0]], log_pi_old=[[0.0]], log_ref=[[0.0]],
+                1,
+                1,
+                advantages=[[2.5]],
+                log_pi=[[0.0]],
+                log_pi_old=[[0.0]],
+                log_ref=[[0.0]],
             )
         )
 
@@ -178,7 +191,7 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        B, S = 128, 2048
+        B, S = 256, 16384
         return {
             "advantages": RandnTensor((B, S)),
             "log_pi": RandnTensor((B, S)),
