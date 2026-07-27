@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Fused Residual Add and RMS Norm",
-            atol=1e-05,
-            rtol=1e-05,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Fused Residual Add and RMS Norm"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -30,10 +27,6 @@ class Challenge(ChallengeBase):
         assert weight.shape == (C,)
         assert out.shape == (N, C)
         assert x.dtype == residual.dtype == weight.dtype == out.dtype == torch.float32
-        assert x.device.type == "cuda"
-        assert residual.device.type == "cuda"
-        assert weight.device.type == "cuda"
-        assert out.device.type == "cuda"
 
         z = x + residual
         rms = torch.sqrt(torch.mean(z**2, dim=-1, keepdim=True) + eps)
@@ -51,7 +44,7 @@ class Challenge(ChallengeBase):
         }
 
     def _make_test_case(self, N, C, eps=1e-5, zero_x=False, zero_residual=False, negative=False):
-        device = "cuda"
+        device = self.device
         dtype = torch.float32
         if zero_x:
             x = torch.zeros(N, C, device=device, dtype=dtype)
@@ -76,7 +69,7 @@ class Challenge(ChallengeBase):
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
-        device = "cuda"
+        device = self.device
         dtype = torch.float32
         x = torch.tensor([[1.0, 0.0, -1.0, 2.0]], device=device, dtype=dtype)
         residual = torch.tensor([[0.5, 1.5, 0.5, -0.5]], device=device, dtype=dtype)

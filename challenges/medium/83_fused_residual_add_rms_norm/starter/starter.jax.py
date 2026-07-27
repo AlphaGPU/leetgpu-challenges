@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# x, residual, weight are tensors on GPU
+# x, residual, weight are tensors on device
 @jax.jit
 def solve(
     x: jax.Array,
