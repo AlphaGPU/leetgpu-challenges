@@ -8,8 +8,8 @@ from core.challenge_base import ChallengeBase, OutTensor, RandnTensor
 
 class Challenge(ChallengeBase):
     name = "DPO Sequence Loss"
-    atol = 0.001
-    rtol = 0.001
+    atol = 1e-04
+    rtol = 1e-04
     num_gpus = 1
     access_tier = "free"
 
