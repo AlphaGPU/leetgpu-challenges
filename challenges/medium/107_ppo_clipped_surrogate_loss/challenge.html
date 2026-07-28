@@ -1,80 +1,89 @@
 <p>
-  Given precomputed advantages and log probabilities from the current policy, previous policy,
-  and reference policy, compute a scalar PPO-style clipped surrogate loss. The operation combines
-  a clipped policy ratio with a non-negative reference-policy KL regularizer and reduces the result
-  across a batch of sequences.
+  Given precomputed advantages and log probabilities from the current and previous policies, compute
+  the scalar PPO clipped-surrogate loss. For each response token, PPO compares the current policy
+  with the policy that generated the data, limits how far that ratio can move from one, and averages
+  the resulting surrogate objective across the batch.
 </p>
 
 <h2>Implementation Requirements</h2>
 <ul>
-  <li>Implement <code>solve(advantages, log_pi, log_pi_old, log_ref, output, clip_eps, beta, B, S)</code> with the signature unchanged</li>
-  <li>Write the single scalar result into the preallocated <code>output</code> tensor</li>
+  <li>Implement <code>solve(advantages, log_pi, log_pi_old, output, clip_eps, B, S)</code> with the signature unchanged</li>
+  <li>Write the single scalar loss into <code>output[0]</code></li>
   <li>Use only native features of the selected framework; external libraries are not permitted</li>
   <li>All input tensors have shape <code>[B, S]</code> and the output has shape <code>[1]</code></li>
   <li>All <code>S</code> positions are valid response tokens; padding and token masks are outside the scope of this challenge</li>
-  <li><code>advantages</code>, <code>log_pi_old</code>, and <code>log_ref</code> are fixed precomputed inputs; do not differentiate through them</li>
+  <li><code>advantages</code> and <code>log_pi_old</code> are fixed precomputed inputs; do not differentiate through them</li>
 </ul>
 
-<p>For each batch element <code>b</code> and sequence position <code>s</code>, compute the policy ratio,
-clipped surrogate, and reference-policy penalty:</p>
+<h2>Loss Calculation</h2>
+<p>
+  At position <code>[b, s]</code>, <code>log_pi</code> and <code>log_pi_old</code> are the log
+  probabilities assigned to the same response token by the current and previous policies. Let
+  <code>A</code> denote <code>advantages</code>, and let <code>epsilon</code> denote
+  <code>clip_eps</code>.
+</p>
+
+<p>First, compute the probability ratio between the current and previous policies:</p>
+
+\[
+r_{b,s} = \exp\!\left(\log\pi_{b,s} - \log\pi^{\mathrm{old}}_{b,s}\right)
+\]
+
+<p>Clamp that ratio to PPO's trust region:</p>
+
+\[
+\widehat{r}_{b,s} = \operatorname{clip}\!\left(r_{b,s}, 1 - \varepsilon, 1 + \varepsilon\right)
+\]
 
 <p>
-  Below, \( A_{b,s} \) are the entries of <code>advantages</code>; \( \log\pi_{b,s} \),
-  \( \log\pi^{\mathrm{old}}_{b,s} \), and \( \log\pi^{\mathrm{ref}}_{b,s} \) are the entries of
-  <code>log_pi</code>, <code>log_pi_old</code>, and <code>log_ref</code>; and \( \varepsilon \) and
-  \( \beta \) denote <code>clip_eps</code> and <code>beta</code>.
+  The per-token surrogate takes the less optimistic of the unclipped and clipped values. This
+  <code>min</code> is intentional: it applies correctly to both positive and negative advantages.
 </p>
 
 \[
-\begin{aligned}
-r_{b,s}
-&= \exp\!\left(
-    \log\pi_{b,s} - \log\pi^{\mathrm{old}}_{b,s}
-\right), \\
-L_{b,s}^{\mathrm{clip}}
-&= \min\!\Bigl(
-    r_{b,s} A_{b,s}, \\
-&\qquad
-    \operatorname{clip}\!\left(r_{b,s}, 1 - \varepsilon, 1 + \varepsilon\right)
-    A_{b,s}
-\Bigr), \\
-d_{b,s}
-&= \log\pi^{\mathrm{ref}}_{b,s} - \log\pi_{b,s}, \\
-K_{b,s}
-&= \exp(d_{b,s}) - d_{b,s} - 1, \\
-\mathcal{L}
-&= -\frac{1}{B S}\sum_{b=0}^{B-1}\sum_{s=0}^{S-1}
-\left(L_{b,s}^{\mathrm{clip}} - \beta\,K_{b,s}\right).
-\end{aligned}
+L_{b,s}^{\mathrm{CLIP}}
+= \min\!\left(r_{b,s} A_{b,s},\; \widehat{r}_{b,s} A_{b,s}\right)
 \]
 
-<p>The scalar \( \mathcal{L} \) is the value written to <code>output[0]</code>.</p>
+<p>
+  PPO maximizes this surrogate objective. Because this challenge returns a loss for minimization,
+  negate its mean over every batch and sequence position:
+</p>
+
+\[
+\text{output}[0]
+= -\frac{1}{B S}\sum_{b=0}^{B-1}\sum_{s=0}^{S-1} L_{b,s}^{\mathrm{CLIP}}
+\]
 
 <h2>Examples</h2>
-<p>For <code>B</code> = 1, <code>S</code> = 4, <code>clip_eps</code> = 0.2, and <code>beta</code> = 0.01:</p>
+<p>For <code>B</code> = 1, <code>S</code> = 4, and <code>clip_eps</code> = 0.2:</p>
 
 \[
 \begin{aligned}
 \text{advantages}
-&= \begin{bmatrix} 1.0 & -2.0 & 3.0 & -4.0 \end{bmatrix}, \\
+&= \begin{bmatrix} 1.0 & -2.0 & 3.0 & -4.0 \end{bmatrix} \\[6pt]
 \text{log_pi}
-&= \begin{bmatrix} \log(1.3) & \log(0.7) & \log(1.1) & \log(0.8) \end{bmatrix}, \\
+&= \begin{bmatrix} \log(1.3) & \log(0.7) & \log(1.1) & \log(0.8) \end{bmatrix} \\[6pt]
 \text{log_pi_old}
-&= \begin{bmatrix} 0.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}, \\
-\text{log_ref}
-&= \begin{bmatrix} 0.1 & -0.2 & 0.05 & -0.1 \end{bmatrix}, \\
-r
-&= \begin{bmatrix} 1.3 & 0.7 & 1.1 & 0.8 \end{bmatrix}, \\
-\operatorname{clip}(r, 0.8, 1.2)
-&= \begin{bmatrix} 1.2 & 0.8 & 1.1 & 0.8 \end{bmatrix}, \\
-L^{\mathrm{clip}}
-&= \begin{bmatrix} 1.2 & -1.6 & 3.3 & -3.2 \end{bmatrix}, \\
-K
-&\approx \begin{bmatrix} 0.01250 & 0.01294 & 0.00101 & 0.00790 \end{bmatrix}.
+&= \begin{bmatrix} 0.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}
 \end{aligned}
 \]
+
+<p>The intermediate values are:</p>
+
 \[
-\text{output} \approx \begin{bmatrix} 0.07509 \end{bmatrix}
+\begin{aligned}
+r
+&= \begin{bmatrix} 1.3 & 0.7 & 1.1 & 0.8 \end{bmatrix} \\[6pt]
+\widehat{r}
+&= \begin{bmatrix} 1.2 & 0.8 & 1.1 & 0.8 \end{bmatrix} \\[6pt]
+L^{\mathrm{CLIP}}
+&= \begin{bmatrix} 1.2 & -1.6 & 3.3 & -3.2 \end{bmatrix}
+\end{aligned}
+\]
+
+\[
+\text{output}[0] = -\operatorname{mean}\!\left(L^{\mathrm{CLIP}}\right) = 0.075
 \]
 
 <h2>Constraints</h2>
@@ -82,8 +91,8 @@ K
   <li>1 &le; <code>B</code> &le; 256</li>
   <li>1 &le; <code>S</code> &le; 16,384</li>
   <li>All tensors contain 32-bit floating point values</li>
-  <li><code>0 &le; clip_eps &lt; 1</code> and <code>0 &le; beta &le; 1</code></li>
-  <li>Both <code>log_pi - log_pi_old</code> and <code>log_ref - log_pi</code> lie in [-16, 16], so every exponential is finite in float32</li>
+  <li><code>0 &le; clip_eps &lt; 1</code></li>
+  <li><code>log_pi - log_pi_old</code> lies in [-16, 16], so every exponential is finite in float32</li>
   <li>Performance is measured with <code>B</code> = 256, <code>S</code> = 16,384</li>
 </ul>
 

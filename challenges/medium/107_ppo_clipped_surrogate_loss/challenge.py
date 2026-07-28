@@ -18,23 +18,19 @@ class Challenge(ChallengeBase):
         advantages: torch.Tensor,
         log_pi: torch.Tensor,
         log_pi_old: torch.Tensor,
-        log_ref: torch.Tensor,
         output: torch.Tensor,
         clip_eps: float,
-        beta: float,
         B: int,
         S: int,
     ):
         assert advantages.shape == (B, S)
         assert log_pi.shape == (B, S)
         assert log_pi_old.shape == (B, S)
-        assert log_ref.shape == (B, S)
         assert output.shape == (1,)
         assert (
             advantages.dtype
             == log_pi.dtype
             == log_pi_old.dtype
-            == log_ref.dtype
             == output.dtype
             == torch.float32
         )
@@ -42,18 +38,14 @@ class Challenge(ChallengeBase):
         ratio = torch.exp(log_pi - log_pi_old)
         clipped_ratio = torch.clamp(ratio, 1.0 - clip_eps, 1.0 + clip_eps)
         surrogate = torch.minimum(ratio * advantages, clipped_ratio * advantages)
-        kl_diff = log_ref - log_pi
-        kl_penalty = torch.exp(kl_diff) - kl_diff - 1.0
-        output[0] = -torch.mean(surrogate - beta * kl_penalty)
+        output[0] = -torch.mean(surrogate)
 
     def reference_impl_jax(
         self,
         advantages,
         log_pi,
         log_pi_old,
-        log_ref,
         clip_eps,
-        beta,
         B,
         S,
     ):
@@ -62,19 +54,15 @@ class Challenge(ChallengeBase):
         ratio = jnp.exp(log_pi - log_pi_old)
         clipped_ratio = jnp.clip(ratio, 1.0 - clip_eps, 1.0 + clip_eps)
         surrogate = jnp.minimum(ratio * advantages, clipped_ratio * advantages)
-        kl_diff = log_ref - log_pi
-        kl_penalty = jnp.exp(kl_diff) - kl_diff - 1.0
-        return -jnp.mean(surrogate - beta * kl_penalty)
+        return -jnp.mean(surrogate)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "advantages": (ctypes.POINTER(ctypes.c_float), "in"),
             "log_pi": (ctypes.POINTER(ctypes.c_float), "in"),
             "log_pi_old": (ctypes.POINTER(ctypes.c_float), "in"),
-            "log_ref": (ctypes.POINTER(ctypes.c_float), "in"),
             "output": (ctypes.POINTER(ctypes.c_float), "out"),
             "clip_eps": (ctypes.c_float, "in"),
-            "beta": (ctypes.c_float, "in"),
             "B": (ctypes.c_int, "in"),
             "S": (ctypes.c_int, "in"),
         }
@@ -86,9 +74,7 @@ class Challenge(ChallengeBase):
         advantages=None,
         log_pi=None,
         log_pi_old=None,
-        log_ref=None,
         clip_eps=0.2,
-        beta=0.01,
     ):
         dtype = torch.float32
         device = self.device
@@ -102,10 +88,8 @@ class Challenge(ChallengeBase):
             "advantages": tensor_or_random(advantages),
             "log_pi": tensor_or_random(log_pi),
             "log_pi_old": tensor_or_random(log_pi_old),
-            "log_ref": tensor_or_random(log_ref),
             "output": torch.empty(1, device=device, dtype=dtype),
             "clip_eps": clip_eps,
-            "beta": beta,
             "B": B,
             "S": S,
         }
@@ -117,9 +101,7 @@ class Challenge(ChallengeBase):
             advantages=[[1.0, -2.0, 3.0, -4.0]],
             log_pi=[[0.262364, -0.356675, 0.0953102, -0.223144]],
             log_pi_old=[[0.0, 0.0, 0.0, 0.0]],
-            log_ref=[[0.1, -0.2, 0.05, -0.1]],
             clip_eps=0.2,
-            beta=0.01,
         )
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
@@ -129,7 +111,7 @@ class Challenge(ChallengeBase):
         # Hand-computed clipping example with positive and negative advantages.
         tests.append(self.generate_example_test())
 
-        # Single element with no policy or KL change.
+        # Single element with no policy change.
         tests.append(
             self._make_test_case(
                 1,
@@ -137,20 +119,6 @@ class Challenge(ChallengeBase):
                 advantages=[[2.5]],
                 log_pi=[[0.0]],
                 log_pi_old=[[0.0]],
-                log_ref=[[0.0]],
-            )
-        )
-
-        # Zero advantages isolate the non-negative reference-policy KL regularizer.
-        tests.append(
-            self._make_test_case(
-                1,
-                1,
-                advantages=[[0.0]],
-                log_pi=[[-1.0]],
-                log_pi_old=[[-1.0]],
-                log_ref=[[-2.0]],
-                beta=1.0,
             )
         )
 
@@ -162,7 +130,6 @@ class Challenge(ChallengeBase):
                 advantages=[[0.0] * 4, [0.0] * 4],
                 log_pi=[[0.0] * 4, [0.0] * 4],
                 log_pi_old=[[0.0] * 4, [0.0] * 4],
-                log_ref=[[0.0] * 4, [0.0] * 4],
             )
         )
 
@@ -174,13 +141,12 @@ class Challenge(ChallengeBase):
                 advantages=[[1.0, -1.0, 2.0, -2.0]],
                 log_pi=[[math.log(1.2), math.log(0.8), 0.0, 0.0]],
                 log_pi_old=[[0.0] * 4],
-                log_ref=[[0.0] * 4],
             )
         )
 
         # Power-of-two shape with random mixed-sign values.
         tests.append(self._make_test_case(4, 16))
-        tests.append(self._make_test_case(8, 64, clip_eps=0.1, beta=0.05))
+        tests.append(self._make_test_case(8, 64, clip_eps=0.1))
 
         # Non-power-of-two shapes.
         tests.append(self._make_test_case(3, 30))
@@ -196,10 +162,8 @@ class Challenge(ChallengeBase):
             "advantages": RandnTensor((B, S)),
             "log_pi": RandnTensor((B, S)),
             "log_pi_old": RandnTensor((B, S)),
-            "log_ref": RandnTensor((B, S)),
             "output": OutTensor((1,)),
             "clip_eps": 0.2,
-            "beta": 0.01,
             "B": B,
             "S": S,
         }
