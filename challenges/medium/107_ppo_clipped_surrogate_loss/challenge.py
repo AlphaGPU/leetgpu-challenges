@@ -138,6 +138,46 @@ class Challenge(ChallengeBase):
             )
         )
 
+        # Zero clipping range: every ratio is clamped to one.
+        tests.append(
+            self._make_test_case(
+                1,
+                4,
+                advantages=[[1.0, -1.0, 3.0, -2.0]],
+                log_pi=[[math.log(1.5), math.log(0.5), math.log(2.0), math.log(0.25)]],
+                log_pi_old=[[0.0] * 4],
+                clip_eps=0.0,
+            )
+        )
+
+        # Clipping is inactive for a positive advantage below the range and a negative advantage
+        # above it.
+        tests.append(
+            self._make_test_case(
+                1,
+                2,
+                advantages=[[2.0, -3.0]],
+                log_pi=[[math.log(0.5), math.log(1.5)]],
+                log_pi_old=[[0.0, 0.0]],
+                clip_eps=0.2,
+            )
+        )
+
+        # Nonzero values across batches verify reduction over both B and S.
+        tests.append(
+            self._make_test_case(
+                2,
+                2,
+                advantages=[[1.0, -1.0], [2.0, -2.0]],
+                log_pi=[
+                    [math.log(1.5), math.log(0.5)],
+                    [math.log(0.5), math.log(1.5)],
+                ],
+                log_pi_old=[[0.0, 0.0], [0.0, 0.0]],
+                clip_eps=0.2,
+            )
+        )
+
         # Power-of-two shape with random mixed-sign values.
         tests.append(self._make_test_case(4, 16))
         tests.append(self._make_test_case(8, 64, clip_eps=0.1))
