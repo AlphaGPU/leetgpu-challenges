@@ -27,13 +27,7 @@ class Challenge(ChallengeBase):
         assert log_pi.shape == (B, S)
         assert log_pi_old.shape == (B, S)
         assert output.shape == (1,)
-        assert (
-            advantages.dtype
-            == log_pi.dtype
-            == log_pi_old.dtype
-            == output.dtype
-            == torch.float32
-        )
+        assert advantages.dtype == log_pi.dtype == log_pi_old.dtype == output.dtype == torch.float32
 
         ratio = torch.exp(log_pi - log_pi_old)
         clipped_ratio = torch.clamp(ratio, 1.0 - clip_eps, 1.0 + clip_eps)
