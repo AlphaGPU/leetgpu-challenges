@@ -149,8 +149,29 @@ class Challenge(ChallengeBase):
             )
         )
 
-        # Beta=0 removes the preference margin and produces log(2).
-        tests.append(self._make_test_case(16, beta=0.0))
+        # The largest permitted beta, with a nonzero preference logit and a single sequence.
+        tests.append(
+            self._make_test_case(
+                1,
+                chosen_logps=[1.5],
+                rejected_logps=[-0.5],
+                chosen_ref_logps=[0.25],
+                rejected_ref_logps=[-0.25],
+                beta=1.0,
+            )
+        )
+
+        # Nonzero policy and reference margins that cancel exactly give a log(2) loss.
+        tests.append(
+            self._make_test_case(
+                2,
+                chosen_logps=[3.0, -5.0],
+                rejected_logps=[0.0, -1.0],
+                chosen_ref_logps=[2.0, -6.0],
+                rejected_ref_logps=[-1.0, -2.0],
+                beta=0.5,
+            )
+        )
 
         # Non-power-of-two batch size.
         tests.append(self._make_test_case(127, beta=0.05))

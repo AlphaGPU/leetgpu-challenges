@@ -1,71 +1,149 @@
 <p>
-  Given the log probabilities of chosen and rejected responses under the current policy and a
-  reference policy, compute the Direct Preference Optimization (DPO) sequence loss. The sequence
-  log probabilities have already been summed over response tokens, so this kernel operates on four
-  one-dimensional tensors of shape <code>[B]</code> and produces one mean loss value.
+  Given precomputed sequence log probabilities for chosen and rejected responses under a current
+  policy and a reference policy, compute the Direct Preference Optimization (DPO) loss. Each input
+  is a one-dimensional tensor of shape <code>[B]</code>. The output is one value: the DPO loss
+  averaged across all <code>B</code> response pairs.
 </p>
 <p>
-  Each batch index represents one prompt and the same chosen/rejected response pair evaluated under
-  both policies. The sequence log probabilities must use identical tokenization and token masking
+  Each batch entry represents one prompt and its chosen/rejected response pair. Token-level log
+  probabilities have already been summed, and the same tokenization and masking convention was used
   for the current and reference policies.
 </p>
+
+<p>
+  Before training, a reviewer labels one response as preferred and one as rejected. Each DPO update
+  then consumes that fixed example: prompt <code>x</code>, chosen response <code>y+</code>, and
+  rejected response <code>y-</code>. The current and reference policies each score both responses,
+  producing four sequence log probabilities.
+</p>
+
+<svg width="720" height="480" viewBox="0 0 720 480" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="dpo-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#7ec8a0"/>
+    </marker>
+  </defs>
+  <rect width="720" height="480" rx="8" fill="#222"/>
+  <text x="360" y="27" text-anchor="middle" fill="#ccc" font-family="monospace" font-size="14">DPO</text>
+
+  <rect x="28" y="48" width="664" height="46" rx="6" fill="#292929" stroke="#555" stroke-width="1"/>
+  <text x="360" y="75" text-anchor="middle" fill="#ccc" font-family="monospace" font-size="12">Offline, before training: human feedback labels the preferred y+ and rejected y- response</text>
+
+  <rect x="230" y="118" width="260" height="62" rx="5" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="360" y="143" text-anchor="middle" fill="#b7dcff" font-family="monospace" font-size="12">fixed preference example</text>
+  <text x="360" y="162" text-anchor="middle" fill="#b7dcff" font-family="monospace" font-size="12">prompt x, chosen y+, rejected y-</text>
+
+  <g stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#dpo-arrow)">
+    <line x1="295" y1="180" x2="195" y2="215"/>
+    <line x1="425" y1="180" x2="525" y2="215"/>
+  </g>
+  <rect x="105" y="215" width="180" height="60" rx="5" fill="#4b2e22" stroke="#e76f51" stroke-width="1.5"/>
+  <text x="195" y="240" text-anchor="middle" fill="#f4a261" font-family="monospace" font-size="12">current policy</text>
+  <text x="195" y="258" text-anchor="middle" fill="#f4a261" font-family="monospace" font-size="12">trainable weights θ</text>
+  <rect x="435" y="215" width="180" height="60" rx="5" fill="#35265b" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="525" y="240" text-anchor="middle" fill="#c4b5fd" font-family="monospace" font-size="12">reference policy</text>
+  <text x="525" y="258" text-anchor="middle" fill="#c4b5fd" font-family="monospace" font-size="12">frozen weights θ_ref</text>
+
+  <g fill="#4b2e22" stroke="#e76f51" stroke-width="1.5">
+    <rect x="55" y="308" width="280" height="28" rx="5"/>
+    <rect x="55" y="342" width="280" height="28" rx="5"/>
+  </g>
+  <g fill="#f4a261" font-family="monospace" font-size="12" text-anchor="middle">
+    <text x="195" y="327">l+ = log piθ(y+ | x)</text>
+    <text x="195" y="361">l- = log piθ(y- | x)</text>
+  </g>
+  <g fill="#35265b" stroke="#a78bfa" stroke-width="1.5">
+    <rect x="385" y="308" width="280" height="28" rx="5"/>
+    <rect x="385" y="342" width="280" height="28" rx="5"/>
+  </g>
+  <g fill="#ddd6fe" font-family="monospace" font-size="12" text-anchor="middle">
+    <text x="525" y="327">l+ref = log pi_ref(y+ | x)</text>
+    <text x="525" y="361">l-ref = log pi_ref(y- | x)</text>
+  </g>
+  <g stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#dpo-arrow)">
+    <line x1="195" y1="275" x2="195" y2="308"/>
+    <line x1="525" y1="275" x2="525" y2="308"/>
+    <line x1="195" y1="370" x2="195" y2="415"/>
+    <line x1="525" y1="370" x2="525" y2="415"/>
+  </g>
+  <rect x="82" y="415" width="556" height="38" rx="5" fill="#1e3d2d" stroke="#5cb85c" stroke-width="1.5"/>
+  <text x="360" y="432" text-anchor="middle" fill="#aaeebb" font-family="monospace" font-size="12">z = beta[(l+ - l-) - (l+ref - l-ref)]</text>
+  <text x="360" y="447" text-anchor="middle" fill="#aaeebb" font-family="monospace" font-size="12">output[0] = mean(softplus(-z)) across B preference examples</text>
+  <text x="360" y="472" text-anchor="middle" fill="#aaa" font-family="monospace" font-size="12">only the current-policy weights are updated; the reference policy stays frozen</text>
+</svg>
 
 <h2>Implementation Requirements</h2>
 <ul>
   <li>Implement <code>solve(chosen_logps, rejected_logps, chosen_ref_logps, rejected_ref_logps, output, beta, B)</code> with the signature unchanged</li>
-  <li>Write the scalar mean loss into the preallocated <code>output</code> tensor at <code>output[0]</code></li>
+  <li>Write the mean DPO loss across the batch into <code>output[0]</code></li>
   <li>Use only native features of the selected framework; external libraries are not permitted</li>
-  <li>The input tensors contain sequence-level log probabilities of shape <code>[B]</code></li>
-  <li>Compute the loss stably as <code>softplus(-logits)</code> or an equivalent stable formulation; do not rely on <code>log(sigmoid(logits))</code> without numerical stabilization</li>
-  <li>The reference-policy log probabilities are fixed precomputed inputs; do not differentiate through them</li>
+  <li>All four log-probability inputs have shape <code>[B]</code></li>
+  <li>Compute the loss stably as <code>softplus(-logits)</code> or an equivalent formulation</li>
+  <li>The reference-policy log probabilities are fixed precomputed inputs</li>
 </ul>
 
 <h2>Loss Calculation</h2>
-<p>For each sequence <code>i</code>, first compare the chosen and rejected responses under both policies:</p>
+<p>
+  At batch index <code>i</code>, let <code>l+</code> and <code>l-</code> be the chosen and rejected
+  log probabilities under the current policy. Let <code>l+_ref</code> and <code>l-_ref</code> be the
+  corresponding values under the reference policy.
+</p>
 
 \[
-m_i = \text{chosen_logps}_i - \text{rejected_logps}_i
+\Delta_i^{\pi} = \ell_i^{+} - \ell_i^{-}
 \]
 \[
-m_i^{\mathrm{ref}} = \text{chosen_ref_logps}_i - \text{rejected_ref_logps}_i
+\Delta_i^{\mathrm{ref}} = \ell_i^{+,\mathrm{ref}} - \ell_i^{-,\mathrm{ref}}
 \]
+<p>Subtract the reference margin from the current-policy margin, then scale by <code>beta</code>:</p>
 \[
-z_i = \beta \left(m_i - m_i^{\mathrm{ref}}\right)
+z_i = \beta\left(\Delta_i^{\pi} - \Delta_i^{\mathrm{ref}}\right)
 \]
 
-<p>The DPO loss is the negative log-sigmoid of <code>z</code>, averaged over the batch:</p>
+<p>
+  DPO maximizes the log-sigmoid of this preference logit. This challenge returns the equivalent
+  loss for minimization, averaged across the batch:
+</p>
 
 \[
-\mathcal{L}_{\mathrm{DPO}} = -\frac{1}{B}\sum_{i=0}^{B-1} \log\!\left(\sigma(z_i)\right)
+\text{output}[0]
+= -\frac{1}{B}\sum_{i=0}^{B-1} \log\!\left(\sigma(z_i)\right)
 = \frac{1}{B}\sum_{i=0}^{B-1} \operatorname{softplus}(-z_i)
 \]
 
-<p>The softplus form is mathematically equivalent but remains finite for very large positive or
-negative logits.</p>
+<p>The <code>softplus</code> form is mathematically equivalent and remains finite for very large logits.</p>
 
 <h2>Examples</h2>
 <p>For <code>B</code> = 4 and <code>beta</code> = 0.1:</p>
 
 \[
-\text{chosen_logps} = \begin{bmatrix} 0.0 & 1.0 & -1.0 & 2.0 \end{bmatrix}, \quad
-\text{rejected_logps} = \begin{bmatrix} 0.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}
+\begin{aligned}
+\text{chosen_logps}
+&= \begin{bmatrix} 0.0 & 1.0 & -1.0 & 2.0 \end{bmatrix} \\[6pt]
+\text{rejected_logps}
+&= \begin{bmatrix} 0.0 & 0.0 & 0.0 & 0.0 \end{bmatrix} \\[6pt]
+\text{chosen_ref_logps}
+&= \begin{bmatrix} 0.0 & 0.0 & 0.0 & 0.0 \end{bmatrix} \\[6pt]
+\text{rejected_ref_logps}
+&= \begin{bmatrix} 0.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}
+\end{aligned}
+\]
+
+<p>The reference margin is zero, so the preference logits and final loss are:</p>
+\[
+z = \begin{bmatrix} 0.0 & 0.1 & -0.1 & 0.2 \end{bmatrix}
 \]
 \[
-\text{chosen_ref_logps} = \begin{bmatrix} 0.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}, \quad
-\text{rejected_ref_logps} = \begin{bmatrix} 0.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}
-\]
-\[
-z = \begin{bmatrix} 0.0 & 0.1 & -0.1 & 0.2 \end{bmatrix}, \qquad
-\text{output} = \begin{bmatrix} 0.67002 \end{bmatrix}
+\text{output}[0] = \operatorname{mean}\!\left(\operatorname{softplus}(-z)\right) = 0.67002
 \]
 
 <h2>Constraints</h2>
 <ul>
   <li>1 &le; <code>B</code> &le; 65,536</li>
-  <li>All input and output tensors contain 32-bit floating point values</li>
-  <li><code>0 &le; beta &le; 1</code></li>
+  <li>All tensors contain 32-bit floating point values</li>
+  <li><code>0 &lt; beta &le; 1</code></li>
   <li>All input log probabilities are finite</li>
-  <li>Sequence-level log probabilities are precomputed; token masks and sequence reductions are outside the scope of this challenge</li>
+  <li>Sequence reductions and token masks are outside the scope of this challenge</li>
   <li>Performance is measured with <code>B</code> = 65,536</li>
 </ul>
 
