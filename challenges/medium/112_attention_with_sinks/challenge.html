@@ -1,0 +1,236 @@
+<p>
+  Implement <strong>Attention with Sinks</strong> for a given set of matrices. This is the
+  attention pattern used in <em>StreamingLLM</em> to enable long-context inference: each query
+  attends to a small number of leading <em>sink</em> tokens plus a sliding window of the most
+  recent tokens. Combining a fixed prefix (sinks) with a moving window keeps the KV cache
+  bounded while preserving the anchor tokens that stabilize the softmax distribution.
+</p>
+
+<p>
+  Given query matrix <code>Q</code>, key matrix <code>K</code>, and value matrix <code>V</code>,
+  each of shape <code>M &times; d</code>, compute for every query position <code>i</code>:
+</p>
+
+<p style="text-align:center;">
+  \( \text{score}_{i,j} = \frac{Q_i \cdot K_j}{\sqrt{d}} \)
+</p>
+
+<p>
+  The set of allowed key positions for query <code>i</code> is:
+</p>
+
+<p style="text-align:center;">
+  \( \mathcal{A}_i = \{\, j : j \le i \;\wedge\; (\, j &lt; \text{num_sinks} \;\vee\; j \ge i - \text{window_size} + 1 \,) \,\} \)
+</p>
+
+<p>
+  Softmax is applied only over these allowed positions and the output is the weighted sum of
+  the corresponding values:
+</p>
+
+<p style="text-align:center;">
+  \( \text{output}_i = \sum_{j \in \mathcal{A}_i} \operatorname{softmax}\!\left(\text{score}_{i,\mathcal{A}_i}\right)_j \cdot V_j \)
+</p>
+
+<svg width="360" height="360" viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;">
+  <style>
+    text { font-family: monospace; fill: #cccccc; }
+  </style>
+  <rect width="360" height="360" fill="#222222" rx="6"/>
+
+  <text x="200" y="16" text-anchor="middle" font-size="11">key position &#x2192;</text>
+  <text x="14" y="188" text-anchor="middle" font-size="11" transform="rotate(-90,14,188)">query position</text>
+
+  <g font-size="10" text-anchor="middle">
+    <text x="62" y="36">0</text>
+    <text x="93" y="36">1</text>
+    <text x="124" y="36">2</text>
+    <text x="155" y="36">3</text>
+    <text x="186" y="36">4</text>
+    <text x="217" y="36">5</text>
+    <text x="248" y="36">6</text>
+    <text x="279" y="36">7</text>
+  </g>
+
+  <g font-size="10" text-anchor="middle">
+    <text x="34" y="58">0</text>
+    <text x="34" y="89">1</text>
+    <text x="34" y="120">2</text>
+    <text x="34" y="151">3</text>
+    <text x="34" y="182">4</text>
+    <text x="34" y="213">5</text>
+    <text x="34" y="244">6</text>
+    <text x="34" y="275">7</text>
+  </g>
+
+  <!-- 8x8 mask: num_sinks=2, window_size=3, causal -->
+  <!-- Row 0: allowed = {0}, sinks: {0}, window: {0} -->
+  <rect x="46" y="42" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="77" y="42" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="108" y="42" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="139" y="42" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="170" y="42" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="201" y="42" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="232" y="42" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="263" y="42" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <!-- Row 1: sinks {0,1}, window {0,1} -> {0,1} -->
+  <rect x="46" y="73" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="77" y="73" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="108" y="73" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="139" y="73" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="170" y="73" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="201" y="73" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="232" y="73" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="263" y="73" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <!-- Row 2: sinks {0,1}, window {0,1,2} -> {0,1,2} -->
+  <rect x="46" y="104" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="77" y="104" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="108" y="104" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+  <rect x="139" y="104" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="170" y="104" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="201" y="104" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="232" y="104" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="263" y="104" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <!-- Row 3: sinks {0,1}, window {1,2,3} -> {0,1,2,3} -->
+  <rect x="46" y="135" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="77" y="135" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="108" y="135" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+  <rect x="139" y="135" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+  <rect x="170" y="135" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="201" y="135" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="232" y="135" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="263" y="135" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <!-- Row 4: sinks {0,1}, window {2,3,4} -> {0,1,2,3,4} -->
+  <rect x="46" y="166" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="77" y="166" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="108" y="166" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+  <rect x="139" y="166" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+  <rect x="170" y="166" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+  <rect x="201" y="166" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="232" y="166" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="263" y="166" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <!-- Row 5: sinks {0,1}, window {3,4,5} -> {0,1,3,4,5} (position 2 gap) -->
+  <rect x="46" y="197" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="77" y="197" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="108" y="197" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="139" y="197" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+  <rect x="170" y="197" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+  <rect x="201" y="197" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+  <rect x="232" y="197" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="263" y="197" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <!-- Row 6: sinks {0,1}, window {4,5,6} -> {0,1,4,5,6} -->
+  <rect x="46" y="228" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="77" y="228" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="108" y="228" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="139" y="228" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="170" y="228" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+  <rect x="201" y="228" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+  <rect x="232" y="228" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+  <rect x="263" y="228" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <!-- Row 7: sinks {0,1}, window {5,6,7} -> {0,1,5,6,7} -->
+  <rect x="46" y="259" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="77" y="259" width="31" height="31" fill="#8a4a2a" stroke="#222222" stroke-width="1"/>
+  <rect x="108" y="259" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="139" y="259" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="170" y="259" width="31" height="31" fill="#3a3a3a" stroke="#222222" stroke-width="1"/>
+  <rect x="201" y="259" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+  <rect x="232" y="259" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+  <rect x="263" y="259" width="31" height="31" fill="#2a5a8a" stroke="#222222" stroke-width="1"/>
+
+  <rect x="46" y="42" width="248" height="248" fill="none" stroke="#555555" stroke-width="1"/>
+
+  <g font-size="11">
+    <rect x="90" y="305" width="14" height="14" fill="#8a4a2a"/>
+    <text x="110" y="316" font-size="11">sink</text>
+    <rect x="150" y="305" width="14" height="14" fill="#2a5a8a"/>
+    <text x="170" y="316" font-size="11">window</text>
+    <rect x="228" y="305" width="14" height="14" fill="#3a3a3a"/>
+    <text x="248" y="316" font-size="11">masked</text>
+  </g>
+
+  <text x="180" y="344" text-anchor="middle" font-size="12" fill="#999999">
+    num_sinks = 2, window_size = 3
+  </text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the output matrix <code>output</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+  <strong>Input:</strong><br>
+  <code>Q</code> (4&times;4):
+  \[
+  \begin{bmatrix}
+  1.0 & 0.0 & 0.0 & 0.0 \\
+  0.0 & 1.0 & 0.0 & 0.0 \\
+  0.0 & 0.0 & 1.0 & 0.0 \\
+  0.0 & 0.0 & 0.0 & 1.0
+  \end{bmatrix}
+  \]
+  <code>K</code> (4&times;4):
+  \[
+  \begin{bmatrix}
+  1.0 & 0.0 & 0.0 & 0.0 \\
+  0.0 & 1.0 & 0.0 & 0.0 \\
+  0.0 & 0.0 & 1.0 & 0.0 \\
+  0.0 & 0.0 & 0.0 & 1.0
+  \end{bmatrix}
+  \]
+  <code>V</code> (4&times;4):
+  \[
+  \begin{bmatrix}
+  1.0 & 2.0 & 3.0 & 4.0 \\
+  5.0 & 6.0 & 7.0 & 8.0 \\
+  9.0 & 10.0 & 11.0 & 12.0 \\
+  13.0 & 14.0 & 15.0 & 16.0
+  \end{bmatrix}
+  \]
+  <code>num_sinks</code>: 1, <code>window_size</code>: 2
+</p>
+
+<p>
+  <strong>Output:</strong><br>
+  <code>output</code> (4&times;4):
+  \[
+  \begin{bmatrix}
+  1.0000000 & 2.0000000 & 3.0000000 & 4.0000000 \\
+  3.4898374 & 4.4898372 & 5.4898376 & 6.4898376 \\
+  5.7111764 & 6.7111769 & 7.7111769 & 8.7111759 \\
+  8.6149015 & 9.6149015 & 10.6149025 & 11.6149025
+  \end{bmatrix}
+  \]
+</p>
+
+<p>
+  Query 3 attends to positions <code>{0, 2, 3}</code>: position <code>0</code> is a sink, positions
+  <code>2</code> and <code>3</code> fall inside the causal window <code>[i - window_size + 1, i] = [2, 3]</code>,
+  and position <code>1</code> is neither a sink nor in the window, so it is masked out.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>Matrices <code>Q</code>, <code>K</code>, and <code>V</code> are all of size <code>M &times; d</code></li>
+  <li>1 &le; <code>M</code> &le; 10,000</li>
+  <li>1 &le; <code>d</code> &le; 128</li>
+  <li>1 &le; <code>num_sinks</code> &le; 16, and <code>num_sinks</code> &le; <code>M</code></li>
+  <li>1 &le; <code>window_size</code> &le; <code>M</code></li>
+  <li>All elements in <code>Q</code>, <code>K</code>, and <code>V</code> are sampled from <code>[-1.0, 1.0]</code></li>
+  <li>Data type for all matrices is <code>float32</code></li>
+  <li>Performance is measured with <code>M</code> = 5,000, <code>d</code> = 128, <code>num_sinks</code> = 4, <code>window_size</code> = 1,024</li>
+</ul>
+
+<h2>References</h2>
+<ul>
+  <li>
+    Xiao et al.,
+    <a href="https://arxiv.org/abs/2309.17453" target="_blank" rel="noopener noreferrer"
+       style="color:#60a5fa; text-decoration:underline">Efficient Streaming Language Models with Attention Sinks</a>
+    (arXiv:2309.17453, ICLR 2024) &mdash; introduces the attention sink phenomenon and the efficient LLM streaming mechanism. For a more in depth dive, please read the paper.
+  </li>
+</ul>
