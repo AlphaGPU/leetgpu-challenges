@@ -1,13 +1,13 @@
 <p>
-  Given rewards for <code>G</code> sampled responses to each of <code>B</code> prompts, compute the
-  Group Relative Policy Optimization (GRPO) surrogate loss over <code>S</code> response tokens.
-  Normalize rewards within each prompt's response group to obtain a sequence-level advantage,
-  broadcast that advantage across the response tokens, apply the clipped policy objective, and add
-  the non-negative reference-policy KL estimator.
+  For each of <code>B</code> prompts, GRPO compares the rewards of <code>G</code> sampled responses.
+  It uses each response's reward relative to the rest of its group as an advantage, rather than
+  learning a separate critic. That advantage is applied to every one of the response's
+  <code>S</code> tokens in a clipped policy objective with a reference-policy KL regularizer.
 </p>
 <p>
-  At position <code>[b, g, s]</code>, every log probability refers to the same sampled token
-  <code>y[b,g,s]</code> conditioned on prompt <code>b</code> and its preceding response tokens.
+  At position <code>[b, g, s]</code>, <code>log_pi</code>, <code>log_pi_old</code>, and
+  <code>log_ref</code> all score the same sampled token <code>y[b,g,s]</code>, conditioned on
+  prompt <code>b</code> and the preceding response tokens.
 </p>
 
 <svg width="720" height="366" viewBox="0 0 720 366" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
@@ -141,59 +141,74 @@
 
 <h2>Loss Calculation</h2>
 <p>
-  Below, \( R_{b,g} \) are the entries of <code>rewards</code>; \( \log\pi_{b,g,s} \),
-  \( \log\pi^{\mathrm{old}}_{b,g,s} \), and \( \log\pi^{\mathrm{ref}}_{b,g,s} \) are the entries of
-  <code>log_pi</code>, <code>log_pi_old</code>, and <code>log_ref</code>; and \( \varepsilon \) and
-  \( \beta \) denote <code>clip_eps</code> and <code>beta</code>.
+  For one prompt <code>b</code>, normalize the <code>G</code> response rewards using the group's
+  population mean and standard deviation. Let <code>R</code> denote <code>rewards</code>.
 </p>
-<p>Normalize rewards independently within each prompt group using the population standard deviation:</p>
 
 \[
-\begin{aligned}
-\mu_b
-&= \frac{1}{G}\sum_{g=0}^{G-1} R_{b,g}, \\
-\sigma_b
-&= \sqrt{\frac{1}{G}\sum_{g=0}^{G-1}(R_{b,g}-\mu_b)^2}, \\
-A_{b,g}
-&= \frac{R_{b,g}-\mu_b}{\sigma_b + 10^{-8}}.
-\end{aligned}
+\mu_b = \frac{1}{G}\sum_{g=0}^{G-1} R_{b,g}
 \]
-
-<p>Broadcast the sequence advantage over tokens and compute the clipped policy objective:</p>
-
 \[
-\begin{aligned}
-r_{b,g,s}
-&= \exp\!\left(\log\pi_{b,g,s} - \log\pi^{\mathrm{old}}_{b,g,s}\right), \\
-L^{\mathrm{clip}}_{b,g,s}
-&= \min\!\Bigl(
-    r_{b,g,s}A_{b,g}, \\
-&\qquad
-    \operatorname{clip}\!\left(r_{b,g,s}, 1-\varepsilon, 1+\varepsilon\right)
-    A_{b,g}
-\Bigr).
-\end{aligned}
+\sigma_b = \sqrt{\frac{1}{G}\sum_{g=0}^{G-1}(R_{b,g}-\mu_b)^2}
+\]
+\[
+A_{b,g} = \frac{R_{b,g}-\mu_b}{\sigma_b + 10^{-8}}
 \]
 
 <p>
-  Use the non-negative \( k_3 \) reference-policy KL sample estimator. Its expectation is
-  \( \mathrm{KL}\!\left(\pi \,\|\, \pi^{\mathrm{ref}}\right) \) when tokens are sampled from the
-  current policy.
+  This is an outcome-level GRPO advantage. The same advantage is broadcast to every token of
+  response <code>g</code>:
 </p>
 
 \[
-\begin{aligned}
-d_{b,g,s}
-&= \log\pi^{\mathrm{ref}}_{b,g,s} - \log\pi_{b,g,s}, \\
-K_{b,g,s}
-&= \exp(d_{b,g,s}) - d_{b,g,s} - 1, \\
-\mathcal{L}
-&= -\frac{1}{BGS}\sum_{b,g,s}
-\left(L^{\mathrm{clip}}_{b,g,s} - \beta\,K_{b,g,s}\right).
-\end{aligned}
+A_{b,g,s} = A_{b,g}
 \]
 
-<p>The scalar \( \mathcal{L} \) is the value written to <code>output[0]</code>.</p>
+<p>
+  Compare the current policy with the old policy that sampled the response.
+</p>
+
+\[
+r_{b,g,s} = \exp\!\left(\log\pi_{b,g,s} - \log\pi^{\mathrm{old}}_{b,g,s}\right)
+\]
+<p>
+  Clamp that ratio around one, then take the less optimistic of the clipped and unclipped values.
+  Let <code>epsilon</code> denote <code>clip_eps</code>. This <code>min</code> applies correctly to
+  both positive and negative advantages.
+</p>
+
+\[
+\widehat{r}_{b,g,s} = \operatorname{clip}\!\left(r_{b,g,s}, 1-\varepsilon, 1+\varepsilon\right)
+\]
+
+\[
+L^{\mathrm{clip}}_{b,g,s}
+= \min\!\left(r_{b,g,s}A_{b,g,s},\; \widehat{r}_{b,g,s}A_{b,g,s}\right)
+\]
+
+<p>
+  GRPO also penalizes divergence from the frozen reference policy. Let <code>beta</code> be the KL
+  coefficient. The non-negative <code>k3</code> sample estimator is:
+</p>
+
+\[
+d_{b,g,s} = \log\pi^{\mathrm{ref}}_{b,g,s} - \log\pi_{b,g,s}
+\]
+\[
+K_{b,g,s} = \exp(d_{b,g,s}) - d_{b,g,s} - 1
+\]
+
+<p>
+  GRPO maximizes the clipped objective minus this penalty. Because this challenge returns a loss for
+  minimization, write the negated mean over all prompts, responses, and tokens to <code>output[0]</code>:
+</p>
+
+\[
+\text{output}[0]
+= -\frac{1}{BGS}\sum_{b=0}^{B-1}\sum_{g=0}^{G-1}\sum_{s=0}^{S-1}
+\left(L^{\mathrm{clip}}_{b,g,s} - \beta K_{b,g,s}\right)
+\]
+
 
 <h2>Examples</h2>
 <p>For <code>B</code> = 1, <code>G</code> = 2, <code>S</code> = 2, <code>clip_eps</code> = 0.2,
@@ -202,17 +217,17 @@ and <code>beta</code> = 0.01:</p>
 \[
 \begin{aligned}
 \text{rewards}
-&= \begin{bmatrix} 10.0 & 0.0 \end{bmatrix}, \\
+&= \begin{bmatrix} 10.0 & 0.0 \end{bmatrix} \\[6pt]
 \text{log_pi}
-&= \begin{bmatrix} 0.1 & 0.2 \\ -0.5 & -0.4 \end{bmatrix}, \\
+&= \begin{bmatrix} 0.1 & 0.2 \\ -0.5 & -0.4 \end{bmatrix} \\[6pt]
 \text{log_pi_old}
-&= \begin{bmatrix} 0.0 & 0.0 \\ 0.0 & 0.0 \end{bmatrix}, \\
+&= \begin{bmatrix} 0.0 & 0.0 \\ 0.0 & 0.0 \end{bmatrix} \\[6pt]
 \text{log_ref}
-&= \begin{bmatrix} 0.0 & 0.0 \\ 0.0 & 0.0 \end{bmatrix}.
+&= \begin{bmatrix} 0.0 & 0.0 \\ 0.0 & 0.0 \end{bmatrix}
 \end{aligned}
 \]
 \[
-\text{output} \approx \begin{bmatrix} -0.17563 \end{bmatrix}
+\text{output}[0] \approx -0.17563
 \]
 
 <h2>Constraints</h2>
