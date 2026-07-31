@@ -1,0 +1,221 @@
+import ctypes
+from typing import Any, Dict, List
+
+import torch
+import torch.nn.functional as F
+from core.challenge_base import ChallengeBase, OutTensor, RandnTensor
+
+
+class Challenge(ChallengeBase):
+    name = "DPO Sequence Loss"
+    atol = 1e-04
+    rtol = 1e-04
+    num_gpus = 1
+    access_tier = "free"
+
+    def reference_impl(
+        self,
+        chosen_logps: torch.Tensor,
+        rejected_logps: torch.Tensor,
+        chosen_ref_logps: torch.Tensor,
+        rejected_ref_logps: torch.Tensor,
+        output: torch.Tensor,
+        beta: float,
+        B: int,
+    ):
+        assert chosen_logps.shape == (B,)
+        assert rejected_logps.shape == (B,)
+        assert chosen_ref_logps.shape == (B,)
+        assert rejected_ref_logps.shape == (B,)
+        assert output.shape == (1,)
+        assert (
+            chosen_logps.dtype
+            == rejected_logps.dtype
+            == chosen_ref_logps.dtype
+            == rejected_ref_logps.dtype
+            == output.dtype
+            == torch.float32
+        )
+
+        chosen_margin = chosen_logps - rejected_logps
+        reference_margin = chosen_ref_logps - rejected_ref_logps
+        logits = beta * (chosen_margin - reference_margin)
+        output[0] = -F.logsigmoid(logits).mean()
+
+    def reference_impl_jax(
+        self,
+        chosen_logps,
+        rejected_logps,
+        chosen_ref_logps,
+        rejected_ref_logps,
+        beta,
+        B,
+    ):
+        import jax
+        import jax.numpy as jnp
+
+        chosen_margin = chosen_logps - rejected_logps
+        reference_margin = chosen_ref_logps - rejected_ref_logps
+        logits = beta * (chosen_margin - reference_margin)
+        return jnp.mean(jax.nn.softplus(-logits))
+
+    def get_solve_signature(self) -> Dict[str, tuple]:
+        return {
+            "chosen_logps": (ctypes.POINTER(ctypes.c_float), "in"),
+            "rejected_logps": (ctypes.POINTER(ctypes.c_float), "in"),
+            "chosen_ref_logps": (ctypes.POINTER(ctypes.c_float), "in"),
+            "rejected_ref_logps": (ctypes.POINTER(ctypes.c_float), "in"),
+            "output": (ctypes.POINTER(ctypes.c_float), "out"),
+            "beta": (ctypes.c_float, "in"),
+            "B": (ctypes.c_int, "in"),
+        }
+
+    def _make_test_case(
+        self,
+        B,
+        chosen_logps=None,
+        rejected_logps=None,
+        chosen_ref_logps=None,
+        rejected_ref_logps=None,
+        beta=0.1,
+        base=0.0,
+    ):
+        dtype = torch.float32
+        device = self.device
+
+        def tensor_or_random(values):
+            if values is None:
+                return base + torch.randn(B, device=device, dtype=dtype)
+            return torch.tensor(values, device=device, dtype=dtype)
+
+        return {
+            "chosen_logps": tensor_or_random(chosen_logps),
+            "rejected_logps": tensor_or_random(rejected_logps),
+            "chosen_ref_logps": tensor_or_random(chosen_ref_logps),
+            "rejected_ref_logps": tensor_or_random(rejected_ref_logps),
+            "output": torch.empty(1, device=device, dtype=dtype),
+            "beta": beta,
+            "B": B,
+        }
+
+    def generate_example_test(self) -> Dict[str, Any]:
+        return self._make_test_case(
+            4,
+            chosen_logps=[0.0, 1.0, -1.0, 2.0],
+            rejected_logps=[0.0, 0.0, 0.0, 0.0],
+            chosen_ref_logps=[0.0, 0.0, 0.0, 0.0],
+            rejected_ref_logps=[0.0, 0.0, 0.0, 0.0],
+            beta=0.1,
+        )
+
+    def generate_functional_test(self) -> List[Dict[str, Any]]:
+        torch.manual_seed(42)
+        tests = []
+
+        # Hand-computed example with positive, negative, and zero logits.
+        tests.append(self.generate_example_test())
+
+        # Single sequence with a zero preference margin.
+        tests.append(
+            self._make_test_case(
+                1,
+                chosen_logps=[-2.0],
+                rejected_logps=[-2.0],
+                chosen_ref_logps=[-1.0],
+                rejected_ref_logps=[-1.0],
+            )
+        )
+
+        # Non-zero reference margins with positive and negative DPO logits.
+        tests.append(
+            self._make_test_case(
+                2,
+                chosen_logps=[2.0, -1.0],
+                rejected_logps=[0.0, 1.0],
+                chosen_ref_logps=[0.5, -0.5],
+                rejected_ref_logps=[-0.5, 0.5],
+                beta=0.7,
+            )
+        )
+
+        # Large positive and negative logits expose sigmoid/log underflow.
+        tests.append(
+            self._make_test_case(
+                4,
+                chosen_logps=[1000.0, -1000.0, 500.0, -500.0],
+                rejected_logps=[0.0] * 4,
+                chosen_ref_logps=[0.0] * 4,
+                rejected_ref_logps=[0.0] * 4,
+            )
+        )
+
+        # The largest permitted beta, with a nonzero preference logit and a single sequence.
+        tests.append(
+            self._make_test_case(
+                1,
+                chosen_logps=[1.5],
+                rejected_logps=[-0.5],
+                chosen_ref_logps=[0.25],
+                rejected_ref_logps=[-0.25],
+                beta=1.0,
+            )
+        )
+
+        # Nonzero policy and reference margins that cancel exactly give a log(2) loss.
+        tests.append(
+            self._make_test_case(
+                2,
+                chosen_logps=[3.0, -5.0],
+                rejected_logps=[0.0, -1.0],
+                chosen_ref_logps=[2.0, -6.0],
+                rejected_ref_logps=[-1.0, -2.0],
+                beta=0.5,
+            )
+        )
+
+        # Non-power-of-two batch size.
+        tests.append(self._make_test_case(127, beta=0.05))
+
+        # Sequence log probabilities are token sums, so real magnitudes are large and negative.
+        tests.append(self._make_test_case(32, base=-450.0))
+
+        # Policy barely moved from the reference, as at the start of DPO training: the
+        # margins are small differences between large-magnitude log probabilities.
+        tests.append(
+            self._make_test_case(
+                6,
+                chosen_logps=[-812.5, -1190.25, -415.75, -2033.0, -655.5, -978.25],
+                rejected_logps=[-820.0, -1183.5, -422.25, -2025.5, -661.0, -985.0],
+                chosen_ref_logps=[-812.0, -1191.0, -415.0, -2034.0, -655.0, -979.0],
+                rejected_ref_logps=[-819.5, -1184.0, -423.0, -2026.0, -660.5, -984.5],
+            )
+        )
+
+        # Short chosen responses against long rejected ones. The length gap dominates each
+        # policy margin but cancels against the reference, so dropping the reference term
+        # saturates the loss to zero instead of the correct value.
+        tests.append(
+            self._make_test_case(
+                4,
+                chosen_logps=[-118.0, -95.5, -140.25, -102.0],
+                rejected_logps=[-870.5, -1204.0, -655.75, -988.25],
+                chosen_ref_logps=[-120.0, -97.0, -138.5, -104.0],
+                rejected_ref_logps=[-865.0, -1210.5, -660.0, -983.0],
+            )
+        )
+
+        # Realistic accumulated batch.
+        tests.append(self._make_test_case(4096, beta=0.2))
+        return tests
+
+    def generate_performance_test(self) -> Dict[str, Any]:
+        B = 65536
+        return {
+            "chosen_logps": RandnTensor((B,)),
+            "rejected_logps": RandnTensor((B,)),
+            "chosen_ref_logps": RandnTensor((B,)),
+            "rejected_ref_logps": RandnTensor((B,)),
+            "output": OutTensor((1,)),
+            "beta": 0.1,
+            "B": B,
+        }
