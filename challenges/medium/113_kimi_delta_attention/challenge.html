@@ -1,0 +1,83 @@
+<p>
+  Implement <strong>Kimi Delta Attention</strong> (KDA), the linear attention mechanism introduced in
+  <a href="https://arxiv.org/abs/2510.26692" target="_blank">"Kimi Linear: An Expressive, Efficient Attention Architecture"</a>.
+  KDA extends the gated delta rule with a <em>channel-wise</em> forget gate: the recurrent state
+  \( S_t \in \mathbb{R}^{d \times d} \) is a fast-weight associative memory that is decayed
+  per feature channel, corrected by the delta rule, and then queried. For each batch, the state
+  starts at \( S_0 = 0 \) and is updated for <code>t = 1, ..., T</code>:
+  $$
+  S_t = \left(I - \beta_t k_t k_t^\top\right) \text{Diag}(\alpha_t)\, S_{t-1} + \beta_t k_t v_t^\top
+  $$
+  $$
+  o_t = S_t^\top q_t
+  $$
+  where \( q_t, k_t, v_t \in \mathbb{R}^{d} \) are the query, key, and value vectors at step
+  <code>t</code>, \( \alpha_t \in (0, 1]^{d} \) is the channel-wise decay gate, and
+  \( \beta_t \in [0, 1) \) is the update strength. The update can be read as online gradient
+  descent on the reconstruction loss \( \frac{1}{2}\lVert S^\top k_t - v_t \rVert^2 \) with
+  per-channel weight decay: old associations fade channel by channel while the delta rule
+  overwrites the value currently associated with \( k_t \).
+</p>
+<p>
+  All tensors are <code>float32</code>. <code>Q</code>, <code>K</code>, <code>V</code>,
+  <code>alpha</code>, and <code>output</code> have shape
+  <code>batch &times; T &times; d</code>; <code>beta</code> has shape <code>batch &times; T</code>.
+  Key vectors are L2-normalized, so \( \lVert k_t \rVert_2 = 1 \) (or \( k_t = 0 \)).
+  Each batch element is an independent sequence.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>output</code></li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input (<code>batch</code> = 1, <code>T</code> = 2, <code>d</code> = 2):
+  $$
+  Q = \begin{bmatrix} 1 & 0 \\ 1 & 1 \end{bmatrix},\quad
+  K = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix},\quad
+  V = \begin{bmatrix} 1 & 2 \\ 2 & 0 \end{bmatrix},\quad
+  \alpha = \begin{bmatrix} 1 & 1 \\ 0.5 & 0.5 \end{bmatrix},\quad
+  \beta = \begin{bmatrix} 1 & 0.5 \end{bmatrix}
+  $$
+</p>
+<p>
+  Step 1: \( S_1 = k_1 v_1^\top = \begin{bmatrix} 1 & 2 \\ 0 & 0 \end{bmatrix} \),
+  so \( o_1 = S_1^\top q_1 = \begin{bmatrix} 1 \\ 2 \end{bmatrix} \).
+  Step 2: the decayed state is \( \begin{bmatrix} 0.5 & 1 \\ 0 & 0 \end{bmatrix} \), and the
+  delta update with \( k_2 = (0, 1) \) adds \( 0.5\, k_2 v_2^\top \), giving
+  \( S_2 = \begin{bmatrix} 0.5 & 1 \\ 1 & 0 \end{bmatrix} \) and
+  \( o_2 = S_2^\top q_2 = \begin{bmatrix} 1.5 \\ 1 \end{bmatrix} \).
+</p>
+<p>
+  Output:
+  $$
+  \text{output} = \begin{bmatrix} 1 & 2 \\ 1.5 & 1 \end{bmatrix}
+  $$
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>batch</code> &le; 8</li>
+  <li>1 &le; <code>T</code> &le; 16,384</li>
+  <li>1 &le; <code>d</code> &le; 128</li>
+  <li>0 &lt; <code>alpha</code> values &le; 1, 0 &le; <code>beta</code> values &lt; 1</li>
+  <li>Rows of <code>K</code> are L2-normalized (unit norm or all-zero)</li>
+  <li>Performance is measured with <code>batch</code> = 4, <code>T</code> = 8,192, <code>d</code> = 128</li>
+</ul>
+
+<h2>References</h2>
+<ul>
+  <li>
+    Moonshot AI, <a href="https://arxiv.org/abs/2510.26692" target="_blank">"Kimi Linear: An Expressive, Efficient Attention Architecture"</a> (arXiv:2510.26692) — introduces Kimi Delta Attention
+  </li>
+  <li>
+    Yang et al., <a href="https://arxiv.org/abs/2412.06464" target="_blank">"Gated Delta Networks: Improving Mamba2 with Delta Rule"</a> (arXiv:2412.06464) — the head-wise gated delta rule KDA refines
+  </li>
+  <li>
+    <a href="https://jianyuh.github.io/attention/2025/12/13/KDA.html" target="_blank">"Linear Attention: Kimi Delta Attention"</a> — walkthrough of the KDA recurrence and chunkwise algorithm
+  </li>
+</ul>
