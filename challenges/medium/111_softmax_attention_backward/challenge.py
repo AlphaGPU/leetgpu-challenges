@@ -262,7 +262,7 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        M, N, d = 512, 256, 128
+        M, N, d = 8192, 4096, 128
         Q = torch.randn((M, d), device=self.device, dtype=dtype)
         K = torch.randn((N, d), device=self.device, dtype=dtype)
         V = torch.randn((N, d), device=self.device, dtype=dtype)
