@@ -1,0 +1,136 @@
+<p>
+  Implement multi-head self-attention with <strong>QK-Normalization</strong>: before the attention scores
+  are computed, apply RMSNorm along the head dimension to each token's per-head query and key vectors.
+  This variant appears in modern language and vision models (e.g. Chameleon, Gemma-3, OLMo, ViT-22B)
+  where it dramatically improves training stability.
+</p>
+
+<p>
+  Inputs are float32 tensors: <code>Q</code>, <code>K</code>, and <code>V</code> each have shape
+  <code>(N, d_model)</code>, where <code>N</code> is the sequence length and
+  <code>d_model</code> is the model dimension. The model is split into <code>h</code> heads
+  of dimension <code>d_head = d_model / h</code>. The learned RMSNorm scale vectors
+  <code>q_weight</code> and <code>k_weight</code> each have shape <code>(d_head,)</code> and
+  are shared across all heads and tokens. Attention is non-causal (every token attends to every token).
+</p>
+
+<svg width="640" height="230" viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="ah2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#999"/>
+    </marker>
+  </defs>
+  <rect width="640" height="230" fill="#222" rx="8"/>
+
+  <!-- Q -->
+  <rect x="20" y="25" width="70" height="34" fill="#1a3a5c" rx="4"/>
+  <text x="55" y="47" fill="#7ec8e3" font-family="monospace" font-size="14" text-anchor="middle">Q</text>
+  <!-- K -->
+  <rect x="20" y="98" width="70" height="34" fill="#1a3a5c" rx="4"/>
+  <text x="55" y="120" fill="#7ec8e3" font-family="monospace" font-size="14" text-anchor="middle">K</text>
+  <!-- V -->
+  <rect x="20" y="171" width="70" height="34" fill="#1a3a5c" rx="4"/>
+  <text x="55" y="193" fill="#7ec8e3" font-family="monospace" font-size="14" text-anchor="middle">V</text>
+
+  <!-- RMSNorm on Q -->
+  <line x1="90" y1="42" x2="128" y2="42" stroke="#999" stroke-width="1.5" marker-end="url(#ah2)"/>
+  <rect x="128" y="25" width="140" height="34" fill="#2d3a5c" rx="4"/>
+  <text x="198" y="47" fill="#7ec8e3" font-family="monospace" font-size="12" text-anchor="middle">RMSNorm(Q) &#215; q_w</text>
+
+  <!-- RMSNorm on K -->
+  <line x1="90" y1="115" x2="128" y2="115" stroke="#999" stroke-width="1.5" marker-end="url(#ah2)"/>
+  <rect x="128" y="98" width="140" height="34" fill="#2d3a5c" rx="4"/>
+  <text x="198" y="120" fill="#7ec8e3" font-family="monospace" font-size="12" text-anchor="middle">RMSNorm(K) &#215; k_w</text>
+
+  <!-- Scores -->
+  <line x1="268" y1="42" x2="315" y2="72" stroke="#999" stroke-width="1.5" marker-end="url(#ah2)"/>
+  <line x1="268" y1="115" x2="315" y2="88" stroke="#999" stroke-width="1.5" marker-end="url(#ah2)"/>
+  <rect x="315" y="63" width="150" height="34" fill="#2d5a27" rx="4"/>
+  <text x="390" y="85" fill="#a5e8a5" font-family="monospace" font-size="12" text-anchor="middle">Q&#183;K&#7488; / &#8730;d_head</text>
+
+  <!-- softmax -->
+  <line x1="465" y1="80" x2="500" y2="80" stroke="#999" stroke-width="1.5" marker-end="url(#ah2)"/>
+  <rect x="500" y="63" width="120" height="34" fill="#2d5a27" rx="4"/>
+  <text x="560" y="85" fill="#a5e8a5" font-family="monospace" font-size="13" text-anchor="middle">softmax</text>
+
+  <!-- attn output -->
+  <line x1="560" y1="97" x2="560" y2="130" stroke="#999" stroke-width="1.5"/>
+  <line x1="560" y1="130" x2="360" y2="130" stroke="#999" stroke-width="1.5"/>
+  <line x1="360" y1="130" x2="360" y2="150" stroke="#999" stroke-width="1.5" marker-end="url(#ah2)"/>
+  <line x1="90" y1="188" x2="315" y2="167" stroke="#999" stroke-width="1.5" marker-end="url(#ah2)"/>
+
+  <rect x="315" y="150" width="150" height="34" fill="#2d5a27" rx="4"/>
+  <text x="390" y="172" fill="#a5e8a5" font-family="monospace" font-size="13" text-anchor="middle">weights &#183; V</text>
+
+  <!-- output -->
+  <line x1="465" y1="167" x2="500" y2="167" stroke="#999" stroke-width="1.5" marker-end="url(#ah2)"/>
+  <rect x="500" y="150" width="80" height="34" fill="#1a5c2d" rx="4"/>
+  <text x="540" y="172" fill="#7ec8e3" font-family="monospace" font-size="14" text-anchor="middle">output</text>
+</svg>
+
+<p>
+  Reshape <code>Q</code>, <code>K</code>, <code>V</code> from <code>(N, d_model)</code> to
+  <code>(N, h, d_head)</code> so each row holds one vector per head. For every token
+  <code>i</code> and head <code>t</code>, normalize the length-<code>d_head</code> vectors:
+</p>
+
+\[
+\begin{aligned}
+\text{rms}^Q_{i,t} &= \sqrt{\tfrac{1}{d_{\text{head}}}\sum_{j=0}^{d_{\text{head}}-1} Q_{i,t,j}^{\,2} + \varepsilon},
+& \hat{Q}_{i,t,j} &= \tfrac{Q_{i,t,j}}{\text{rms}^Q_{i,t}} \cdot \text{q\_weight}_j \\[6pt]
+\text{rms}^K_{i,t} &= \sqrt{\tfrac{1}{d_{\text{head}}}\sum_{j=0}^{d_{\text{head}}-1} K_{i,t,j}^{\,2} + \varepsilon},
+& \hat{K}_{i,t,j} &= \tfrac{K_{i,t,j}}{\text{rms}^K_{i,t}} \cdot \text{k\_weight}_j
+\end{aligned}
+\]
+
+<p>Then, independently for each head <code>t</code> \(\in \{0,\dots,h-1\}\), compute scaled dot-product attention:</p>
+
+\[
+S_{t,i,j} = \frac{\hat{Q}_{i,t,:}\;\cdot\;\hat{K}_{j,t,:}}{\sqrt{d_{\text{head}}}}, \quad
+A_{t,i,j} = \frac{\exp(S_{t,i,j})}{\sum_{k=0}^{N-1} \exp(S_{t,i,k})}, \quad
+O_{i,t,:} = \sum_{j=0}^{N-1} A_{t,i,j} \; V_{j,t,:}
+\]
+
+<p>
+  Finally concatenate the per-head outputs back into <code>(N, d_model)</code> and write to
+  <code>output</code>.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted).</li>
+  <li>The <code>solve</code> function signature must remain unchanged.</li>
+  <li>The final result must be stored in the <code>output</code> tensor.</li>
+  <li>RMSNorm reduces along the head dimension (length <code>d_head</code>), not across heads.</li>
+  <li><code>q_weight</code> and <code>k_weight</code> are shared across all tokens and heads.</li>
+  <li>Attention is non-causal: every query attends to every key.</li>
+  <li><code>d_model</code> is always divisible by <code>h</code>.</li>
+</ul>
+
+<h2>Example</h2>
+<p>With <code>N</code> = 2, <code>d_model</code> = 4, <code>h</code> = 2 (so <code>d_head</code> = 2), <code>eps</code> = 1e-6:</p>
+<pre>
+Input:
+  Q        = [[1.0,  0.0,  2.0,  3.0],
+              [0.5, -1.0,  0.0,  2.0]]
+  K        = [[1.0,  1.0,  0.0,  1.0],
+              [0.0,  1.0,  2.0, -1.0]]
+  V        = [[0.5,  1.0,  1.5,  2.0],
+              [2.5,  3.0,  3.5,  4.0]]
+  q_weight = [1.0, 1.0]
+  k_weight = [1.0, 1.0]
+
+Output ≈ [[1.0379, 1.5379, 2.0374, 2.5374],
+          [1.1125, 1.6125, 1.7288, 2.2288]]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 4,096</li>
+  <li>2 &le; <code>d_model</code> &le; 4,096</li>
+  <li>1 &le; <code>h</code> &le; 64, and <code>d_model</code> is a multiple of <code>h</code></li>
+  <li><code>Q</code>, <code>K</code>, <code>V</code>, <code>q_weight</code>, <code>k_weight</code>, and <code>output</code> are float32</li>
+  <li><code>eps</code> is a small positive float32 (e.g. 1e-6)</li>
+  <li>Performance is measured with <code>N</code> = 2,048, <code>d_model</code> = 2,048, <code>h</code> = 16</li>
+</ul>
