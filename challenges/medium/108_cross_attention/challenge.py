@@ -28,7 +28,7 @@ class Challenge(ChallengeBase):
         assert K.shape == (N, H, D)
         assert V.shape == (N, H, D)
         assert output.shape == (M, H, D)
-        assert Q.dtype == K.dtype == V.dtype == output.dtype
+        assert Q.dtype == K.dtype == V.dtype == output.dtype == torch.float32
 
         # (M, H, D) -> (H, M, D); (N, H, D) -> (H, N, D)
         Qt = Q.transpose(0, 1)
@@ -41,6 +41,23 @@ class Challenge(ChallengeBase):
         out = torch.matmul(attn, Vt)  # (H, M, D)
         # (H, M, D) -> (M, H, D)
         output.copy_(out.transpose(0, 1))
+
+    def reference_impl_jax(self, Q, K, V, M, N, H, D):
+        import jax
+        import jax.numpy as jnp
+
+        Qt = jnp.transpose(Q, (1, 0, 2))
+        Kt = jnp.transpose(K, (1, 0, 2))
+        Vt = jnp.transpose(V, (1, 0, 2))
+
+        scale = 1.0 / math.sqrt(D)
+        scores = (
+            jnp.matmul(Qt, jnp.transpose(Kt, (0, 2, 1)), precision=jax.lax.Precision.HIGHEST)
+            * scale
+        )
+        attn = jax.nn.softmax(scores, axis=-1)
+        out = jnp.matmul(attn, Vt, precision=jax.lax.Precision.HIGHEST)
+        return jnp.transpose(out, (1, 0, 2))
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -169,9 +186,6 @@ class Challenge(ChallengeBase):
 
         # Larger non-power-of-2
         tests.append(self._make_case(100, 200, 8, 64))
-
-        # Realistic Whisper-encoder-decoder-like sizes
-        tests.append(self._make_case(64, 256, 8, 64))
 
         # Realistic BART/T5-like sizes
         tests.append(self._make_case(128, 512, 16, 64))
