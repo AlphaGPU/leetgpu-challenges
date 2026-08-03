@@ -25,7 +25,6 @@ class Challenge(ChallengeBase):
         assert weight.shape == bias.shape == (C,)
         assert input.dtype == weight.dtype == bias.dtype == output.dtype
         assert input.device == weight.device == bias.device == output.device
-        assert str(input.device).startswith("cuda")
 
         mean = input.mean(dim=1, keepdim=True)
         var = input.var(dim=1, keepdim=True, unbiased=False)
@@ -132,8 +131,8 @@ class Challenge(ChallengeBase):
             }
         )
 
-        # power-of-2: 32x64
-        N, C = 32, 64
+        # power-of-2: 4x4096 (max C)
+        N, C = 4, 4096
         tests.append(
             {
                 "input": torch.empty((N, C), device="cuda", dtype=dtype).uniform_(-10.0, 10.0),
