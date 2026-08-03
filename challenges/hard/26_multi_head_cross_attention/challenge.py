@@ -7,7 +7,7 @@ from core.challenge_base import ChallengeBase, OutTensor, RandnTensor
 
 
 class Challenge(ChallengeBase):
-    name = "Cross-Attention"
+    name = "Multi-Head Cross-Attention"
     atol = 1e-04
     rtol = 1e-04
     num_gpus = 1
