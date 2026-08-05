@@ -7,14 +7,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Paged KV-Cache Attention",
-            atol=1e-04,
-            rtol=1e-04,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Paged KV-Cache Attention"
+    atol = 1e-04
+    rtol = 1e-04
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -40,46 +37,30 @@ class Challenge(ChallengeBase):
         assert output.shape == (batch_size, num_heads, head_dim)
         assert Q.dtype == K_cache.dtype == V_cache.dtype == output.dtype == torch.float32
         assert block_table.dtype == context_lens.dtype == torch.int32
-        assert Q.device.type == "cuda"
-        assert K_cache.device.type == "cuda"
-        assert V_cache.device.type == "cuda"
-        assert block_table.device.type == "cuda"
-        assert context_lens.device.type == "cuda"
-        assert output.device.type == "cuda"
 
         scale = 1.0 / math.sqrt(head_dim)
 
-        for s in range(batch_size):
-            ctx_len = context_lens[s].item()
-            n_blocks = (ctx_len + block_size - 1) // block_size
+        # Logical token positions covered by the block table, padded up to a whole
+        # number of blocks so the gather shape is static.
+        max_ctx = max_blocks_per_seq * block_size
+        pos = torch.arange(max_ctx, device=Q.device)
+        logical_block = torch.div(pos, block_size, rounding_mode="floor")
+        offset = pos - logical_block * block_size
 
-            # Gather the physical blocks assigned to this sequence
-            phys_blocks = block_table[s, :n_blocks].long()  # (n_blocks,)
+        # Map each logical position to (physical block, offset within block)
+        phys_block = block_table.long()[:, logical_block]  # (batch_size, max_ctx)
+        within_block = offset.unsqueeze(0).expand(batch_size, max_ctx)
 
-            # Gather K and V: (n_blocks, block_size, num_heads, head_dim)
-            K_blocks = K_cache[phys_blocks]
-            V_blocks = V_cache[phys_blocks]
+        # (batch_size, max_ctx, num_heads, head_dim)
+        K_gathered = K_cache[phys_block, within_block]
+        V_gathered = V_cache[phys_block, within_block]
 
-            # Flatten to (n_blocks * block_size, num_heads, head_dim) and trim
-            K_seq = K_blocks.reshape(-1, num_heads, head_dim)[
-                :ctx_len
-            ]  # (ctx_len, num_heads, head_dim)
-            V_seq = V_blocks.reshape(-1, num_heads, head_dim)[:ctx_len]
+        scores = torch.einsum("bhd,bthd->bth", Q, K_gathered) * scale
+        valid = pos.unsqueeze(0) < context_lens.long().unsqueeze(1)  # (batch_size, max_ctx)
+        scores = scores.masked_fill(~valid.unsqueeze(-1), float("-inf"))
+        attn_weights = torch.softmax(scores, dim=1)
 
-            # Transpose to (num_heads, ctx_len, head_dim)
-            K_seq = K_seq.transpose(0, 1).contiguous()
-            V_seq = V_seq.transpose(0, 1).contiguous()
-
-            # Q[s]: (num_heads, head_dim) -> (num_heads, 1, head_dim)
-            q = Q[s].unsqueeze(1)
-
-            # Scaled dot-product: (num_heads, 1, ctx_len)
-            scores = torch.bmm(q, K_seq.transpose(1, 2)) * scale
-            attn_weights = torch.softmax(scores, dim=-1)
-
-            # Weighted sum: (num_heads, 1, head_dim) -> (num_heads, head_dim)
-            out = torch.bmm(attn_weights, V_seq).squeeze(1)
-            output[s].copy_(out)
+        output.copy_(torch.einsum("bth,bthd->bhd", attn_weights, V_gathered))
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -102,47 +83,42 @@ class Challenge(ChallengeBase):
         if isinstance(context_lens, int):
             context_lens = [context_lens] * batch_size
 
-        max_ctx = max(context_lens)
-        max_blocks_per_seq = (max_ctx + block_size - 1) // block_size
+        blocks_needed = [(cl + block_size - 1) // block_size for cl in context_lens]
+        max_blocks_per_seq = max(blocks_needed)
+        total_needed = sum(blocks_needed)
 
-        # Allocate exactly the blocks needed, assigned sequentially
-        total_blocks = sum((cl + block_size - 1) // block_size for cl in context_lens)
+        # Over-allocate the pool and scatter each sequence's blocks through it, so a
+        # solution that ignores block_table and reads the cache contiguously fails.
+        pool_blocks = total_needed + max(1, total_needed // 2)
+        perm = torch.randperm(pool_blocks).tolist()
 
-        device = "cuda"
+        table = [[0] * max_blocks_per_seq for _ in range(batch_size)]
+        nxt = 0
+        for s in range(batch_size):
+            for b in range(blocks_needed[s]):
+                table[s][b] = perm[nxt]
+                nxt += 1
+
         dtype = torch.float32
-
         if zero_q:
-            Q = torch.zeros(batch_size, num_heads, head_dim, device=device, dtype=dtype)
+            Q = torch.zeros(batch_size, num_heads, head_dim, device=self.device, dtype=dtype)
         else:
-            Q = torch.randn(batch_size, num_heads, head_dim, device=device, dtype=dtype)
+            Q = torch.randn(batch_size, num_heads, head_dim, device=self.device, dtype=dtype)
 
         K_cache = torch.randn(
-            total_blocks, block_size, num_heads, head_dim, device=device, dtype=dtype
+            pool_blocks, block_size, num_heads, head_dim, device=self.device, dtype=dtype
         )
         V_cache = torch.randn(
-            total_blocks, block_size, num_heads, head_dim, device=device, dtype=dtype
+            pool_blocks, block_size, num_heads, head_dim, device=self.device, dtype=dtype
         )
-
-        block_table = torch.zeros(batch_size, max_blocks_per_seq, device=device, dtype=torch.int32)
-        ctx_lens_tensor = torch.tensor(context_lens, device=device, dtype=torch.int32)
-
-        # Assign physical blocks sequentially per sequence
-        block_idx = 0
-        for s in range(batch_size):
-            n_blocks = (context_lens[s] + block_size - 1) // block_size
-            for b in range(n_blocks):
-                block_table[s, b] = block_idx
-                block_idx += 1
-
-        output = torch.zeros(batch_size, num_heads, head_dim, device=device, dtype=dtype)
 
         return {
             "Q": Q,
             "K_cache": K_cache,
             "V_cache": V_cache,
-            "block_table": block_table,
-            "context_lens": ctx_lens_tensor,
-            "output": output,
+            "block_table": torch.tensor(table, device=self.device, dtype=torch.int32),
+            "context_lens": torch.tensor(context_lens, device=self.device, dtype=torch.int32),
+            "output": torch.zeros(batch_size, num_heads, head_dim, device=self.device, dtype=dtype),
             "batch_size": batch_size,
             "num_heads": num_heads,
             "head_dim": head_dim,
@@ -151,37 +127,36 @@ class Challenge(ChallengeBase):
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
-        device = "cuda"
         dtype = torch.float32
 
-        # batch=1, heads=1, head_dim=4, block_size=2, ctx_len=2
-        # Q · K / sqrt(4): [1,1,0,0]·[1,0,0,0]/2 = 0.5, [1,1,0,0]·[0,1,0,0]/2 = 0.5
-        # attn = softmax([0.5, 0.5]) = [0.5, 0.5]
+        # batch=1, heads=1, head_dim=4, block_size=2, ctx_len=2, seq 0 -> physical block 1
+        # scores = Q . K / sqrt(4) = [0.5, 0.5]; softmax([0.5, 0.5]) = [0.5, 0.5]
         # output = 0.5*[2,0,0,0] + 0.5*[0,4,0,0] = [1, 2, 0, 0]
-        Q = torch.tensor([[[1.0, 1.0, 0.0, 0.0]]], device=device, dtype=dtype)  # (1, 1, 4)
+        Q = torch.tensor([[[1.0, 1.0, 0.0, 0.0]]], device=self.device, dtype=dtype)
         K_cache = torch.tensor(
-            [[[[1.0, 0.0, 0.0, 0.0]], [[0.0, 1.0, 0.0, 0.0]]]],
-            device=device,
-            dtype=dtype,
-        )  # (1 block, block_size=2, 1 head, head_dim=4)
-        V_cache = torch.tensor(
-            [[[[2.0, 0.0, 0.0, 0.0]], [[0.0, 4.0, 0.0, 0.0]]]],
-            device=device,
+            [
+                [[[9.0, 9.0, 9.0, 9.0]], [[9.0, 9.0, 9.0, 9.0]]],
+                [[[1.0, 0.0, 0.0, 0.0]], [[0.0, 1.0, 0.0, 0.0]]],
+            ],
+            device=self.device,
             dtype=dtype,
         )
-        block_table = torch.tensor(
-            [[0]], device=device, dtype=torch.int32
-        )  # seq 0 -> physical block 0
-        context_lens = torch.tensor([2], device=device, dtype=torch.int32)
-        output = torch.zeros(1, 1, 4, device=device, dtype=dtype)
+        V_cache = torch.tensor(
+            [
+                [[[9.0, 9.0, 9.0, 9.0]], [[9.0, 9.0, 9.0, 9.0]]],
+                [[[2.0, 0.0, 0.0, 0.0]], [[0.0, 4.0, 0.0, 0.0]]],
+            ],
+            device=self.device,
+            dtype=dtype,
+        )
 
         return {
             "Q": Q,
             "K_cache": K_cache,
             "V_cache": V_cache,
-            "block_table": block_table,
-            "context_lens": context_lens,
-            "output": output,
+            "block_table": torch.tensor([[1]], device=self.device, dtype=torch.int32),
+            "context_lens": torch.tensor([2], device=self.device, dtype=torch.int32),
+            "output": torch.zeros(1, 1, 4, device=self.device, dtype=dtype),
             "batch_size": 1,
             "num_heads": 1,
             "head_dim": 4,
@@ -196,19 +171,19 @@ class Challenge(ChallengeBase):
         # Edge case: single KV token
         tests.append(self._make_test_case(1, 1, 4, 2, 1))
 
-        # Edge case: ctx_len equals block_size exactly
+        # Edge case: context length equals block size exactly
         tests.append(self._make_test_case(1, 2, 8, 4, 4))
 
-        # Zero query: softmax is uniform, output is mean of V
+        # Zero query: softmax is uniform, output is the mean of V
         tests.append(self._make_test_case(2, 2, 8, 4, 8, zero_q=True))
+
+        # Edge case: partially filled trailing block (ctx_len = 3, block_size = 4)
+        tests.append(self._make_test_case(3, 2, 8, 4, [1, 2, 3]))
 
         # Variable context lengths within a batch
         tests.append(self._make_test_case(4, 4, 32, 16, [16, 32, 48, 64]))
 
         # Power-of-2 context lengths
-        tests.append(self._make_test_case(4, 4, 32, 16, 32))
-
-        # Power-of-2, larger
         tests.append(self._make_test_case(4, 8, 64, 16, 128))
 
         # Non-power-of-2 context length
@@ -220,7 +195,7 @@ class Challenge(ChallengeBase):
         # Mixed variable lengths with non-power-of-2
         tests.append(self._make_test_case(4, 8, 64, 16, [50, 100, 150, 200]))
 
-        # Realistic: LLaMA-3 8B style (8 Q heads), shorter context
+        # Realistic: 8 query heads, longer context
         tests.append(self._make_test_case(4, 8, 128, 16, 256))
 
         return tests

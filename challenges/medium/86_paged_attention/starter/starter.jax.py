@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# Q, K_cache, V_cache, block_table, context_lens are tensors on GPU
+# Q, K_cache, V_cache, block_table, context_lens are tensors on device
 @jax.jit
 def solve(
     Q: jax.Array,

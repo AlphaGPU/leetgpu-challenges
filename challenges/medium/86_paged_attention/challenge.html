@@ -158,18 +158,23 @@
 <h2>Example</h2>
 <p>
   Input: <code>batch_size</code> = 1, <code>num_heads</code> = 1, <code>head_dim</code> = 4,
-  <code>block_size</code> = 2, <code>context_lens</code> = [2], <code>block_table</code> = [[0]]
+  <code>block_size</code> = 2, <code>context_lens</code> = [2], <code>block_table</code> = [[1]]
 </p>
 <p>
   \(Q[0, 0] = \begin{bmatrix} 1.0 & 1.0 & 0.0 & 0.0 \end{bmatrix}\)
 </p>
 <p>
-  Keys gathered from block 0 (2 tokens):
+  Sequence 0 stores its logical block 0 in physical block 1, so both tokens are read from
+  <code>K_cache[1]</code> / <code>V_cache[1]</code> (physical block 0 holds unrelated data
+  and must not be attended to).
+</p>
+<p>
+  Keys gathered from physical block 1 (2 tokens):
   \[
   K_0 = \begin{bmatrix} 1.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}, \quad
   K_1 = \begin{bmatrix} 0.0 & 1.0 & 0.0 & 0.0 \end{bmatrix}
   \]
-  Values gathered from block 0:
+  Values gathered from physical block 1:
   \[
   V_0 = \begin{bmatrix} 2.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}, \quad
   V_1 = \begin{bmatrix} 0.0 & 4.0 & 0.0 & 0.0 \end{bmatrix}
@@ -192,10 +197,12 @@
 <ul>
   <li>1 &le; <code>batch_size</code> &le; 32</li>
   <li>1 &le; <code>num_heads</code> &le; 64</li>
-  <li>1 &le; <code>head_dim</code> &le; 256; <code>head_dim</code> is a multiple of 8</li>
+  <li>1 &le; <code>head_dim</code> &le; 256; <code>head_dim</code> is a multiple of 4</li>
   <li>1 &le; <code>block_size</code> &le; 64; <code>block_size</code> is a power of 2</li>
   <li>1 &le; <code>context_lens[s]</code> &le; 8,192 for all sequences <code>s</code></li>
+  <li><code>max_blocks_per_seq</code> = <code>ceil(max(context_lens) / block_size)</code></li>
   <li>All input tensors are on the GPU and in <code>float32</code> (except <code>block_table</code> and <code>context_lens</code> which are <code>int32</code>)</li>
-  <li><code>block_table[s, i]</code> is a valid index into the first dimension of <code>K_cache</code> for all <code>i &lt; ceil(context_lens[s] / block_size)</code></li>
+  <li><code>block_table[s, i]</code> is a valid index into the first dimension of <code>K_cache</code> for all <code>i &lt; ceil(context_lens[s] / block_size)</code>; physical blocks are scattered arbitrarily through the pool, and entries at or beyond that index are padding that must be ignored</li>
+  <li>The cache pool may contain blocks that belong to no sequence; only blocks reachable through <code>block_table</code> may be read</li>
   <li>Performance is measured with <code>batch_size</code> = 8, <code>num_heads</code> = 32, <code>head_dim</code> = 128, <code>block_size</code> = 16, <code>context_lens[s]</code> = 2,048 for all sequences</li>
 </ul>
