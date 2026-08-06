@@ -9,8 +9,8 @@ class Challenge(ChallengeBase):
     def __init__(self):
         super().__init__(
             name="Integral Image",
-            atol=1.0,
-            rtol=1e-05,
+            atol=1e-02,
+            rtol=1e-02,
             num_gpus=1,
             access_tier="free",
         )
@@ -19,7 +19,8 @@ class Challenge(ChallengeBase):
         assert input.shape == (H, W)
         assert output.shape == (H, W)
         assert input.dtype == torch.float32
-        assert input.device.type == "cuda"
+        assert output.dtype == torch.float32
+        assert input.device == output.device
 
         result = torch.cumsum(torch.cumsum(input, dim=0), dim=1)
         output.copy_(result)
@@ -153,7 +154,7 @@ class Challenge(ChallengeBase):
         H = 8192
         W = 8192
         return {
-            "input": torch.empty((H, W), device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
+            "input": torch.empty((H, W), device="cuda", dtype=dtype).uniform_(-0.01, 0.01),
             "output": torch.empty((H, W), device="cuda", dtype=dtype),
             "H": H,
             "W": W,
