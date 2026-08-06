@@ -1,0 +1,245 @@
+<p>
+  Implement a bilateral filter on a 2D image of 32-bit floating point values.
+  The bilateral filter is an edge-preserving smoothing filter: for each pixel it computes a
+  weighted average of its neighbors, where the weight combines a spatial Gaussian (favoring
+  nearby pixels) and a range Gaussian (favoring pixels with similar intensity), so that sharp
+  edges are preserved while flat regions are smoothed.
+  The image is stored in row-major order and boundary pixels are handled by clamping to the
+  nearest valid index (border replication).
+</p>
+
+<svg width="580" height="300" viewBox="0 0 580 300" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;" font-family="monospace" font-size="11">
+  <rect width="580" height="300" rx="8" fill="#222"/>
+
+  <text x="290" y="20" text-anchor="middle" fill="#ccc" font-size="12">Bilateral filter weights for one pixel (r = 2, &#x3c3;&#x209b; = 1.5, &#x3c3;&#x1d63; = 0.2)</text>
+
+  <!-- Image patch containing a vertical edge -->
+  <rect x="30" y="40" width="30" height="30" rx="2" fill="#2a3550" stroke="#44577f"/>
+  <text x="45" y="59" text-anchor="middle" fill="#ddd" font-size="9">0.2</text>
+  <rect x="60" y="40" width="30" height="30" rx="2" fill="#2a3550" stroke="#44577f"/>
+  <text x="75" y="59" text-anchor="middle" fill="#ddd" font-size="9">0.2</text>
+  <rect x="90" y="40" width="30" height="30" rx="2" fill="#4a4426" stroke="#8a7a30"/>
+  <text x="105" y="59" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <rect x="120" y="40" width="30" height="30" rx="2" fill="#4a4426" stroke="#8a7a30"/>
+  <text x="135" y="59" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <rect x="150" y="40" width="30" height="30" rx="2" fill="#4a4426" stroke="#8a7a30"/>
+  <text x="165" y="59" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <rect x="30" y="70" width="30" height="30" rx="2" fill="#2a3550" stroke="#44577f"/>
+  <text x="45" y="89" text-anchor="middle" fill="#ddd" font-size="9">0.2</text>
+  <rect x="60" y="70" width="30" height="30" rx="2" fill="#2a3550" stroke="#44577f"/>
+  <text x="75" y="89" text-anchor="middle" fill="#ddd" font-size="9">0.2</text>
+  <rect x="90" y="70" width="30" height="30" rx="2" fill="#4a4426" stroke="#8a7a30"/>
+  <text x="105" y="89" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <rect x="120" y="70" width="30" height="30" rx="2" fill="#4a4426" stroke="#8a7a30"/>
+  <text x="135" y="89" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <rect x="150" y="70" width="30" height="30" rx="2" fill="#4a4426" stroke="#8a7a30"/>
+  <text x="165" y="89" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <rect x="30" y="100" width="30" height="30" rx="2" fill="#2a3550" stroke="#44577f"/>
+  <text x="45" y="119" text-anchor="middle" fill="#ddd" font-size="9">0.2</text>
+  <rect x="60" y="100" width="30" height="30" rx="2" fill="#2a3550" stroke="#44577f"/>
+  <text x="75" y="119" text-anchor="middle" fill="#ddd" font-size="9">0.2</text>
+  <rect x="90" y="100" width="30" height="30" rx="2" fill="#4a4426" stroke="#4477bb" stroke-width="2"/>
+  <text x="105" y="119" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <rect x="120" y="100" width="30" height="30" rx="2" fill="#4a4426" stroke="#8a7a30"/>
+  <text x="135" y="119" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <rect x="150" y="100" width="30" height="30" rx="2" fill="#4a4426" stroke="#8a7a30"/>
+  <text x="165" y="119" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <rect x="30" y="130" width="30" height="30" rx="2" fill="#2a3550" stroke="#44577f"/>
+  <text x="45" y="149" text-anchor="middle" fill="#ddd" font-size="9">0.2</text>
+  <rect x="60" y="130" width="30" height="30" rx="2" fill="#2a3550" stroke="#44577f"/>
+  <text x="75" y="149" text-anchor="middle" fill="#ddd" font-size="9">0.2</text>
+  <rect x="90" y="130" width="30" height="30" rx="2" fill="#4a4426" stroke="#8a7a30"/>
+  <text x="105" y="149" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <rect x="120" y="130" width="30" height="30" rx="2" fill="#4a4426" stroke="#8a7a30"/>
+  <text x="135" y="149" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <rect x="150" y="130" width="30" height="30" rx="2" fill="#4a4426" stroke="#8a7a30"/>
+  <text x="165" y="149" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <rect x="30" y="160" width="30" height="30" rx="2" fill="#2a3550" stroke="#44577f"/>
+  <text x="45" y="179" text-anchor="middle" fill="#ddd" font-size="9">0.2</text>
+  <rect x="60" y="160" width="30" height="30" rx="2" fill="#2a3550" stroke="#44577f"/>
+  <text x="75" y="179" text-anchor="middle" fill="#ddd" font-size="9">0.2</text>
+  <rect x="90" y="160" width="30" height="30" rx="2" fill="#4a4426" stroke="#8a7a30"/>
+  <text x="105" y="179" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <rect x="120" y="160" width="30" height="30" rx="2" fill="#4a4426" stroke="#8a7a30"/>
+  <text x="135" y="179" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <rect x="150" y="160" width="30" height="30" rx="2" fill="#4a4426" stroke="#8a7a30"/>
+  <text x="165" y="179" text-anchor="middle" fill="#ddd" font-size="9">0.9</text>
+  <text x="105" y="208" text-anchor="middle" fill="#ccc" font-size="10">image patch</text>
+
+  <text x="200" y="120" text-anchor="middle" fill="#888" font-size="16">&#xd7;</text>
+
+  <!-- Spatial Gaussian weights -->
+  <rect x="215" y="40" width="30" height="30" rx="2" fill="#1e292d" stroke="#44aa66"/>
+  <text x="230" y="59" text-anchor="middle" fill="#ddd" font-size="9">.17</text>
+  <rect x="245" y="40" width="30" height="30" rx="2" fill="#1e332d" stroke="#44aa66"/>
+  <text x="260" y="59" text-anchor="middle" fill="#ddd" font-size="9">.33</text>
+  <rect x="275" y="40" width="30" height="30" rx="2" fill="#1e372d" stroke="#44aa66"/>
+  <text x="290" y="59" text-anchor="middle" fill="#ddd" font-size="9">.41</text>
+  <rect x="305" y="40" width="30" height="30" rx="2" fill="#1e332d" stroke="#44aa66"/>
+  <text x="320" y="59" text-anchor="middle" fill="#ddd" font-size="9">.33</text>
+  <rect x="335" y="40" width="30" height="30" rx="2" fill="#1e292d" stroke="#44aa66"/>
+  <text x="350" y="59" text-anchor="middle" fill="#ddd" font-size="9">.17</text>
+  <rect x="215" y="70" width="30" height="30" rx="2" fill="#1e332d" stroke="#44aa66"/>
+  <text x="230" y="89" text-anchor="middle" fill="#ddd" font-size="9">.33</text>
+  <rect x="245" y="70" width="30" height="30" rx="2" fill="#1e452d" stroke="#44aa66"/>
+  <text x="260" y="89" text-anchor="middle" fill="#ddd" font-size="9">.64</text>
+  <rect x="275" y="70" width="30" height="30" rx="2" fill="#1e4e2d" stroke="#44aa66"/>
+  <text x="290" y="89" text-anchor="middle" fill="#ddd" font-size="9">.80</text>
+  <rect x="305" y="70" width="30" height="30" rx="2" fill="#1e452d" stroke="#44aa66"/>
+  <text x="320" y="89" text-anchor="middle" fill="#ddd" font-size="9">.64</text>
+  <rect x="335" y="70" width="30" height="30" rx="2" fill="#1e332d" stroke="#44aa66"/>
+  <text x="350" y="89" text-anchor="middle" fill="#ddd" font-size="9">.33</text>
+  <rect x="215" y="100" width="30" height="30" rx="2" fill="#1e372d" stroke="#44aa66"/>
+  <text x="230" y="119" text-anchor="middle" fill="#ddd" font-size="9">.41</text>
+  <rect x="245" y="100" width="30" height="30" rx="2" fill="#1e4e2d" stroke="#44aa66"/>
+  <text x="260" y="119" text-anchor="middle" fill="#ddd" font-size="9">.80</text>
+  <rect x="275" y="100" width="30" height="30" rx="2" fill="#1e5a2d" stroke="#4477bb" stroke-width="2"/>
+  <text x="290" y="119" text-anchor="middle" fill="#ddd" font-size="9">1.0</text>
+  <rect x="305" y="100" width="30" height="30" rx="2" fill="#1e4e2d" stroke="#44aa66"/>
+  <text x="320" y="119" text-anchor="middle" fill="#ddd" font-size="9">.80</text>
+  <rect x="335" y="100" width="30" height="30" rx="2" fill="#1e372d" stroke="#44aa66"/>
+  <text x="350" y="119" text-anchor="middle" fill="#ddd" font-size="9">.41</text>
+  <rect x="215" y="130" width="30" height="30" rx="2" fill="#1e332d" stroke="#44aa66"/>
+  <text x="230" y="149" text-anchor="middle" fill="#ddd" font-size="9">.33</text>
+  <rect x="245" y="130" width="30" height="30" rx="2" fill="#1e452d" stroke="#44aa66"/>
+  <text x="260" y="149" text-anchor="middle" fill="#ddd" font-size="9">.64</text>
+  <rect x="275" y="130" width="30" height="30" rx="2" fill="#1e4e2d" stroke="#44aa66"/>
+  <text x="290" y="149" text-anchor="middle" fill="#ddd" font-size="9">.80</text>
+  <rect x="305" y="130" width="30" height="30" rx="2" fill="#1e452d" stroke="#44aa66"/>
+  <text x="320" y="149" text-anchor="middle" fill="#ddd" font-size="9">.64</text>
+  <rect x="335" y="130" width="30" height="30" rx="2" fill="#1e332d" stroke="#44aa66"/>
+  <text x="350" y="149" text-anchor="middle" fill="#ddd" font-size="9">.33</text>
+  <rect x="215" y="160" width="30" height="30" rx="2" fill="#1e292d" stroke="#44aa66"/>
+  <text x="230" y="179" text-anchor="middle" fill="#ddd" font-size="9">.17</text>
+  <rect x="245" y="160" width="30" height="30" rx="2" fill="#1e332d" stroke="#44aa66"/>
+  <text x="260" y="179" text-anchor="middle" fill="#ddd" font-size="9">.33</text>
+  <rect x="275" y="160" width="30" height="30" rx="2" fill="#1e372d" stroke="#44aa66"/>
+  <text x="290" y="179" text-anchor="middle" fill="#ddd" font-size="9">.41</text>
+  <rect x="305" y="160" width="30" height="30" rx="2" fill="#1e332d" stroke="#44aa66"/>
+  <text x="320" y="179" text-anchor="middle" fill="#ddd" font-size="9">.33</text>
+  <rect x="335" y="160" width="30" height="30" rx="2" fill="#1e292d" stroke="#44aa66"/>
+  <text x="350" y="179" text-anchor="middle" fill="#ddd" font-size="9">.17</text>
+  <text x="290" y="208" text-anchor="middle" fill="#ccc" font-size="10">spatial weight w_s</text>
+
+  <text x="385" y="120" text-anchor="middle" fill="#888" font-size="16">&#x2192;</text>
+
+  <!-- Spatial times range weights -->
+  <rect x="400" y="40" width="30" height="30" rx="2" fill="#262626" stroke="#3a3a3a"/>
+  <text x="415" y="59" text-anchor="middle" fill="#ddd" font-size="9">0</text>
+  <rect x="430" y="40" width="30" height="30" rx="2" fill="#262626" stroke="#3a3a3a"/>
+  <text x="445" y="59" text-anchor="middle" fill="#ddd" font-size="9">0</text>
+  <rect x="460" y="40" width="30" height="30" rx="2" fill="#1e372d" stroke="#44aa66"/>
+  <text x="475" y="59" text-anchor="middle" fill="#ddd" font-size="9">.41</text>
+  <rect x="490" y="40" width="30" height="30" rx="2" fill="#1e332d" stroke="#44aa66"/>
+  <text x="505" y="59" text-anchor="middle" fill="#ddd" font-size="9">.33</text>
+  <rect x="520" y="40" width="30" height="30" rx="2" fill="#1e292d" stroke="#44aa66"/>
+  <text x="535" y="59" text-anchor="middle" fill="#ddd" font-size="9">.17</text>
+  <rect x="400" y="70" width="30" height="30" rx="2" fill="#262626" stroke="#3a3a3a"/>
+  <text x="415" y="89" text-anchor="middle" fill="#ddd" font-size="9">0</text>
+  <rect x="430" y="70" width="30" height="30" rx="2" fill="#262626" stroke="#3a3a3a"/>
+  <text x="445" y="89" text-anchor="middle" fill="#ddd" font-size="9">0</text>
+  <rect x="460" y="70" width="30" height="30" rx="2" fill="#1e4e2d" stroke="#44aa66"/>
+  <text x="475" y="89" text-anchor="middle" fill="#ddd" font-size="9">.80</text>
+  <rect x="490" y="70" width="30" height="30" rx="2" fill="#1e452d" stroke="#44aa66"/>
+  <text x="505" y="89" text-anchor="middle" fill="#ddd" font-size="9">.64</text>
+  <rect x="520" y="70" width="30" height="30" rx="2" fill="#1e332d" stroke="#44aa66"/>
+  <text x="535" y="89" text-anchor="middle" fill="#ddd" font-size="9">.33</text>
+  <rect x="400" y="100" width="30" height="30" rx="2" fill="#262626" stroke="#3a3a3a"/>
+  <text x="415" y="119" text-anchor="middle" fill="#ddd" font-size="9">0</text>
+  <rect x="430" y="100" width="30" height="30" rx="2" fill="#262626" stroke="#3a3a3a"/>
+  <text x="445" y="119" text-anchor="middle" fill="#ddd" font-size="9">0</text>
+  <rect x="460" y="100" width="30" height="30" rx="2" fill="#1e5a2d" stroke="#4477bb" stroke-width="2"/>
+  <text x="475" y="119" text-anchor="middle" fill="#ddd" font-size="9">1.0</text>
+  <rect x="490" y="100" width="30" height="30" rx="2" fill="#1e4e2d" stroke="#44aa66"/>
+  <text x="505" y="119" text-anchor="middle" fill="#ddd" font-size="9">.80</text>
+  <rect x="520" y="100" width="30" height="30" rx="2" fill="#1e372d" stroke="#44aa66"/>
+  <text x="535" y="119" text-anchor="middle" fill="#ddd" font-size="9">.41</text>
+  <rect x="400" y="130" width="30" height="30" rx="2" fill="#262626" stroke="#3a3a3a"/>
+  <text x="415" y="149" text-anchor="middle" fill="#ddd" font-size="9">0</text>
+  <rect x="430" y="130" width="30" height="30" rx="2" fill="#262626" stroke="#3a3a3a"/>
+  <text x="445" y="149" text-anchor="middle" fill="#ddd" font-size="9">0</text>
+  <rect x="460" y="130" width="30" height="30" rx="2" fill="#1e4e2d" stroke="#44aa66"/>
+  <text x="475" y="149" text-anchor="middle" fill="#ddd" font-size="9">.80</text>
+  <rect x="490" y="130" width="30" height="30" rx="2" fill="#1e452d" stroke="#44aa66"/>
+  <text x="505" y="149" text-anchor="middle" fill="#ddd" font-size="9">.64</text>
+  <rect x="520" y="130" width="30" height="30" rx="2" fill="#1e332d" stroke="#44aa66"/>
+  <text x="535" y="149" text-anchor="middle" fill="#ddd" font-size="9">.33</text>
+  <rect x="400" y="160" width="30" height="30" rx="2" fill="#262626" stroke="#3a3a3a"/>
+  <text x="415" y="179" text-anchor="middle" fill="#ddd" font-size="9">0</text>
+  <rect x="430" y="160" width="30" height="30" rx="2" fill="#262626" stroke="#3a3a3a"/>
+  <text x="445" y="179" text-anchor="middle" fill="#ddd" font-size="9">0</text>
+  <rect x="460" y="160" width="30" height="30" rx="2" fill="#1e372d" stroke="#44aa66"/>
+  <text x="475" y="179" text-anchor="middle" fill="#ddd" font-size="9">.41</text>
+  <rect x="490" y="160" width="30" height="30" rx="2" fill="#1e332d" stroke="#44aa66"/>
+  <text x="505" y="179" text-anchor="middle" fill="#ddd" font-size="9">.33</text>
+  <rect x="520" y="160" width="30" height="30" rx="2" fill="#1e292d" stroke="#44aa66"/>
+  <text x="535" y="179" text-anchor="middle" fill="#ddd" font-size="9">.17</text>
+  <text x="475" y="208" text-anchor="middle" fill="#ccc" font-size="10">w_s &#xd7; w_r (used)</text>
+
+  <!-- Legend -->
+  <rect x="120" y="228" width="14" height="14" rx="2" fill="#2a3550" stroke="#44577f" stroke-width="1.5"/>
+  <text x="140" y="240" fill="#ccc" font-size="9">across the edge</text>
+  <rect x="250" y="228" width="14" height="14" rx="2" fill="#262626" stroke="#3a3a3a" stroke-width="1.5"/>
+  <text x="270" y="240" fill="#ccc" font-size="9">weight &#x2248; 0</text>
+  <rect x="360" y="228" width="14" height="14" rx="2" fill="#1e5a2d" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="380" y="240" fill="#ccc" font-size="9">center pixel</text>
+
+  <text x="290" y="270" text-anchor="middle" fill="#ccc" font-size="10">The range Gaussian zeroes out neighbors on the far side of the edge, so</text>
+  <text x="290" y="286" text-anchor="middle" fill="#ccc" font-size="10">smoothing never crosses it. Each pixel divides by its own sum of weights.</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>output</code></li>
+  <li>
+    For each output pixel at position \((i, j)\), compute:
+    \[
+      \text{output}[i,j] = \frac{\displaystyle\sum_{dy=-r}^{r}\sum_{dx=-r}^{r} w_s(dy,dx)\, w_r\bigl(\text{image}[i',j'] - \text{image}[i,j]\bigr)\, \text{image}[i',j']}
+                                 {\displaystyle\sum_{dy=-r}^{r}\sum_{dx=-r}^{r} w_s(dy,dx)\, w_r\bigl(\text{image}[i',j'] - \text{image}[i,j]\bigr)}
+    \]
+    where \(i' = \text{clamp}(i+dy, 0, H-1)\), \(j' = \text{clamp}(j+dx, 0, W-1)\),
+    \(w_s(dy,dx) = \exp\!\left(-\tfrac{dy^2+dx^2}{2\sigma_s^2}\right)\), and
+    \(w_r(\delta) = \exp\!\left(-\tfrac{\delta^2}{2\sigma_r^2}\right)\)
+  </li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input image (\(H=3, W=3\)), <code>spatial_sigma</code> = 1.0,
+  <code>range_sigma</code> = 0.5, <code>radius</code> = 1:
+  \[
+  \begin{bmatrix}
+  1.0 & 1.0 & 1.0 \\
+  1.0 & 0.0 & 1.0 \\
+  1.0 & 1.0 & 1.0
+  \end{bmatrix}
+  \]
+  Output:
+  \[
+  \begin{bmatrix}
+  0.9891 & 0.9812 & 0.9891 \\
+  0.9812 & 0.3453 & 0.9812 \\
+  0.9891 & 0.9812 & 0.9891
+  \end{bmatrix}
+  \]
+  The center pixel (value 0.0) is surrounded by neighbors all equal to 1.0. Because the
+  intensity difference of 1.0 is large relative to <code>range_sigma</code> = 0.5, the range
+  weights strongly suppress those neighbors, so the output at the center (0.3453) is far lower
+  than a plain Gaussian blur would produce (&approx; 0.7958). The outer pixels remain close to
+  1.0 because their neighbors are mostly equal to themselves.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>H</code>, <code>W</code> &le; 8192</li>
+  <li>1 &le; <code>radius</code> &le; 16</li>
+  <li>&minus;10.0 &le; <code>image[i]</code> &le; 10.0, stored as 32-bit floats</li>
+  <li>0.1 &le; <code>spatial_sigma</code>, <code>range_sigma</code> &le; 10.0</li>
+  <li>
+    Performance is measured with <code>H</code> = 2,048, <code>W</code> = 2,048,
+    <code>radius</code> = 5, <code>spatial_sigma</code> = 3.0, <code>range_sigma</code> = 0.1
+  </li>
+</ul>

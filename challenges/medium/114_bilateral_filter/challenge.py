@@ -1,20 +1,17 @@
 import ctypes
+import math
 from typing import Any, Dict, List
 
 import torch
-import torch.nn.functional as F
 from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Bilateral Filter",
-            atol=1e-04,
-            rtol=1e-04,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Bilateral Filter"
+    atol = 1e-04
+    rtol = 1e-04
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -30,32 +27,26 @@ class Challenge(ChallengeBase):
         assert output.shape == (H * W,)
         assert image.dtype == torch.float32
         assert output.dtype == torch.float32
-        assert image.device.type == "cuda"
-        assert output.device.type == "cuda"
 
         r = int(radius)
         img = image.view(H, W)
 
-        yy = torch.arange(-r, r + 1, device=image.device, dtype=torch.float32)
-        xx = torch.arange(-r, r + 1, device=image.device, dtype=torch.float32)
-        grid_y, grid_x = torch.meshgrid(yy, xx, indexing="ij")
-        spatial_weights = torch.exp(-(grid_y**2 + grid_x**2) / (2.0 * float(spatial_sigma) ** 2))
-
-        padded = (
-            F.pad(img.unsqueeze(0).unsqueeze(0), (r, r, r, r), mode="replicate")
-            .squeeze(0)
-            .squeeze(0)
-        )
+        yi = torch.arange(H, device=image.device)
+        xi = torch.arange(W, device=image.device)
 
         out = torch.zeros(H, W, device=image.device, dtype=torch.float32)
         norm = torch.zeros(H, W, device=image.device, dtype=torch.float32)
+        inv_2ss2 = 1.0 / (2.0 * float(spatial_sigma) ** 2)
         inv_2rs2 = 1.0 / (2.0 * float(range_sigma) ** 2)
 
-        for dy in range(2 * r + 1):
-            for dx in range(2 * r + 1):
-                neighbor = padded[dy : dy + H, dx : dx + W]
+        for dy in range(-r, r + 1):
+            rows = torch.clamp(yi + dy, 0, H - 1)
+            for dx in range(-r, r + 1):
+                cols = torch.clamp(xi + dx, 0, W - 1)
+                neighbor = img.index_select(0, rows).index_select(1, cols)
+                spatial_weight = math.exp(-(dy * dy + dx * dx) * inv_2ss2)
                 range_weight = torch.exp(-((neighbor - img) ** 2) * inv_2rs2)
-                weight = spatial_weights[dy, dx] * range_weight
+                weight = spatial_weight * range_weight
                 out += weight * neighbor
                 norm += weight
 
@@ -76,9 +67,9 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         H, W = 3, 3
         image = torch.tensor(
-            [1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0], device="cuda", dtype=dtype
+            [1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0], device=self.device, dtype=dtype
         )
-        output = torch.zeros(H * W, device="cuda", dtype=dtype)
+        output = torch.zeros(H * W, device=self.device, dtype=dtype)
         return {
             "image": image,
             "output": output,
@@ -91,15 +82,14 @@ class Challenge(ChallengeBase):
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.float32
-        device = "cuda"
         tests = []
 
         # single_pixel
         H, W = 1, 1
         tests.append(
             {
-                "image": torch.tensor([0.5], device=device, dtype=dtype),
-                "output": torch.zeros(H * W, device=device, dtype=dtype),
+                "image": torch.tensor([0.5], device=self.device, dtype=dtype),
+                "output": torch.zeros(H * W, device=self.device, dtype=dtype),
                 "H": H,
                 "W": W,
                 "spatial_sigma": 1.0,
@@ -112,8 +102,8 @@ class Challenge(ChallengeBase):
         H, W = 2, 2
         tests.append(
             {
-                "image": torch.zeros(H * W, device=device, dtype=dtype),
-                "output": torch.zeros(H * W, device=device, dtype=dtype),
+                "image": torch.zeros(H * W, device=self.device, dtype=dtype),
+                "output": torch.zeros(H * W, device=self.device, dtype=dtype),
                 "H": H,
                 "W": W,
                 "spatial_sigma": 1.0,
@@ -127,9 +117,9 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "image": torch.tensor(
-                    [1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0], device=device, dtype=dtype
+                    [1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0], device=self.device, dtype=dtype
                 ),
-                "output": torch.zeros(H * W, device=device, dtype=dtype),
+                "output": torch.zeros(H * W, device=self.device, dtype=dtype),
                 "H": H,
                 "W": W,
                 "spatial_sigma": 1.0,
@@ -161,10 +151,10 @@ class Challenge(ChallengeBase):
                         1.0,
                         1.0,
                     ],
-                    device=device,
+                    device=self.device,
                     dtype=dtype,
                 ),
-                "output": torch.zeros(H * W, device=device, dtype=dtype),
+                "output": torch.zeros(H * W, device=self.device, dtype=dtype),
                 "H": H,
                 "W": W,
                 "spatial_sigma": 1.5,
@@ -177,8 +167,8 @@ class Challenge(ChallengeBase):
         H, W = 16, 16
         tests.append(
             {
-                "image": torch.empty(H * W, device=device, dtype=dtype).uniform_(0.0, 1.0),
-                "output": torch.zeros(H * W, device=device, dtype=dtype),
+                "image": torch.empty(H * W, device=self.device, dtype=dtype).uniform_(0.0, 1.0),
+                "output": torch.zeros(H * W, device=self.device, dtype=dtype),
                 "H": H,
                 "W": W,
                 "spatial_sigma": 1.5,
@@ -191,8 +181,8 @@ class Challenge(ChallengeBase):
         H, W = 64, 64
         tests.append(
             {
-                "image": torch.empty(H * W, device=device, dtype=dtype).uniform_(-1.0, 1.0),
-                "output": torch.zeros(H * W, device=device, dtype=dtype),
+                "image": torch.empty(H * W, device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "output": torch.zeros(H * W, device=self.device, dtype=dtype),
                 "H": H,
                 "W": W,
                 "spatial_sigma": 2.0,
@@ -205,8 +195,8 @@ class Challenge(ChallengeBase):
         H, W = 100, 100
         tests.append(
             {
-                "image": torch.empty(H * W, device=device, dtype=dtype).uniform_(0.0, 1.0),
-                "output": torch.zeros(H * W, device=device, dtype=dtype),
+                "image": torch.empty(H * W, device=self.device, dtype=dtype).uniform_(0.0, 1.0),
+                "output": torch.zeros(H * W, device=self.device, dtype=dtype),
                 "H": H,
                 "W": W,
                 "spatial_sigma": 2.0,
@@ -219,8 +209,8 @@ class Challenge(ChallengeBase):
         H, W = 255, 255
         tests.append(
             {
-                "image": torch.empty(H * W, device=device, dtype=dtype).uniform_(-1.0, 1.0),
-                "output": torch.zeros(H * W, device=device, dtype=dtype),
+                "image": torch.empty(H * W, device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                "output": torch.zeros(H * W, device=self.device, dtype=dtype),
                 "H": H,
                 "W": W,
                 "spatial_sigma": 1.5,
@@ -233,8 +223,8 @@ class Challenge(ChallengeBase):
         H, W = 512, 512
         tests.append(
             {
-                "image": torch.empty(H * W, device=device, dtype=dtype).uniform_(0.0, 1.0),
-                "output": torch.zeros(H * W, device=device, dtype=dtype),
+                "image": torch.empty(H * W, device=self.device, dtype=dtype).uniform_(0.0, 1.0),
+                "output": torch.zeros(H * W, device=self.device, dtype=dtype),
                 "H": H,
                 "W": W,
                 "spatial_sigma": 2.0,
@@ -247,8 +237,8 @@ class Challenge(ChallengeBase):
         H, W = 1000, 1000
         tests.append(
             {
-                "image": torch.empty(H * W, device=device, dtype=dtype).uniform_(0.0, 1.0),
-                "output": torch.zeros(H * W, device=device, dtype=dtype),
+                "image": torch.empty(H * W, device=self.device, dtype=dtype).uniform_(0.0, 1.0),
+                "output": torch.zeros(H * W, device=self.device, dtype=dtype),
                 "H": H,
                 "W": W,
                 "spatial_sigma": 3.0,
@@ -263,8 +253,8 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         H, W = 2048, 2048
         return {
-            "image": torch.empty(H * W, device="cuda", dtype=dtype).uniform_(0.0, 1.0),
-            "output": torch.zeros(H * W, device="cuda", dtype=dtype),
+            "image": torch.empty(H * W, device=self.device, dtype=dtype).uniform_(0.0, 1.0),
+            "output": torch.zeros(H * W, device=self.device, dtype=dtype),
             "H": H,
             "W": W,
             "spatial_sigma": 3.0,
