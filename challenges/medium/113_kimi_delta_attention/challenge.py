@@ -43,7 +43,6 @@ class Challenge(ChallengeBase):
         # State S: (batch, d, d) associative memory mapping keys to values.
         S = torch.zeros(batch, d, d, device=Q.device, dtype=Q.dtype)
 
-        # Kept it sequential; there may be better optimizations in the torch form
         for t in range(seq_len):
             k_t = K[:, t, :]  # (batch, d)
             v_t = V[:, t, :]  # (batch, d)
