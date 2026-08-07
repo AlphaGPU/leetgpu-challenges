@@ -1,0 +1,164 @@
+<p>
+Implement one decode step of Multi-Head Latent Attention (MLA), the attention variant used by
+DeepSeek-V2/V3. Instead of caching a full key and value vector per head, MLA caches a single
+low-rank latent vector <code>c</code> of size <code>kv_lora_rank</code> per position, shared by
+every head, plus a small rotary key <code>k_pe</code> of size <code>rope_dim</code> that is also
+shared. Keys and values are reconstructed on the fly from the latent through the per-head
+up-projections <code>W_UK</code> and <code>W_UV</code>.
+</p>
+<p>
+Materializing every key and value would defeat the purpose of the compressed cache, so production
+kernels use <em>weight absorption</em>: fold <code>W_UK</code> into the query and run the whole
+attention in latent space. For a single decode query with per-head query
+<code>q = [q_nope | q_pe]</code> and cache row <code>kv_cache[s] = [c[s] | k_pe[s]]</code>:
+</p>
+<p>
+\[ \tilde{q}_h = q\_nope_h W\_UK_h \qquad
+   s_{h,t} = \frac{\tilde{q}_h \cdot c_t + q\_pe_h \cdot k\_pe_t}{\sqrt{head\_dim + rope\_dim}} \]
+\[ a_h = \text{softmax}(s_h) \qquad
+   o_h = \left( \sum_{t=0}^{seq\_len-1} a_{h,t}\, c_t \right) W\_UV_h \]
+</p>
+<p>
+Note that <code>c</code> plays the role of both key and value, and that the rotary term uses the
+same <code>k_pe</code> for every head. All tensors are <code>float32</code>.
+</p>
+
+<svg width="720" height="300" viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <rect width="720" height="300" fill="#222" rx="10"/>
+  <text x="360" y="26" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">MLA decode: one shared latent cache serves all heads</text>
+
+  <!-- Cache -->
+  <text x="150" y="56" fill="#aaa" font-family="monospace" font-size="12" text-anchor="middle">kv_cache (seq_len rows)</text>
+  <rect x="40" y="68" width="150" height="26" fill="#1d4ed8" rx="3"/>
+  <rect x="190" y="68" width="40" height="26" fill="#9333ea" rx="3"/>
+  <rect x="40" y="98" width="150" height="26" fill="#1d4ed8" rx="3"/>
+  <rect x="190" y="98" width="40" height="26" fill="#9333ea" rx="3"/>
+  <rect x="40" y="128" width="150" height="26" fill="#1d4ed8" rx="3"/>
+  <rect x="190" y="128" width="40" height="26" fill="#9333ea" rx="3"/>
+  <rect x="40" y="158" width="150" height="26" fill="#1d4ed8" rx="3"/>
+  <rect x="190" y="158" width="40" height="26" fill="#9333ea" rx="3"/>
+  <text x="115" y="86" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">c[0] (kv_lora_rank)</text>
+  <text x="115" y="116" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">c[1]</text>
+  <text x="115" y="146" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">...</text>
+  <text x="115" y="176" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">c[seq_len-1]</text>
+  <text x="210" y="86" fill="#fff" font-family="monospace" font-size="10" text-anchor="middle">k_pe</text>
+  <text x="210" y="116" fill="#fff" font-family="monospace" font-size="10" text-anchor="middle">k_pe</text>
+  <text x="210" y="146" fill="#fff" font-family="monospace" font-size="10" text-anchor="middle">...</text>
+  <text x="210" y="176" fill="#fff" font-family="monospace" font-size="10" text-anchor="middle">k_pe</text>
+  <text x="135" y="202" fill="#888" font-family="monospace" font-size="11" text-anchor="middle">no per-head K / V stored</text>
+
+  <!-- Heads -->
+  <text x="360" y="56" fill="#aaa" font-family="monospace" font-size="12" text-anchor="middle">queries</text>
+  <rect x="300" y="72" width="120" height="24" fill="#0f766e" rx="3"/>
+  <rect x="300" y="104" width="120" height="24" fill="#0f766e" rx="3"/>
+  <rect x="300" y="136" width="120" height="24" fill="#0f766e" rx="3"/>
+  <text x="360" y="89" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">q[0] = nope | pe</text>
+  <text x="360" y="121" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">q[1]</text>
+  <text x="360" y="153" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">q[num_heads-1]</text>
+
+  <line x1="230" y1="90" x2="300" y2="84" stroke="#60a5fa" stroke-width="1.2" marker-end="url(#arr114)"/>
+  <line x1="230" y1="120" x2="300" y2="116" stroke="#60a5fa" stroke-width="1.2" marker-end="url(#arr114)"/>
+  <line x1="230" y1="170" x2="300" y2="148" stroke="#60a5fa" stroke-width="1.2" marker-end="url(#arr114)"/>
+
+  <!-- Pipeline -->
+  <text x="470" y="80" fill="#4ade80" font-family="monospace" font-size="12">per head h:</text>
+  <text x="470" y="102" fill="#4ade80" font-family="monospace" font-size="12">q~ = q_nope · W_UK[h]</text>
+  <text x="470" y="124" fill="#4ade80" font-family="monospace" font-size="12">s  = (q~·c + q_pe·k_pe) * scale</text>
+  <text x="470" y="146" fill="#4ade80" font-family="monospace" font-size="12">a  = softmax(s)</text>
+  <text x="470" y="168" fill="#4ade80" font-family="monospace" font-size="12">l  = sum_t a[t] * c[t]</text>
+  <text x="470" y="190" fill="#4ade80" font-family="monospace" font-size="12">out[h] = l · W_UV[h]</text>
+  <text x="470" y="216" fill="#aaa" font-family="monospace" font-size="11">scale = 1/sqrt(head_dim+rope_dim)</text>
+
+  <rect x="40" y="232" width="640" height="48" fill="#2d2d2d" rx="6"/>
+  <text x="360" y="252" fill="#ccc" font-family="monospace" font-size="11" text-anchor="middle">attention runs entirely in latent space: c[t] acts as both key and value,</text>
+  <text x="360" y="270" fill="#ccc" font-family="monospace" font-size="11" text-anchor="middle">and W_UV is applied once per head after the weighted sum, not per position</text>
+
+  <defs>
+    <marker id="arr114" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3 z" fill="#888"/>
+    </marker>
+  </defs>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the function <code>solve(q, kv_cache, W_UK, W_UV, output, num_heads, seq_len, kv_lora_rank, head_dim, rope_dim)</code>.</li>
+  <li>Do not change the function signature or use external libraries beyond the standard GPU framework.</li>
+  <li><code>q</code> has shape <code>(num_heads, head_dim + rope_dim)</code>: the first <code>head_dim</code> entries of each row are <code>q_nope</code>, the remaining <code>rope_dim</code> entries are <code>q_pe</code>.</li>
+  <li><code>kv_cache</code> has shape <code>(seq_len, kv_lora_rank + rope_dim)</code>: the first <code>kv_lora_rank</code> entries of each row are the latent <code>c</code>, the remaining <code>rope_dim</code> entries are <code>k_pe</code>.</li>
+  <li><code>W_UK</code> has shape <code>(num_heads, head_dim, kv_lora_rank)</code> and <code>W_UV</code> has shape <code>(num_heads, kv_lora_rank, head_dim)</code>.</li>
+  <li>Use the scale factor <code>1 / sqrt(head_dim + rope_dim)</code> and a softmax over the <code>seq_len</code> cached positions.</li>
+  <li>Write the result into the provided <code>output</code> buffer of shape <code>(num_heads, head_dim)</code>.</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  With <code>num_heads</code> = 2, <code>seq_len</code> = 2, <code>kv_lora_rank</code> = 2,
+  <code>head_dim</code> = 2, <code>rope_dim</code> = 1:
+</p>
+<p>
+  \(q\) (2&times;3, last column is <code>q_pe</code>):
+  \[
+  \begin{bmatrix}
+  1 & 0 & 1 \\
+  0 & 1 & 0
+  \end{bmatrix}
+  \qquad
+  kv\_cache\text{ (2}\times\text{3, last column is } k\_pe\text{):}
+  \begin{bmatrix}
+  1 & 0 & 0 \\
+  0 & 1 & 1
+  \end{bmatrix}
+  \]
+  \(W\_UK_0\) (2&times;2):
+  \[
+  \begin{bmatrix}
+  1 & 0 \\
+  0 & 1
+  \end{bmatrix}
+  \qquad
+  W\_UK_1\text{ (2}\times\text{2):}
+  \begin{bmatrix}
+  0 & 1 \\
+  1 & 0
+  \end{bmatrix}
+  \]
+  \(W\_UV_0\) (2&times;2):
+  \[
+  \begin{bmatrix}
+  1 & 2 \\
+  3 & 4
+  \end{bmatrix}
+  \qquad
+  W\_UV_1\text{ (2}\times\text{2):}
+  \begin{bmatrix}
+  1 & 0 \\
+  0 & 1
+  \end{bmatrix}
+  \]
+</p>
+<p>
+  <strong>Output</strong> (2&times;2, values rounded to 4 decimals):
+  \[
+  \begin{bmatrix}
+  2.0000 & 3.0000 \\
+  0.6405 & 0.3595
+  \end{bmatrix}
+  \]
+</p>
+<p>
+  Head 0 scores are equal, so its attention is uniform and the latent result is
+  <code>[0.5, 0.5]</code>. Head 1 sees scores <code>[0.5774, 0]</code>, giving weights
+  <code>[0.6405, 0.3595]</code>, which pass through the identity <code>W_UV</code> unchanged.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>num_heads</code> &le; 128</li>
+  <li>1 &le; <code>seq_len</code> &le; 8,192</li>
+  <li>1 &le; <code>kv_lora_rank</code> &le; 512</li>
+  <li>1 &le; <code>head_dim</code> &le; 128</li>
+  <li>1 &le; <code>rope_dim</code> &le; 64</li>
+  <li>All tensor values are <code>float32</code></li>
+  <li>Performance is measured with <code>num_heads</code> = 128, <code>seq_len</code> = 4,096, <code>kv_lora_rank</code> = 512, <code>head_dim</code> = 128, <code>rope_dim</code> = 64</li>
+</ul>
