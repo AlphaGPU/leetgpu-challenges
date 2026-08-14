@@ -1,0 +1,196 @@
+<p>
+  Implement the forward pass of <strong>multi-scale deformable attention</strong>, the core
+  inference kernel of Deformable DETR and related detection / BEV vision transformers. Instead of
+  attending to every spatial location, each query attends to only \(L \times P\) learned sampling
+  points spread across \(L\) feature-map levels. Each sampling point lands at a fractional
+  coordinate, so its feature vector must be reconstructed by <strong>bilinear interpolation</strong>
+  and then combined using precomputed attention weights. All floating-point tensors are
+  <code>float32</code>; <code>spatial_shapes</code> is <code>int32</code>.
+</p>
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 330" width="660" height="330"
+     style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="dfa-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6"
+            orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#999"/>
+    </marker>
+  </defs>
+  <rect width="660" height="330" fill="#222" rx="8"/>
+
+  <!-- Level 0: 2x2 feature map -->
+  <text x="120" y="30" text-anchor="middle" fill="#888" font-size="11" font-family="monospace">level 0 &#x2014; 2 &#xd7; 2</text>
+  <rect x="60" y="44" width="60" height="60" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <rect x="120" y="44" width="60" height="60" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <rect x="60" y="104" width="60" height="60" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <rect x="120" y="104" width="60" height="60" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="90" y="78" text-anchor="middle" fill="#aaccee" font-size="11" font-family="monospace">[1, 2]</text>
+  <text x="150" y="78" text-anchor="middle" fill="#aaccee" font-size="11" font-family="monospace">[3, 4]</text>
+  <text x="90" y="138" text-anchor="middle" fill="#aaccee" font-size="11" font-family="monospace">[5, 6]</text>
+  <text x="150" y="138" text-anchor="middle" fill="#aaccee" font-size="11" font-family="monospace">[7, 8]</text>
+
+  <!-- bilinear weight spokes from the sampling point to the 4 pixel centers -->
+  <line x1="120" y1="104" x2="90" y2="74" stroke="#e0a040" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="120" y1="104" x2="150" y2="74" stroke="#e0a040" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="120" y1="104" x2="90" y2="134" stroke="#e0a040" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="120" y1="104" x2="150" y2="134" stroke="#e0a040" stroke-width="1" stroke-dasharray="3,3"/>
+  <circle cx="120" cy="104" r="5" fill="#e06060" stroke="#fff" stroke-width="1"/>
+  <text x="120" y="184" text-anchor="middle" fill="#e06060" font-size="10" font-family="monospace">(x, y) = (0.5, 0.5)</text>
+  <text x="120" y="198" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">4 &#xd7; weight 0.25</text>
+
+  <!-- Level 1: 1x1 feature map -->
+  <text x="120" y="234" text-anchor="middle" fill="#888" font-size="11" font-family="monospace">level 1 &#x2014; 1 &#xd7; 1</text>
+  <rect x="90" y="248" width="60" height="52" fill="#1e3d2d" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="120" y="278" text-anchor="middle" fill="#aaeebb" font-size="11" font-family="monospace">[10, 20]</text>
+  <circle cx="120" cy="274" r="5" fill="#e06060" stroke="#fff" stroke-width="1"/>
+  <text x="120" y="317" text-anchor="middle" fill="#e06060" font-size="10" font-family="monospace">(x, y) = (0.5, 0.5)</text>
+
+  <!-- Arrows into the sampled-value boxes -->
+  <line x1="190" y1="104" x2="268" y2="104" stroke="#999" stroke-width="1.5" marker-end="url(#dfa-ah)"/>
+  <line x1="190" y1="274" x2="268" y2="274" stroke="#999" stroke-width="1.5" marker-end="url(#dfa-ah)"/>
+  <text x="229" y="96" text-anchor="middle" fill="#e0a040" font-size="9" font-family="sans-serif">bilinear</text>
+  <text x="229" y="266" text-anchor="middle" fill="#e0a040" font-size="9" font-family="sans-serif">bilinear</text>
+
+  <!-- Sampled values -->
+  <rect x="270" y="86" width="110" height="36" rx="5" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
+  <text x="325" y="109" text-anchor="middle" fill="#ccc" font-size="12" font-family="monospace">[4, 5]</text>
+  <rect x="270" y="256" width="110" height="36" rx="5" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
+  <text x="325" y="279" text-anchor="middle" fill="#ccc" font-size="12" font-family="monospace">[10, 20]</text>
+
+  <!-- Attention weights -->
+  <line x1="380" y1="104" x2="452" y2="150" stroke="#999" stroke-width="1.5" marker-end="url(#dfa-ah)"/>
+  <line x1="380" y1="274" x2="452" y2="200" stroke="#999" stroke-width="1.5" marker-end="url(#dfa-ah)"/>
+  <text x="410" y="112" text-anchor="middle" fill="#c060e0" font-size="11" font-family="monospace">&#xd7; 0.75</text>
+  <text x="410" y="256" text-anchor="middle" fill="#c060e0" font-size="11" font-family="monospace">&#xd7; 0.25</text>
+
+  <!-- Sum node -->
+  <circle cx="470" cy="175" r="16" fill="#222" stroke="#999" stroke-width="1.5"/>
+  <text x="470" y="181" text-anchor="middle" fill="#ccc" font-size="17" font-family="sans-serif" font-weight="bold">+</text>
+  <line x1="488" y1="175" x2="520" y2="175" stroke="#999" stroke-width="1.5" marker-end="url(#dfa-ah)"/>
+
+  <!-- Output -->
+  <rect x="522" y="157" width="112" height="36" rx="5" fill="#3a2010" stroke="#e0a040" stroke-width="1.5"/>
+  <text x="578" y="180" text-anchor="middle" fill="#f0b060" font-size="12" font-family="monospace">[5.5, 8.75]</text>
+  <text x="578" y="140" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">output[n, q, h]</text>
+
+  <!-- Legend -->
+  <text x="470" y="300" text-anchor="middle" fill="#666" font-size="9" font-family="sans-serif">one query, one head, one sampling point per level</text>
+</svg>
+
+<p>
+  The \(L\) feature maps are packed back-to-back along the spatial axis of <code>value</code>, which
+  has shape \((N, S, H, D)\) with \(S = \sum_{\ell} h_\ell w_\ell\). Level \(\ell\) starts at row
+  \(\text{start}_\ell = \sum_{j < \ell} h_j w_j\), and pixel \((x, y)\) of that level lives at row
+  \(\text{start}_\ell + y\,w_\ell + x\). The per-level sizes are given by
+  <code>spatial_shapes</code>, whose row \(\ell\) is \((h_\ell, w_\ell)\); the starting offsets are
+  <em>not</em> provided.
+</p>
+
+<p>
+  For batch element \(n\), query \(q\), head \(h\), level \(\ell\) and point \(p\), let
+  \((x, y) = \texttt{sampling_loc}[n, q, h, \ell, p]\) be a location normalized to \([0, 1]\)
+  relative to level \(\ell\). Convert it to pixel coordinates and interpolate:
+</p>
+
+\[
+\begin{aligned}
+p_x &= x\,w_\ell - 0.5, \qquad p_y = y\,h_\ell - 0.5 \\[4pt]
+x_0 &= \lfloor p_x \rfloor, \quad y_0 = \lfloor p_y \rfloor, \quad
+\delta_x = p_x - x_0, \quad \delta_y = p_y - y_0 \\[6pt]
+\text{Sample}_\ell(n, h, x, y) &= \sum_{c_y \in \{0,1\}} \sum_{c_x \in \{0,1\}}
+  \omega_{c_x} \, \omega_{c_y} \cdot V_\ell\bigl[n,\, y_0 + c_y,\, x_0 + c_x,\, h\bigr] \\[4pt]
+&\quad \omega_{c_x} = \begin{cases} 1 - \delta_x & c_x = 0 \\ \delta_x & c_x = 1 \end{cases},
+\qquad
+\omega_{c_y} = \begin{cases} 1 - \delta_y & c_y = 0 \\ \delta_y & c_y = 1 \end{cases}
+\end{aligned}
+\]
+
+<p>
+  Corners that fall outside the level (\(x_0 + c_x \notin [0, w_\ell - 1]\) or
+  \(y_0 + c_y \notin [0, h_\ell - 1]\)) contribute <strong>zero</strong> &mdash; the feature map is
+  zero-padded, never clamped. The output is the attention-weighted sum over all levels and points:
+</p>
+
+\[
+\texttt{output}[n, q, h\,D + d] =
+\sum_{\ell=0}^{L-1} \sum_{p=0}^{P-1}
+\texttt{attn_weight}[n, q, h, \ell, p] \cdot
+\text{Sample}_\ell\bigl(n, h, \texttt{sampling_loc}[n, q, h, \ell, p]\bigr)_d
+\]
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>output</code> tensor of shape \((N, Q, H D)\)</li>
+  <li>Compute the level starting offsets yourself from <code>spatial_shapes</code></li>
+  <li>All tensors are contiguous and row-major: <code>value[n, s, h, d]</code> sits at offset
+      <code>((n*S + s)*H + h)*D + d</code>, and
+      <code>sampling_loc[n, q, h, l, p, i]</code> at
+      <code>((((n*Q + q)*H + h)*L + l)*P + p)*2 + i</code></li>
+  <li>Sampling locations are <em>not</em> guaranteed to lie inside \([0, 1]\); out-of-range corners
+      must be treated as zeros</li>
+  <li>The last axis of <code>sampling_loc</code> is ordered \((x, y)\) &mdash; column first, row
+      second</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: \(N = 1,\; Q = 1,\; H = 1,\; D = 2,\; L = 2,\; P = 1,\; S = 5\), with
+  \(\texttt{spatial_shapes} = \begin{bmatrix} 2 & 2 \\ 1 & 1 \end{bmatrix}\)
+  (a \(2 \times 2\) level followed by a \(1 \times 1\) level).
+</p>
+<p>
+  The five packed feature rows of <code>value</code> (rows 0&ndash;3 are level 0 in row-major order,
+  row 4 is level 1):
+  \[
+  \texttt{value}[0, :, 0, :] =
+  \begin{bmatrix}
+  1 & 2 \\
+  3 & 4 \\
+  5 & 6 \\
+  7 & 8 \\
+  10 & 20
+  \end{bmatrix}
+  \]
+</p>
+<p>
+  Both sampling points sit at the center of their level, and the attention weights favor level 0:
+  \[
+  \texttt{sampling_loc}[0, 0, 0, :, 0, :] = \begin{bmatrix} 0.5 & 0.5 \\ 0.5 & 0.5 \end{bmatrix},
+  \qquad
+  \texttt{attn_weight}[0, 0, 0, :, :] = \begin{bmatrix} 0.75 \\ 0.25 \end{bmatrix}
+  \]
+</p>
+<p>
+  <strong>Level 0</strong>: \(p_x = 0.5 \cdot 2 - 0.5 = 0.5\) and \(p_y = 0.5\), so
+  \(x_0 = y_0 = 0\) and \(\delta_x = \delta_y = 0.5\) &mdash; all four pixels get weight
+  \(0.25\), giving \(\tfrac{1}{4}\bigl([1, 2] + [3, 4] + [5, 6] + [7, 8]\bigr) = [4, 5]\).
+</p>
+<p>
+  <strong>Level 1</strong>: \(p_x = 0.5 \cdot 1 - 0.5 = 0\) and \(p_y = 0\), so the point lands
+  exactly on the single pixel, giving \([10, 20]\).
+</p>
+<p>
+  Output:
+  \[
+  \texttt{output}[0, 0, :] = 0.75 \cdot [4, 5] + 0.25 \cdot [10, 20]
+  = \begin{bmatrix} 5.5 & 8.75 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 8</li>
+  <li>1 &le; <code>Q</code> &le; 30,000</li>
+  <li>1 &le; <code>H</code> &le; 16</li>
+  <li>1 &le; <code>D</code> &le; 64</li>
+  <li>1 &le; <code>L</code> &le; 8, &nbsp; 1 &le; <code>P</code> &le; 16</li>
+  <li>1 &le; \(h_\ell\), \(w_\ell\) &le; 256 and <code>S</code> = \(\sum_\ell h_\ell w_\ell\)</li>
+  <li><code>attn_weight[n, q, h, :, :]</code> is non-negative and sums to 1</li>
+  <li><code>spatial_shapes</code> is <code>int32</code>; all other tensors are <code>float32</code></li>
+  <li>Performance is measured with <code>N</code> = 2, <code>Q</code> = 20,000, <code>H</code> = 8,
+      <code>D</code> = 32, <code>L</code> = 4, <code>P</code> = 4 and levels
+      128 &times; 128, 64 &times; 64, 32 &times; 32, 16 &times; 16
+      (<code>S</code> = 21,760)</li>
+</ul>
