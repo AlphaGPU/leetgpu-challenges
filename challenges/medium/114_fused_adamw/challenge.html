@@ -1,0 +1,101 @@
+<p>
+  Implement a single fused AdamW optimizer step. Given a flat parameter vector
+  <code>params</code>, its gradient <code>grad</code>, and the optimizer's running
+  first and second moment estimates <code>m</code> and <code>v</code>, update
+  <code>params</code>, <code>m</code>, and <code>v</code> in place for one training
+  step. AdamW is the optimizer behind most modern LLM training runs (GPT, LLaMA,
+  and friends); fusing its handful of elementwise operations into a single kernel
+  avoids several redundant read&ndash;write passes over what can be a very large
+  parameter tensor, which is exactly what a <code>fused=True</code> optimizer does
+  under the hood.
+</p>
+
+<p>
+  For step <code>t</code> (1-indexed), the update is:
+</p>
+<p>
+  \[
+  \begin{align}
+  \theta &\leftarrow \theta \cdot (1 - \eta \cdot \lambda) \\
+  m &\leftarrow \beta_1 m + (1 - \beta_1) g \\
+  v &\leftarrow \beta_2 v + (1 - \beta_2) g^2 \\
+  \hat{m} &= \frac{m}{1 - \beta_1^{t}}, \quad
+  \hat{v} = \frac{v}{1 - \beta_2^{t}} \\
+  \theta &\leftarrow \theta - \eta \cdot \frac{\hat{m}}{\sqrt{\hat{v}} + \epsilon}
+  \end{align}
+  \]
+</p>
+<p>
+  where <code>&theta;</code> is <code>params</code>, <code>g</code> is
+  <code>grad</code>, <code>&eta;</code> is the learning rate <code>lr</code>,
+  <code>&lambda;</code> is <code>weight_decay</code>, and
+  <code>&beta;<sub>1</sub></code>, <code>&beta;<sub>2</sub></code>,
+  <code>&epsilon;</code> are <code>beta1</code>, <code>beta2</code>,
+  <code>eps</code>. The weight decay is <em>decoupled</em>: it is applied directly
+  to <code>params</code> rather than added into <code>grad</code>, which is the
+  detail that distinguishes AdamW from plain Adam with L2 regularization.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Do not change the function signature.</li>
+  <li>Do not use external libraries beyond what is available in the starter.</li>
+  <li><code>params</code>, <code>m</code>, and <code>v</code> are updated in place;
+      there is no separate output buffer.</li>
+  <li>Apply the decoupled weight decay to <code>params</code> using its
+      pre-update value, before computing the moment updates and the adaptive
+      step, matching the order shown above.</li>
+  <li><code>t</code> is always &ge; 1, so the bias-correction denominators are
+      never zero.</li>
+</ul>
+
+<h2>Example 1</h2>
+<pre>
+N = 2, t = 1
+params = [1.0, -1.0]
+grad   = [0.1, -0.1]
+m      = [0.0,  0.0]
+v      = [0.0,  0.0]
+lr = 0.1, beta1 = 0.9, beta2 = 0.999, eps = 1e-8, weight_decay = 0.0
+
+m_new = 0.9*0 + 0.1*grad      = [0.01, -0.01]
+v_new = 0.999*0 + 0.001*grad^2 = [1e-5,  1e-5]
+m_hat = m_new / (1 - 0.9)      = [0.1,  -0.1]
+v_hat = v_new / (1 - 0.999)    = [0.01,  0.01]
+step  = lr * m_hat / (sqrt(v_hat) + eps) = [0.1, -0.1]
+
+params -> [0.9, -0.9]
+</pre>
+
+<h2>Example 2</h2>
+<pre>
+N = 1, t = 1
+params = [1.0]
+grad   = [0.5]
+m      = [0.0]
+v      = [0.0]
+lr = 0.1, beta1 = 0.9, beta2 = 0.999, eps = 1e-8, weight_decay = 0.01
+
+params after decoupled decay: 1.0 * (1 - 0.1*0.01) = 0.999
+m_new = 0.05, v_new = 0.00025
+m_hat = 0.5,  v_hat = 0.25
+step  = 0.1 * 0.5 / (0.5 + 1e-8) = 0.1
+
+params -> 0.999 - 0.1 = 0.899
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 16,777,216</li>
+  <li>1 &le; <code>t</code> &le; 100,000</li>
+  <li><code>params</code>, <code>grad</code>, <code>m</code>, and <code>v</code>
+      are float32</li>
+  <li>Values in <code>params</code> and <code>grad</code> are in the range
+      [&minus;10, 10]</li>
+  <li>0 &lt; <code>lr</code> &le; 1</li>
+  <li>0 &le; <code>beta1</code>, <code>beta2</code> &lt; 1</li>
+  <li>1e-12 &le; <code>eps</code> &le; 1e-2</li>
+  <li>0 &le; <code>weight_decay</code> &le; 1</li>
+  <li><code>v</code> is always non-negative; <code>m</code> may be negative</li>
+  <li>Performance is measured with <code>N</code> = 4,096&times;4,096 = 16,777,216</li>
+</ul>
