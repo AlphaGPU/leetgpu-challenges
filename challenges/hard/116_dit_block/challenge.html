@@ -1,0 +1,263 @@
+<p>
+  Implement a single <strong>DiT</strong> (Diffusion Transformer) block, the layer that Stable
+  Diffusion 3, Flux, and the original DiT stack dozens of times to denoise image latents. Given a
+  batch of patch token sequences \(x\) of shape <code>(batch_size, seq_len, 512)</code>, a
+  per-sample conditioning vector \(c\) of shape <code>(batch_size, 512)</code> (the timestep plus
+  class/text embedding), and a packed weight buffer, compute the block output. Unlike a language
+  model block, normalization here has <em>no learned affine parameters</em>: the scale, shift, and
+  residual gate are predicted from \(c\) by an <strong>adaLN-Zero</strong> modulation layer, so
+  every sample in the batch is normalized with different parameters.
+</p>
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 720" width="430" height="720" style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#999"/>
+    </marker>
+    <marker id="ahg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#cc9944"/>
+    </marker>
+  </defs>
+  <rect width="430" height="720" fill="#222"/>
+
+  <!-- ===== conditioning branch ===== -->
+  <text x="95" y="20" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">c (batch, 512)</text>
+  <line x1="95" y1="28" x2="95" y2="46" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="20" y="49" width="150" height="30" rx="5" fill="#4d3a1e" stroke="#cc9944" stroke-width="1"/>
+  <text x="95" y="69" text-anchor="middle" fill="#eecc99" font-size="12" font-family="sans-serif">SiLU</text>
+  <line x1="95" y1="79" x2="95" y2="97" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="20" y="100" width="150" height="30" rx="5" fill="#4d3a1e" stroke="#cc9944" stroke-width="1"/>
+  <text x="95" y="120" text-anchor="middle" fill="#eecc99" font-size="12" font-family="sans-serif">Linear 512 &#8594; 3072</text>
+  <line x1="95" y1="130" x2="95" y2="148" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="20" y="151" width="150" height="52" rx="5" fill="#333" stroke="#cc9944" stroke-width="1"/>
+  <text x="95" y="169" text-anchor="middle" fill="#eecc99" font-size="10" font-family="monospace">shift_msa scale_msa gate_msa</text>
+  <text x="95" y="190" text-anchor="middle" fill="#eecc99" font-size="10" font-family="monospace">shift_mlp scale_mlp gate_mlp</text>
+
+  <!-- modulation bus -->
+  <line x1="170" y1="177" x2="185" y2="177" stroke="#cc9944" stroke-width="1.5"/>
+  <line x1="185" y1="115" x2="185" y2="606" stroke="#cc9944" stroke-width="1.5"/>
+  <line x1="185" y1="115" x2="200" y2="115" stroke="#cc9944" stroke-width="1.5" marker-end="url(#ahg)"/>
+  <line x1="185" y1="306" x2="264" y2="306" stroke="#cc9944" stroke-width="1.5" marker-end="url(#ahg)"/>
+  <line x1="185" y1="453" x2="200" y2="453" stroke="#cc9944" stroke-width="1.5" marker-end="url(#ahg)"/>
+  <line x1="185" y1="606" x2="264" y2="606" stroke="#cc9944" stroke-width="1.5" marker-end="url(#ahg)"/>
+
+  <!-- ===== main branch ===== -->
+  <text x="280" y="20" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">x (batch, seq_len, 512)</text>
+  <line x1="280" y1="28" x2="280" y2="46" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- residual 1 -->
+  <line x1="280" y1="36" x2="390" y2="36" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="390" y1="36" x2="390" y2="348" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="390" y1="348" x2="297" y2="348" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#ah)"/>
+
+  <rect x="200" y="49" width="160" height="30" rx="5" fill="#333" stroke="#777" stroke-width="1"/>
+  <text x="280" y="69" text-anchor="middle" fill="#ccc" font-size="12" font-family="sans-serif">LayerNorm (no affine)</text>
+  <line x1="280" y1="79" x2="280" y2="97" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="200" y="100" width="160" height="30" rx="5" fill="#4d3a1e" stroke="#cc9944" stroke-width="1"/>
+  <text x="280" y="120" text-anchor="middle" fill="#eecc99" font-size="12" font-family="sans-serif">Modulate (scale, shift)</text>
+  <line x1="280" y1="130" x2="280" y2="148" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="200" y="151" width="160" height="30" rx="5" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+  <text x="280" y="171" text-anchor="middle" fill="#aaccee" font-size="12" font-family="sans-serif">QKV Projection</text>
+  <line x1="280" y1="181" x2="280" y2="199" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="200" y="202" width="160" height="30" rx="5" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+  <text x="280" y="222" text-anchor="middle" fill="#aaccee" font-size="12" font-family="sans-serif">Self-Attention (8 heads)</text>
+  <line x1="280" y1="232" x2="280" y2="250" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="200" y="253" width="160" height="30" rx="5" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+  <text x="280" y="273" text-anchor="middle" fill="#aaccee" font-size="12" font-family="sans-serif">Output Projection</text>
+  <line x1="280" y1="283" x2="280" y2="294" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <circle cx="280" cy="306" r="12" fill="#222" stroke="#cc9944" stroke-width="1.5"/>
+  <text x="280" y="311" text-anchor="middle" fill="#eecc99" font-size="14" font-family="sans-serif">&#8857;</text>
+  <line x1="280" y1="318" x2="280" y2="336" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <circle cx="280" cy="348" r="12" fill="#222" stroke="#999" stroke-width="1.5"/>
+  <text x="280" y="353" text-anchor="middle" fill="#ccc" font-size="15" font-family="sans-serif" font-weight="bold">+</text>
+  <line x1="280" y1="360" x2="280" y2="384" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- residual 2 -->
+  <line x1="280" y1="372" x2="410" y2="372" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="410" y1="372" x2="410" y2="648" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="410" y1="648" x2="297" y2="648" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#ah)"/>
+
+  <rect x="200" y="387" width="160" height="30" rx="5" fill="#333" stroke="#777" stroke-width="1"/>
+  <text x="280" y="407" text-anchor="middle" fill="#ccc" font-size="12" font-family="sans-serif">LayerNorm (no affine)</text>
+  <line x1="280" y1="417" x2="280" y2="435" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="200" y="438" width="160" height="30" rx="5" fill="#4d3a1e" stroke="#cc9944" stroke-width="1"/>
+  <text x="280" y="458" text-anchor="middle" fill="#eecc99" font-size="12" font-family="sans-serif">Modulate (scale, shift)</text>
+  <line x1="280" y1="468" x2="280" y2="486" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="200" y="489" width="160" height="30" rx="5" fill="#1e3d2d" stroke="#44aa66" stroke-width="1"/>
+  <text x="280" y="509" text-anchor="middle" fill="#aaeebb" font-size="12" font-family="sans-serif">GELU&#40;Linear 512&#8594;2048&#41;</text>
+  <line x1="280" y1="519" x2="280" y2="537" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="200" y="540" width="160" height="30" rx="5" fill="#1e3d2d" stroke="#44aa66" stroke-width="1"/>
+  <text x="280" y="560" text-anchor="middle" fill="#aaeebb" font-size="12" font-family="sans-serif">Linear 2048 &#8594; 512</text>
+  <line x1="280" y1="570" x2="280" y2="594" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <circle cx="280" cy="606" r="12" fill="#222" stroke="#cc9944" stroke-width="1.5"/>
+  <text x="280" y="611" text-anchor="middle" fill="#eecc99" font-size="14" font-family="sans-serif">&#8857;</text>
+  <line x1="280" y1="618" x2="280" y2="636" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <circle cx="280" cy="648" r="12" fill="#222" stroke="#999" stroke-width="1.5"/>
+  <text x="280" y="653" text-anchor="middle" fill="#ccc" font-size="15" font-family="sans-serif" font-weight="bold">+</text>
+  <line x1="280" y1="660" x2="280" y2="684" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <text x="280" y="702" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">output (batch, seq_len, 512)</text>
+</svg>
+
+<p>
+  The six modulation vectors are produced once per sample and broadcast across all
+  <code>seq_len</code> tokens of that sample:
+</p>
+
+\[
+\begin{aligned}
+\left[\gamma_{\text{msa}} \mid \alpha_{\text{msa}} \mid g_{\text{msa}} \mid \gamma_{\text{mlp}} \mid \alpha_{\text{mlp}} \mid g_{\text{mlp}}\right]
+&= \text{SiLU}(c)\, W_{\text{ada}}^\top + b_{\text{ada}} \in \mathbb{R}^{B \times 3072}
+\end{aligned}
+\]
+
+<p>where each of the six pieces is a contiguous slice of 512 values (in the order shown) and
+\(\text{SiLU}(z) = z \cdot \sigma(z)\). The block itself is then:</p>
+
+\[
+\begin{aligned}
+h &= \text{LN}(x) \odot (1 + \alpha_{\text{msa}}) + \gamma_{\text{msa}} \\[4pt]
+x' &= x + g_{\text{msa}} \odot \text{Attn}(h) \\[4pt]
+h' &= \text{LN}(x') \odot (1 + \alpha_{\text{mlp}}) + \gamma_{\text{mlp}} \\[4pt]
+\text{output} &= x' + g_{\text{mlp}} \odot \text{MLP}(h')
+\end{aligned}
+\]
+
+<p>with the sub-operations defined as:</p>
+
+\[
+\begin{aligned}
+\text{LN}(z) &= \frac{z - \mu}{\sqrt{\sigma^2 + \varepsilon}}, \quad
+\mu = \frac{1}{d}\sum_i z_i, \quad \sigma^2 = \frac{1}{d}\sum_i (z_i - \mu)^2, \quad \varepsilon = 10^{-6} \\[8pt]
+[Q \mid K \mid V] &= h\, W_{qkv}^\top + b_{qkv}, \quad \text{each reshaped to } (B, T, 8, 64) \\[4pt]
+\text{head}_i &= \text{softmax}\!\left(\frac{Q_i K_i^\top}{\sqrt{64}}\right) V_i \quad \text{(no causal mask)} \\[4pt]
+\text{Attn}(h) &= \text{Concat}(\text{head}_1, \ldots, \text{head}_8)\, W_o^\top + b_o \\[8pt]
+\text{MLP}(h') &= \text{GELU}\!\left(h'\, W_{fc1}^\top + b_{fc1}\right) W_{fc2}^\top + b_{fc2}
+\end{aligned}
+\]
+
+<p>Attention, normalization, and the MLP are applied independently per batch sample; tokens never
+mix across samples.</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>output</code> tensor</li>
+  <li>LayerNorm uses \(\varepsilon = 10^{-6}\) and has no learned weight or bias</li>
+  <li>Modulation scales by \(1 + \alpha\), not \(\alpha\)</li>
+  <li>Self-attention is bidirectional — do <em>not</em> apply a causal mask</li>
+  <li>Use the <a href="https://docs.pytorch.org/docs/stable/generated/torch.nn.GELU.html" target="_blank">GELU tanh approximation</a>: \(\text{GELU}(x) = 0.5\,x\!\left(1 + \tanh\!\left(\sqrt{\tfrac{2}{\pi}}\left(x + 0.044715\,x^3\right)\right)\right)\)</li>
+</ul>
+
+<h2>Weight Layout</h2>
+<p>All block parameters are packed into a single contiguous <code>weights</code> buffer
+(4,726,272 floats) in the order below. All 2-D matrices are stored row-major with shape
+<code>(out_dim, in_dim)</code>, so \(W_{qkv}[i][j]\) lives at
+<code>weights[1575936 + i * 512 + j]</code>.</p>
+
+<table style="border-collapse:separate; border-spacing:16px 6px;">
+  <tr>
+    <th style="text-align:left;">Parameter</th>
+    <th style="text-align:left;">Shape</th>
+    <th style="text-align:right;">Size</th>
+    <th style="text-align:right;">Offset</th>
+  </tr>
+  <tr>
+    <td>\(W_{\text{ada}}\) (adaLN modulation)</td>
+    <td>(3072, 512)</td>
+    <td style="text-align:right;">1,572,864</td>
+    <td style="text-align:right;">0</td>
+  </tr>
+  <tr>
+    <td>\(b_{\text{ada}}\)</td>
+    <td>(3072,)</td>
+    <td style="text-align:right;">3,072</td>
+    <td style="text-align:right;">1,572,864</td>
+  </tr>
+  <tr>
+    <td>\(W_{qkv}\)</td>
+    <td>(1536, 512)</td>
+    <td style="text-align:right;">786,432</td>
+    <td style="text-align:right;">1,575,936</td>
+  </tr>
+  <tr>
+    <td>\(b_{qkv}\)</td>
+    <td>(1536,)</td>
+    <td style="text-align:right;">1,536</td>
+    <td style="text-align:right;">2,362,368</td>
+  </tr>
+  <tr>
+    <td>\(W_o\)</td>
+    <td>(512, 512)</td>
+    <td style="text-align:right;">262,144</td>
+    <td style="text-align:right;">2,363,904</td>
+  </tr>
+  <tr>
+    <td>\(b_o\)</td>
+    <td>(512,)</td>
+    <td style="text-align:right;">512</td>
+    <td style="text-align:right;">2,626,048</td>
+  </tr>
+  <tr>
+    <td>\(W_{fc1}\)</td>
+    <td>(2048, 512)</td>
+    <td style="text-align:right;">1,048,576</td>
+    <td style="text-align:right;">2,626,560</td>
+  </tr>
+  <tr>
+    <td>\(b_{fc1}\)</td>
+    <td>(2048,)</td>
+    <td style="text-align:right;">2,048</td>
+    <td style="text-align:right;">3,675,136</td>
+  </tr>
+  <tr>
+    <td>\(W_{fc2}\)</td>
+    <td>(512, 2048)</td>
+    <td style="text-align:right;">1,048,576</td>
+    <td style="text-align:right;">3,677,184</td>
+  </tr>
+  <tr>
+    <td>\(b_{fc2}\)</td>
+    <td>(512,)</td>
+    <td style="text-align:right;">512</td>
+    <td style="text-align:right;">4,725,760</td>
+  </tr>
+</table>
+
+<h2>Example</h2>
+<p>With <code>batch_size</code> = 1, <code>seq_len</code> = 4, <code>x</code> drawn uniformly from
+[&minus;1, 1], <code>c</code> drawn uniformly from [&minus;2, 2], and randomly initialized
+weights:</p>
+<pre>
+Input:  x.shape       = (1, 4, 512)     # 4 patch tokens
+        c.shape       = (1, 512)        # timestep + class conditioning
+        weights.shape = (4,726,272,)    # packed weight buffer
+        batch_size    = 1
+        seq_len       = 4
+Output: output.shape  = (1, 4, 512)     # denoised patch tokens
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li><code>d_model</code> = 512, <code>n_heads</code> = 8, <code>head_dim</code> = 64,
+      <code>mlp_hidden</code> = 2,048</li>
+  <li>1 &le; <code>batch_size</code> &le; 16</li>
+  <li>1 &le; <code>seq_len</code> &le; 4,096</li>
+  <li>All tensors use 32-bit floating point</li>
+  <li>Performance is measured with <code>batch_size</code> = 4, <code>seq_len</code> = 1,024</li>
+</ul>
