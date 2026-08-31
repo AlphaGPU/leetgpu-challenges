@@ -1,0 +1,194 @@
+<p>
+Implement prefix-cached attention, the attention pattern used during <em>chunked prefill</em> in
+LLM inference systems such as vLLM and TensorRT-LLM. Given query tensors for a chunk of
+<code>new_len</code> tokens and packed key/value tensors containing both a cached prefix of
+<code>cache_len</code> tokens and the new tokens themselves, compute scaled dot-product attention
+where each new query token attends to all cached tokens (full access) and causally to the new
+tokens (lower-triangular access). All tensors use <code>float32</code>.
+</p>
+
+<svg width="680" height="280" viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <rect width="680" height="280" fill="#222" rx="10"/>
+
+  <!-- Title -->
+  <text x="340" y="26" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">Attention mask (cache_len=4, new_len=4, total_len=8)</text>
+
+  <!-- Column labels -->
+  <text x="200" y="55" fill="#60a5fa" font-family="monospace" font-size="11" text-anchor="middle">K cache (j=0..3)</text>
+  <text x="390" y="55" fill="#4ade80" font-family="monospace" font-size="11" text-anchor="middle">K new (j=4..7)</text>
+
+  <!-- Row labels -->
+  <text x="60" y="100" fill="#ccc" font-family="monospace" font-size="11" text-anchor="end">Q[0]</text>
+  <text x="60" y="130" fill="#ccc" font-family="monospace" font-size="11" text-anchor="end">Q[1]</text>
+  <text x="60" y="160" fill="#ccc" font-family="monospace" font-size="11" text-anchor="end">Q[2]</text>
+  <text x="60" y="190" fill="#ccc" font-family="monospace" font-size="11" text-anchor="end">Q[3]</text>
+
+  <!-- Cache block: all 4 queries attend to all 4 cache keys (full rectangle) -->
+  <!-- Row 0 -->
+  <rect x="70" y="82" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <rect x="106" y="82" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <rect x="142" y="82" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <rect x="178" y="82" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <!-- Row 1 -->
+  <rect x="70" y="114" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <rect x="106" y="114" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <rect x="142" y="114" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <rect x="178" y="114" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <!-- Row 2 -->
+  <rect x="70" y="146" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <rect x="106" y="146" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <rect x="142" y="146" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <rect x="178" y="146" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <!-- Row 3 -->
+  <rect x="70" y="178" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <rect x="106" y="178" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <rect x="142" y="178" width="32" height="32" fill="#1d4ed8" rx="2"/>
+  <rect x="178" y="178" width="32" height="32" fill="#1d4ed8" rx="2"/>
+
+  <!-- New-token block: lower-triangular (causal) -->
+  <!-- Row 0: Q[0] attends only to K_new[0] (j=4) -->
+  <rect x="214" y="82" width="32" height="32" fill="#15803d" rx="2"/>
+  <rect x="250" y="82" width="32" height="32" fill="#333" rx="2"/>
+  <rect x="286" y="82" width="32" height="32" fill="#333" rx="2"/>
+  <rect x="322" y="82" width="32" height="32" fill="#333" rx="2"/>
+  <!-- Row 1: Q[1] attends to K_new[0,1] -->
+  <rect x="214" y="114" width="32" height="32" fill="#15803d" rx="2"/>
+  <rect x="250" y="114" width="32" height="32" fill="#15803d" rx="2"/>
+  <rect x="286" y="114" width="32" height="32" fill="#333" rx="2"/>
+  <rect x="322" y="114" width="32" height="32" fill="#333" rx="2"/>
+  <!-- Row 2: Q[2] attends to K_new[0,1,2] -->
+  <rect x="214" y="146" width="32" height="32" fill="#15803d" rx="2"/>
+  <rect x="250" y="146" width="32" height="32" fill="#15803d" rx="2"/>
+  <rect x="286" y="146" width="32" height="32" fill="#15803d" rx="2"/>
+  <rect x="322" y="146" width="32" height="32" fill="#333" rx="2"/>
+  <!-- Row 3: Q[3] attends to all K_new -->
+  <rect x="214" y="178" width="32" height="32" fill="#15803d" rx="2"/>
+  <rect x="250" y="178" width="32" height="32" fill="#15803d" rx="2"/>
+  <rect x="286" y="178" width="32" height="32" fill="#15803d" rx="2"/>
+  <rect x="322" y="178" width="32" height="32" fill="#15803d" rx="2"/>
+
+  <!-- Divider between cache and new blocks -->
+  <line x1="212" y1="78" x2="212" y2="216" stroke="#aaa" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+  <!-- Legend -->
+  <rect x="430" y="100" width="16" height="16" fill="#1d4ed8" rx="2"/>
+  <text x="452" y="113" fill="#ccc" font-family="monospace" font-size="12">attend (cache)</text>
+  <rect x="430" y="124" width="16" height="16" fill="#15803d" rx="2"/>
+  <text x="452" y="137" fill="#ccc" font-family="monospace" font-size="12">attend (causal)</text>
+  <rect x="430" y="148" width="16" height="16" fill="#333" rx="2"/>
+  <text x="452" y="161" fill="#ccc" font-family="monospace" font-size="12">masked out</text>
+
+  <text x="430" y="195" fill="#4ade80" font-family="monospace" font-size="11">mask: j &lt;= cache_len + i</text>
+  <text x="430" y="213" fill="#4ade80" font-family="monospace" font-size="11">scale = 1 / sqrt(head_dim)</text>
+  <text x="430" y="231" fill="#4ade80" font-family="monospace" font-size="11">output = softmax(scores) @ V</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the function <code>solve(Q, K, V, output, num_heads, cache_len, new_len, head_dim)</code>.</li>
+  <li>Do not change the function signature or use external libraries beyond the standard GPU frameworks.</li>
+  <li>Write the result into the provided <code>output</code> buffer.</li>
+  <li>Use scaled dot-product attention with scale factor <code>1 / sqrt(head_dim)</code>.</li>
+  <li>
+    Apply the causal mask: query token <code>i</code> (at absolute sequence position
+    <code>cache_len + i</code>) attends to key token <code>j</code> if and only if
+    <code>j &le; cache_len + i</code>. Masked positions receive <code>-inf</code> before
+    softmax.
+  </li>
+  <li>
+    <code>K</code> and <code>V</code> are packed buffers of shape
+    <code>(num_heads, cache_len + new_len, head_dim)</code>; the first <code>cache_len</code>
+    positions along the sequence dimension are the cached prefix.
+  </li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  With <code>num_heads</code> = 2, <code>cache_len</code> = 2, <code>new_len</code> = 2,
+  <code>head_dim</code> = 4 (total_len = 4):
+</p>
+<p>
+  <strong>Input:</strong><br>
+  \(Q_0\) (2&times;4):
+  \[
+  \begin{bmatrix}
+  1 & 0 & 0 & 1 \\
+  0 & 1 & 1 & 0
+  \end{bmatrix}
+  \]
+  \(Q_1\) (2&times;4):
+  \[
+  \begin{bmatrix}
+  0 & 1 & 0 & 1 \\
+  1 & 0 & 1 & 0
+  \end{bmatrix}
+  \]
+  \(K_0\) (4&times;4, cache rows first):
+  \[
+  \begin{bmatrix}
+  1 & 0 & 1 & 0 \\
+  0 & 1 & 0 & 1 \\
+  1 & 1 & 0 & 0 \\
+  0 & 0 & 1 & 1
+  \end{bmatrix}
+  \]
+  \(K_1\) (4&times;4):
+  \[
+  \begin{bmatrix}
+  0 & 1 & 0 & -1 \\
+  -1 & 0 & 1 & 0 \\
+  1 & 0 & -1 & 0 \\
+  0 & 1 & 0 & 1
+  \end{bmatrix}
+  \]
+  \(V_0\) (4&times;4):
+  \[
+  \begin{bmatrix}
+  1 & 2 & 3 & 4 \\
+  5 & 6 & 7 & 8 \\
+  9 & 10 & 11 & 12 \\
+  13 & 14 & 15 & 16
+  \end{bmatrix}
+  \]
+  \(V_1\) (4&times;4):
+  \[
+  \begin{bmatrix}
+  -1 & -2 & -3 & -4 \\
+  2 & 3 & 4 & 5 \\
+  6 & 7 & 8 & 9 \\
+  -2 & -3 & -4 & -5
+  \end{bmatrix}
+  \]
+  \(\text{cache\_len} = 2\), \(\text{new\_len} = 2\).<br>
+  Query token 0 (absolute position 2) attends to \(K[\,:\,,\,0{:}3,\,:\,]\); token 1 attends to all four keys.
+</p>
+<p>
+  <strong>Output</strong> (values rounded to 2 decimal places):<br>
+  \(\text{output}_0\) (2&times;4):
+  \[
+  \begin{bmatrix}
+  5.00 & 6.00 & 7.00 & 8.00 \\
+  7.00 & 8.00 & 9.00 & 10.00
+  \end{bmatrix}
+  \]
+  \(\text{output}_1\) (2&times;4):
+  \[
+  \begin{bmatrix}
+  2.33 & 2.67 & 3.00 & 3.33 \\
+  1.25 & 1.25 & 1.25 & 1.25
+  \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>num_heads</code> &le; 64</li>
+  <li>0 &le; <code>cache_len</code> &le; 4,096</li>
+  <li>1 &le; <code>new_len</code> &le; 1,024</li>
+  <li>8 &le; <code>head_dim</code> &le; 256; <code>head_dim</code> is a multiple of 8</li>
+  <li>All tensor values are <code>float32</code></li>
+  <li>
+    Performance is measured with <code>num_heads</code> = 32, <code>cache_len</code> = 1,024,
+    <code>new_len</code> = 512, <code>head_dim</code> = 128
+  </li>
+</ul>
