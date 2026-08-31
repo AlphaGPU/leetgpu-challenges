@@ -1,0 +1,118 @@
+<p>
+  Implement an <strong>NVFP4</strong> matrix multiplication, the low-precision GEMM that powers
+  state-of-the-art LLM inference on Hopper and Blackwell GPUs. Both operands are stored in 4-bit
+  floating point (FP4 E2M1) with per-block FP8 (E4M3) scales along the reduction dimension, plus
+  a single per-tensor FP32 scale. Given packed activations <code>x_q</code> of shape
+  <code>M &times; K</code>, packed weights <code>w_q</code> of shape <code>N &times; K</code>,
+  and their respective block scales, compute
+  <code>y = alpha &times; (x &times; w<sup>T</sup>)</code> of shape <code>M &times; N</code>
+  in float16.
+</p>
+
+<p>
+  <strong>FP4 E2M1 encoding:</strong> Each weight is 4 bits
+  [sign | exp (2 bits) | mantissa (1 bit)] representing one of sixteen values:
+  <code>{&plusmn;0, &plusmn;0.5, &plusmn;1, &plusmn;1.5, &plusmn;2, &plusmn;3, &plusmn;4, &plusmn;6}</code>.
+  The nibble-to-value mapping is:
+</p>
+<pre>
+  0x0 =  0.0    0x8 = -0.0
+  0x1 =  0.5    0x9 = -0.5
+  0x2 =  1.0    0xA = -1.0
+  0x3 =  1.5    0xB = -1.5
+  0x4 =  2.0    0xC = -2.0
+  0x5 =  3.0    0xD = -3.0
+  0x6 =  4.0    0xE = -4.0
+  0x7 =  6.0    0xF = -6.0
+</pre>
+
+<p>
+  <strong>Packing:</strong> Each byte of <code>x_q</code> / <code>w_q</code> stores two FP4
+  values. The high nibble (bits 7&ndash;4) holds the even-index value and the low nibble
+  (bits 3&ndash;0) holds the odd-index value.
+</p>
+
+<p>
+  <strong>Block scales:</strong> Each contiguous block of <strong>16</strong> FP4 values along
+  the <code>K</code> dimension shares one E4M3 (float8) scale. The scale tensors
+  <code>x_scales</code> and <code>w_scales</code> are passed as raw uint8 bytes holding the
+  E4M3 bit patterns. Dequantization is:
+</p>
+<pre>
+x[m, k] = fp4_decode(x_q_nibble[m, k]) * e4m3_decode(x_scales[m, k // 16])
+w[n, k] = fp4_decode(w_q_nibble[n, k]) * e4m3_decode(w_scales[n, k // 16])
+y[m, n] = alpha * sum_k x[m, k] * w[n, k]
+</pre>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>y</code> as float16</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input (<code>M</code> = 2, <code>N</code> = 2, <code>K</code> = 16, <code>alpha</code> = 1.0):
+</p>
+<p>
+  Packed activations \(x\_q\) (uint8, \(2 \times 8\)) and decoded FP4 values (each row has
+  sixteen values):
+  \[
+  x\_q =
+  \begin{bmatrix}
+  \texttt{0x22} & \cdots & \texttt{0x22} \\
+  \texttt{0x11} & \cdots & \texttt{0x11}
+  \end{bmatrix}
+  \;\Rightarrow\;
+  x_{\text{fp4}} =
+  \begin{bmatrix}
+  1.0 & 1.0 & \cdots & 1.0 \\
+  0.5 & 0.5 & \cdots & 0.5
+  \end{bmatrix}
+  \]
+  Packed weights \(w\_q\) (uint8, \(2 \times 8\)):
+  \[
+  w\_q =
+  \begin{bmatrix}
+  \texttt{0x44} & \cdots & \texttt{0x44} \\
+  \texttt{0xAA} & \cdots & \texttt{0xAA}
+  \end{bmatrix}
+  \;\Rightarrow\;
+  w_{\text{fp4}} =
+  \begin{bmatrix}
+  2.0 & 2.0 & \cdots & 2.0 \\
+  -1.0 & -1.0 & \cdots & -1.0
+  \end{bmatrix}
+  \]
+  Block scales (one block per row since <code>K</code> = 16): both
+  <code>x_scales</code> and <code>w_scales</code> are uint8 \(2 \times 1\) with every byte
+  equal to <code>0x38</code>, which is the E4M3 bit pattern for 1.0. The dequantized operands
+  therefore equal the FP4 values above.
+</p>
+<p>
+  Output \(y = \alpha \cdot (x \times w^T)\) (float16, \(2 \times 2\)):
+  \[
+  \begin{bmatrix}
+  \sum 1.0 \cdot 2.0 & \sum 1.0 \cdot (-1.0) \\
+  \sum 0.5 \cdot 2.0 & \sum 0.5 \cdot (-1.0)
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+  32.0 & -16.0 \\
+  16.0 & -8.0
+  \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code>, <code>N</code> &le; 32,768</li>
+  <li>16 &le; <code>K</code> &le; 32,768</li>
+  <li><code>K</code> is divisible by <strong>16</strong> (the NVFP4 block size)</li>
+  <li>All tensors are stored in row-major order</li>
+  <li>Inputs: <code>x_q</code>, <code>w_q</code>, <code>x_scales</code>, <code>w_scales</code>
+      are <code>uint8</code>; <code>alpha</code> is <code>float32</code></li>
+  <li>Output: <code>y</code> is <code>float16</code></li>
+  <li>Performance is measured with <code>M</code> = 2,048, <code>N</code> = 18,432, <code>K</code> = 3,072</li>
+</ul>
