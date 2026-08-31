@@ -1,0 +1,58 @@
+<p>
+Implement batched <em>min-p sampling</em>, a logit-filtering primitive used in modern LLM serving
+stacks such as vLLM, Hugging Face TGI, and llama.cpp. Given a batch of logits
+<code>logits</code> of shape \(B \times V\) and a scalar <code>min_p</code> in \([0, 1]\), produce
+a batch of filtered probabilities <code>probs</code> of the same shape. For each row \(b\):
+</p>
+<ol>
+  <li>Convert logits to probabilities with softmax: \(p_{b,i} = \exp(z_{b,i}) / \sum_j \exp(z_{b,j})\).</li>
+  <li>Find the maximum probability in the row: \(p^{\max}_b = \max_i p_{b,i}\).</li>
+  <li>Mask every token whose probability is below \(\text{min\_p} \cdot p^{\max}_b\) (set it to 0).</li>
+  <li>Renormalize the surviving probabilities so they sum to 1.</li>
+</ol>
+<p>
+Unlike top-k or top-p sampling, min-p does not require any sort: the cutoff is defined relative
+to the row's most likely token, which makes it well-suited to GPU parallelization while still
+adapting to how peaked or flat each distribution is.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement <code>solve(logits, probs, min_p, B, V)</code>; do not change the signature or use external libraries beyond the standard GPU frameworks.</li>
+  <li>Write the result into the provided <code>probs</code> buffer. Every row must sum to exactly 1; masked positions must be exactly 0.</li>
+  <li>Apply min-p independently per row of the batch.</li>
+  <li>Use the numerically stable softmax (subtract the per-row max before exponentiating).</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  With <code>B</code> = 2, <code>V</code> = 4, <code>min_p</code> = 0.1:
+</p>
+<p>
+  <strong>Input</strong> <code>logits</code> (2&times;4):
+  \[
+  \begin{bmatrix} 1.0 & 2.0 & 3.0 & 4.0 \\ -1.0 & 0.0 & 1.0 & -2.0 \end{bmatrix}
+  \]
+</p>
+<p>
+  For row 0, \(\max z = 4\) so \(e = [e^{-3}, e^{-2}, e^{-1}, e^{0}] \approx [0.0498, 0.1353, 0.3679, 1.0000]\).
+  The first entry falls below the threshold \(\text{min\_p} = 0.1\) (note that \(e^{-3} / \sum e &lt; 0.1 \cdot e^{0} / \sum e\)),
+  so it is masked. Renormalizing the rest gives row 0 of <code>probs</code>.
+  For row 1, \(\max z = 1\) and the last entry is masked by the same reasoning.
+</p>
+<p>
+  <strong>Output</strong> <code>probs</code> (2&times;4):
+  \[
+  \begin{bmatrix} 0.0000 & 0.0900 & 0.2447 & 0.6652 \\ 0.0900 & 0.2447 & 0.6652 & 0.0000 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 256</li>
+  <li>1 &le; <code>V</code> &le; 200,000</li>
+  <li>0.0 &le; <code>min_p</code> &le; 1.0</li>
+  <li>-50.0 &le; <code>logits[b, i]</code> &le; 50.0</li>
+  <li>Inputs and outputs are <code>float32</code></li>
+  <li>Performance is measured with <code>B</code> = 64, <code>V</code> = 128,000, <code>min_p</code> = 0.05</li>
+</ul>
