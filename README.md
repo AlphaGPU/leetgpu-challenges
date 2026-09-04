@@ -20,6 +20,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on contributing new challe
 
 ## License
 
-This problem set is licensed under [CC BY‑NC‑ND 4.0 license](LICENSE).
+This problem set is licensed under the [CC BY-NC-ND 4.0 license](LICENSE).
 
-© 2025 AlphaGPU, LLC. Commercial use, redistribution, or derivative use is prohibited.
+Copyright 2025 AlphaGPU, LLC. Commercial use, redistribution, or derivative use is prohibited.
