@@ -1,0 +1,150 @@
+<p>
+  Implement <strong>Non-Maximum Suppression</strong> (NMS), the post-processing pass that every
+  object detector runs after the network forward pass: the model emits thousands of overlapping
+  candidate boxes, and NMS collapses them down to one box per object. Given <code>N</code> boxes in
+  corner format <code>(x1, y1, x2, y2)</code> together with their confidence <code>scores</code>,
+  walk the boxes from the highest score to the lowest; every box that has not been suppressed yet
+  is kept, and it suppresses all lower-scoring boxes whose intersection over union (IoU) with it is
+  greater than <code>iou_threshold</code>. Write a 1 into <code>keep[i]</code> for a surviving box
+  and a 0 for a suppressed one.
+</p>
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 350" width="700" height="350" style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="nmsah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#999"/>
+    </marker>
+  </defs>
+  <rect width="700" height="350" fill="#222"/>
+
+  <!-- ===== input: 6 candidate boxes ===== -->
+  <text x="156" y="26" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">6 candidates</text>
+  <g transform="translate(30,44)">
+    <rect x="0" y="0" width="96" height="96" fill="none" stroke="#4477bb" stroke-width="2"/>
+    <text x="5" y="14" fill="#aaccee" font-size="11" font-family="monospace">0.90</text>
+    <rect x="12" y="12" width="96" height="96" fill="none" stroke="#4477bb" stroke-width="2"/>
+    <text x="17" y="105" fill="#aaccee" font-size="11" font-family="monospace">0.75</text>
+    <rect x="144" y="0" width="96" height="96" fill="none" stroke="#4477bb" stroke-width="2"/>
+    <text x="149" y="14" fill="#aaccee" font-size="11" font-family="monospace">0.95</text>
+    <rect x="156" y="12" width="96" height="96" fill="none" stroke="#4477bb" stroke-width="2"/>
+    <text x="161" y="105" fill="#aaccee" font-size="11" font-family="monospace">0.60</text>
+    <rect x="72" y="120" width="96" height="96" fill="none" stroke="#4477bb" stroke-width="2"/>
+    <text x="77" y="134" fill="#aaccee" font-size="11" font-family="monospace">0.55</text>
+    <rect x="84" y="132" width="96" height="96" fill="none" stroke="#4477bb" stroke-width="2"/>
+    <text x="89" y="225" fill="#aaccee" font-size="11" font-family="monospace">0.50</text>
+  </g>
+
+  <!-- ===== arrow ===== -->
+  <text x="341" y="158" text-anchor="middle" fill="#ccc" font-size="12" font-family="monospace">NMS</text>
+  <text x="341" y="176" text-anchor="middle" fill="#888" font-size="11" font-family="monospace">IoU &gt; 0.5</text>
+  <line x1="300" y1="190" x2="382" y2="190" stroke="#999" stroke-width="1.5" marker-end="url(#nmsah)"/>
+
+  <!-- ===== output: 3 survivors ===== -->
+  <text x="526" y="26" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">3 survivors</text>
+  <g transform="translate(400,44)">
+    <rect x="0" y="0" width="96" height="96" fill="#1e3d2d" stroke="#44aa66" stroke-width="2.5"/>
+    <text x="5" y="14" fill="#aaeebb" font-size="11" font-family="monospace">0.90</text>
+    <rect x="12" y="12" width="96" height="96" fill="none" stroke="#666" stroke-width="1.5" stroke-dasharray="4,4"/>
+    <text x="17" y="105" fill="#777" font-size="11" font-family="monospace">0.75</text>
+    <rect x="144" y="0" width="96" height="96" fill="#1e3d2d" stroke="#44aa66" stroke-width="2.5"/>
+    <text x="149" y="14" fill="#aaeebb" font-size="11" font-family="monospace">0.95</text>
+    <rect x="156" y="12" width="96" height="96" fill="none" stroke="#666" stroke-width="1.5" stroke-dasharray="4,4"/>
+    <text x="161" y="105" fill="#777" font-size="11" font-family="monospace">0.60</text>
+    <rect x="72" y="120" width="96" height="96" fill="#1e3d2d" stroke="#44aa66" stroke-width="2.5"/>
+    <text x="77" y="134" fill="#aaeebb" font-size="11" font-family="monospace">0.55</text>
+    <rect x="84" y="132" width="96" height="96" fill="none" stroke="#666" stroke-width="1.5" stroke-dasharray="4,4"/>
+    <text x="89" y="225" fill="#777" font-size="11" font-family="monospace">0.50</text>
+  </g>
+
+  <text x="526" y="304" text-anchor="middle" fill="#ccc" font-size="12" font-family="monospace">keep = [1, 0, 1, 0, 1, 0]</text>
+  <text x="526" y="326" text-anchor="middle" fill="#888" font-size="11" font-family="monospace">solid = kept, dashed = suppressed</text>
+</svg>
+
+<p>The overlap of two boxes \(a\) and \(b\) is measured by their intersection over union:</p>
+
+\[
+\text{IoU}(a, b) = \frac{|a \cap b|}{|a| + |b| - |a \cap b|}
+\]
+
+\[
+|a| = (x_2^a - x_1^a)\,(y_2^a - y_1^a), \qquad
+|a \cap b| = w \cdot h
+\]
+
+\[
+w = \max\!\left(0,\; \min(x_2^a, x_2^b) - \max(x_1^a, x_1^b)\right), \qquad
+h = \max\!\left(0,\; \min(y_2^a, y_2^b) - \max(y_1^a, y_1^b)\right)
+\]
+
+<h2>Algorithm</h2>
+<ol>
+  <li>Order the box indices by score, from highest to lowest. Boxes with equal scores are ordered
+      by increasing index.</li>
+  <li>Traverse that order. If the current box has already been suppressed, skip it. Otherwise set
+      its <code>keep</code> entry to 1 and suppress every box that appears later in the order whose
+      IoU with it is greater than <code>iou_threshold</code>.</li>
+  <li>Every suppressed box gets a <code>keep</code> entry of 0.</li>
+</ol>
+
+<p>
+  A suppressed box never suppresses anything itself, so the decisions are chained: whether box
+  \(j\) survives depends on which higher-scoring boxes survived before it.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>keep</code> tensor</li>
+  <li>A box is suppressed only when its IoU is strictly greater than <code>iou_threshold</code></li>
+  <li><code>keep</code> is indexed by the original box order, not by the score-sorted order</li>
+  <li>Every entry of <code>keep</code> must be written: 1 for a kept box, 0 for a suppressed box</li>
+</ul>
+
+<h2>Example</h2>
+<p>Six candidates covering three objects, with <code>iou_threshold</code> = 0.5:</p>
+
+\[
+\text{boxes} =
+\begin{bmatrix}
+0 & 0 & 40 & 40 \\
+5 & 5 & 45 & 45 \\
+60 & 0 & 100 & 40 \\
+65 & 5 & 105 & 45 \\
+30 & 50 & 70 & 90 \\
+35 & 55 & 75 & 95
+\end{bmatrix}, \qquad
+\text{scores} =
+\begin{bmatrix}
+0.90 & 0.75 & 0.95 & 0.60 & 0.55 & 0.50
+\end{bmatrix}
+\]
+
+\[
+\text{keep} =
+\begin{bmatrix}
+1 & 0 & 1 & 0 & 1 & 0
+\end{bmatrix}
+\]
+
+<p>
+  Box 2 has the highest score, so it is kept and suppresses box 3
+  (\(\text{IoU} = \tfrac{1225}{1975} \approx 0.62\)). Box 0 is kept next and suppresses box 1 by
+  the same overlap, and box 4 is kept and suppresses box 5. Boxes from different objects never
+  overlap here, so all three winners survive.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 20,000</li>
+  <li><code>boxes</code> has shape <code>(N, 4)</code> and is stored row-major as
+      <code>(x1, y1, x2, y2)</code> with <code>x1</code> &lt; <code>x2</code> and
+      <code>y1</code> &lt; <code>y2</code></li>
+  <li>Box coordinates are integer-valued and lie in [&minus;10,000, 10,000]</li>
+  <li>0 &le; <code>scores</code>[i] &le; 1; equal scores are possible</li>
+  <li>0 &le; <code>iou_threshold</code> &le; 1</li>
+  <li><code>boxes</code> and <code>scores</code> are 32-bit floating point,
+      <code>keep</code> is 32-bit signed integer</li>
+  <li>Performance is measured with <code>N</code> = 16,384 and
+      <code>iou_threshold</code> = 0.5</li>
+</ul>
