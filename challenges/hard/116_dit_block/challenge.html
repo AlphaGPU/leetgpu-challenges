@@ -120,7 +120,7 @@
 
 \[
 \begin{aligned}
-\left[\gamma_{\text{msa}} \mid \alpha_{\text{msa}} \mid g_{\text{msa}} \mid \gamma_{\text{mlp}} \mid \alpha_{\text{mlp}} \mid g_{\text{mlp}}\right]
+\left[\text{shift}_{\text{msa}} \mid \text{scale}_{\text{msa}} \mid \text{gate}_{\text{msa}} \mid \text{shift}_{\text{mlp}} \mid \text{scale}_{\text{mlp}} \mid \text{gate}_{\text{mlp}}\right]
 &= \text{SiLU}(c)\, W_{\text{ada}}^\top + b_{\text{ada}} \in \mathbb{R}^{B \times 3072}
 \end{aligned}
 \]
@@ -130,10 +130,10 @@
 
 \[
 \begin{aligned}
-h &= \text{LN}(x) \odot (1 + \alpha_{\text{msa}}) + \gamma_{\text{msa}} \\[4pt]
-x' &= x + g_{\text{msa}} \odot \text{Attn}(h) \\[4pt]
-h' &= \text{LN}(x') \odot (1 + \alpha_{\text{mlp}}) + \gamma_{\text{mlp}} \\[4pt]
-\text{output} &= x' + g_{\text{mlp}} \odot \text{MLP}(h')
+h &= \text{LN}(x) \odot (1 + \text{scale}_{\text{msa}}) + \text{shift}_{\text{msa}} \\[4pt]
+x' &= x + \text{gate}_{\text{msa}} \odot \text{Attn}(h) \\[4pt]
+h' &= \text{LN}(x') \odot (1 + \text{scale}_{\text{mlp}}) + \text{shift}_{\text{mlp}} \\[4pt]
+\text{output} &= x' + \text{gate}_{\text{mlp}} \odot \text{MLP}(h')
 \end{aligned}
 \]
 
@@ -159,7 +159,7 @@ mix across samples.</p>
   <li>The <code>solve</code> function signature must remain unchanged</li>
   <li>The final result must be stored in the <code>output</code> tensor</li>
   <li>LayerNorm uses \(\varepsilon = 10^{-6}\) and has no learned weight or bias</li>
-  <li>Modulation scales by \(1 + \alpha\), not \(\alpha\)</li>
+  <li>Modulation scales by \(1 + \text{scale}\), not \(\text{scale}\)</li>
   <li>Self-attention is bidirectional — do <em>not</em> apply a causal mask</li>
   <li>Use the <a href="https://docs.pytorch.org/docs/stable/generated/torch.nn.GELU.html" target="_blank">GELU tanh approximation</a>: \(\text{GELU}(x) = 0.5\,x\!\left(1 + \tanh\!\left(\sqrt{\tfrac{2}{\pi}}\left(x + 0.044715\,x^3\right)\right)\right)\)</li>
 </ul>
