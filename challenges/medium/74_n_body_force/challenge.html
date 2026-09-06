@@ -1,0 +1,58 @@
+<p>
+  Given <code>N</code> bodies in 3D space, each with a position vector
+  <code>(x, y, z)</code> and a scalar mass, compute the gravitational force acting on each body
+  due to all other bodies. The softened gravitational force on body <code>i</code> is:
+</p>
+<p>
+  \[
+    \mathbf{F}_i = \sum_{j \neq i} m_j
+      \frac{\mathbf{r}_j - \mathbf{r}_i}
+           {\left(|\mathbf{r}_j - \mathbf{r}_i|^2 + \varepsilon^2\right)^{3/2}}
+  \]
+</p>
+<p>
+  where \(\varepsilon = 10^{-3}\) is a softening factor that prevents singularities when two
+  bodies occupy the same position. Positions and forces are stored in row-major order:
+  <code>array[i * 3 + k]</code> is the <em>k</em>-th coordinate of body <code>i</code>.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native GPU features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The computed force for each body must be written to <code>forces</code></li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input (<code>N</code> = 2):<br>
+  positions:
+  \[
+  \begin{bmatrix}
+  0.0 & 0.0 & 0.0 \\
+  0.0 & 3.0 & 4.0
+  \end{bmatrix}
+  \]
+  masses:
+  \[
+  \begin{bmatrix}
+  2.0 & 1.0
+  \end{bmatrix}
+  \]
+  Output:<br>
+  forces:
+  \[
+  \begin{bmatrix}
+  0.000 & 0.024 & 0.032 \\
+  0.000 & -0.048 & -0.064
+  \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 65,536</li>
+  <li>Positions and forces are <code>float32</code> arrays of shape <code>N</code> &times; 3 in row-major order</li>
+  <li>0.0 &lt; <code>masses[i]</code> &le; 100.0</li>
+  <li>Performance is measured with <code>N</code> = 8,192</li>
+</ul>
