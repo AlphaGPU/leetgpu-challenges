@@ -1,4 +1,4 @@
-name: Check Challenge Indexes
+name: Validate Challenge Structure
 
 on:
   pull_request:
@@ -18,21 +18,5 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: Check for duplicate indexes
-      run: |
-        python - << 'EOF'
-        import os
-        import collections
-
-        challenges_dir = "challenges"
-
-        questions = collections.defaultdict(list)
-        for folder in os.listdir(challenges_dir):
-            folder_path = os.path.join(challenges_dir, folder)
-            for question in os.listdir(folder_path):
-                idx = question.split("_")[0]
-                questions[idx].append(question)
-                if len(questions[idx]) > 1:
-                    print(f"PR duplicated found: \n {questions[idx]}.")
-                    exit(1)
-        EOF
+    - name: Validate challenge structure
+      run: python scripts/validate_challenges.py
