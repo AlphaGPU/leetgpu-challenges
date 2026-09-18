@@ -5,8 +5,8 @@ from std.math import ceildiv
 
 
 def fnv1a_hash(input: UInt32) -> UInt32:
-    comptime FNV_PRIME: UInt32 = 16777619
-    comptime OFFSET_BASIS: UInt32 = 2166136261
+    alias FNV_PRIME: UInt32 = 16777619
+    alias OFFSET_BASIS: UInt32 = 2166136261
 
     var hash: UInt32 = OFFSET_BASIS
 
