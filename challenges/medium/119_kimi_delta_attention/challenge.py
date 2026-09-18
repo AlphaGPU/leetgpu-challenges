@@ -69,9 +69,6 @@ class Challenge(ChallengeBase):
         alpha = jnp.asarray(alpha, dtype=jnp.float32)  # (batch, seq_len, d)
         beta = jnp.asarray(beta, dtype=jnp.float32)  # (batch, seq_len)
 
-        batch = Q.shape[0]
-        d = Q.shape[2]
-
         # Move sequence axis to front for scanning.
         Q_t = jnp.transpose(Q, (1, 0, 2))  # (seq_len, batch, d)
         K_t = jnp.transpose(K, (1, 0, 2))  # (seq_len, batch, d)
