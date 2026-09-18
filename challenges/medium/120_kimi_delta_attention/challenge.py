@@ -179,8 +179,8 @@ class Challenge(ChallengeBase):
         # realistic: chunk-boundary-crossing length with typical head dim
         tests.append(self._make_test_case(2, 200, 64))
 
-        # realistic: full head dim
-        tests.append(self._make_test_case(2, 256, 128))
+        # realistic: long sequence at full head dim, spanning many chunks
+        tests.append(self._make_test_case(2, 1024, 128))
 
         return tests
 
