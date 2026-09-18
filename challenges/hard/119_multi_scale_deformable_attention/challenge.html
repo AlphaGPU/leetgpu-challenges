@@ -1,0 +1,180 @@
+<p>
+Implement the forward pass of <strong>multi-scale deformable attention</strong>, the attention
+operator at the heart of Deformable DETR, Grounding DINO, and BEVFormer. Instead of comparing a
+query against every spatial location, each query predicts a handful of <em>sampling offsets</em>
+and attends only to those few points, drawn from several feature maps of different resolutions.
+The cost therefore does not grow with the image size, but every sample lands at a fractional
+coordinate and must be read with bilinear interpolation from an irregular address.
+</p>
+
+<p>
+The <code>num_levels</code> feature maps are concatenated into a single <code>value</code> buffer:
+level \(l\) has resolution \(H_l \times W_l\) and occupies \(H_l W_l\) consecutive rows, stored
+row-major, starting at the exclusive prefix sum
+\(\text{start}_l = \sum_{j&lt;l} H_j W_j\). Each of the <code>num_queries</code> queries carries
+<code>num_points</code> sampling locations per head and per level, given in normalized
+\([0, 1]\) coordinates as \((x, y)\), together with one scalar attention weight per sample.
+</p>
+
+<svg width="720" height="372" viewBox="0 0 720 372" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <rect width="720" height="372" fill="#222" rx="10"/>
+  <text x="360" y="26" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">one query, one head: P points sampled from each of L feature maps</text>
+
+  <!-- flattened value buffer -->
+  <text x="30" y="52" fill="#aaa" font-family="monospace" font-size="12">value rows: the L levels stored back to back</text>
+  <rect x="30" y="60" width="290" height="24" fill="#1d4ed8" rx="3"/>
+  <rect x="320" y="60" width="150" height="24" fill="#0f766e" rx="3"/>
+  <rect x="470" y="60" width="80" height="24" fill="#9333ea" rx="3"/>
+  <text x="175" y="77" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">level 0: H0*W0 rows</text>
+  <text x="395" y="77" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">level 1</text>
+  <text x="510" y="77" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">level 2</text>
+  <line x1="30" y1="88" x2="30" y2="96" stroke="#888" stroke-width="1"/>
+  <line x1="320" y1="88" x2="320" y2="96" stroke="#888" stroke-width="1"/>
+  <line x1="470" y1="88" x2="470" y2="96" stroke="#888" stroke-width="1"/>
+  <text x="30" y="108" fill="#888" font-family="monospace" font-size="10" text-anchor="middle">0</text>
+  <text x="320" y="108" fill="#888" font-family="monospace" font-size="10" text-anchor="middle">start1</text>
+  <text x="470" y="108" fill="#888" font-family="monospace" font-size="10" text-anchor="middle">start2</text>
+  <text x="600" y="77" fill="#888" font-family="monospace" font-size="10">each row holds M*D floats</text>
+
+  <!-- level 0 grid, 4x4 -->
+  <text x="84" y="138" fill="#aaa" font-family="monospace" font-size="11" text-anchor="middle">level 0 (4 x 4)</text>
+  <rect x="62" y="146" width="44" height="44" fill="#31456e"/>
+  <g stroke="#1d4ed8" stroke-width="1" fill="none">
+    <rect x="40" y="146" width="88" height="88"/>
+    <line x1="62" y1="146" x2="62" y2="234"/>
+    <line x1="84" y1="146" x2="84" y2="234"/>
+    <line x1="106" y1="146" x2="106" y2="234"/>
+    <line x1="40" y1="168" x2="128" y2="168"/>
+    <line x1="40" y1="190" x2="128" y2="190"/>
+    <line x1="40" y1="212" x2="128" y2="212"/>
+  </g>
+  <circle cx="82" cy="171" r="3.5" fill="#f87171"/>
+  <circle cx="115" cy="204" r="3.5" fill="#f87171"/>
+  <text x="84" y="252" fill="#f87171" font-family="monospace" font-size="10" text-anchor="middle">shaded = 4 pixels blended</text>
+
+  <!-- level 1 grid, 2x2 -->
+  <text x="196" y="138" fill="#aaa" font-family="monospace" font-size="11" text-anchor="middle">level 1 (2 x 2)</text>
+  <g stroke="#0f766e" stroke-width="1" fill="none">
+    <rect x="174" y="146" width="44" height="44"/>
+    <line x1="196" y1="146" x2="196" y2="190"/>
+    <line x1="174" y1="168" x2="218" y2="168"/>
+  </g>
+  <circle cx="186" cy="160" r="3.5" fill="#f87171"/>
+  <circle cx="208" cy="181" r="3.5" fill="#f87171"/>
+
+  <!-- level 2 grid, 1x1 -->
+  <text x="262" y="138" fill="#aaa" font-family="monospace" font-size="11" text-anchor="middle">level 2</text>
+  <rect x="252" y="146" width="22" height="22" fill="none" stroke="#9333ea" stroke-width="1"/>
+  <circle cx="266" cy="158" r="3.5" fill="#f87171"/>
+
+  <!-- pipeline text -->
+  <text x="330" y="140" fill="#4ade80" font-family="monospace" font-size="12">for level l, point p:</text>
+  <text x="330" y="162" fill="#4ade80" font-family="monospace" font-size="12">x = loc[..,0] * W_l - 0.5</text>
+  <text x="330" y="182" fill="#4ade80" font-family="monospace" font-size="12">y = loc[..,1] * H_l - 0.5</text>
+  <text x="330" y="202" fill="#4ade80" font-family="monospace" font-size="12">v = bilinear(value, start_l, x, y)</text>
+  <text x="330" y="228" fill="#4ade80" font-family="monospace" font-size="12">out[q,h,:] = sum_{l,p} attn_weight * v</text>
+  <text x="330" y="252" fill="#aaa" font-family="monospace" font-size="11">pixels outside the level contribute 0</text>
+
+  <!-- footer -->
+  <rect x="30" y="278" width="660" height="72" fill="#2d2d2d" rx="6"/>
+  <text x="360" y="300" fill="#ccc" font-family="monospace" font-size="11" text-anchor="middle">a query touches only L * P pixels per head, no matter how large the feature maps are,</text>
+  <text x="360" y="320" fill="#ccc" font-family="monospace" font-size="11" text-anchor="middle">so the kernel is bound by scattered gathers rather than by matrix math &#8212; the</text>
+  <text x="360" y="340" fill="#ccc" font-family="monospace" font-size="11" text-anchor="middle">head_dim floats of one sampled pixel are contiguous and should be read as a unit</text>
+</svg>
+
+<p>
+Write \(\text{start}_l = \sum_{j&lt;l} H_j W_j\) and let \(V_l(i, j) \in \mathbb{R}^{D}\) denote
+row \(\text{start}_l + i W_l + j\) of <code>value</code> at head \(h\), or the zero vector when
+\((i, j)\) falls outside \([0, H_l) \times [0, W_l)\). For query \(q\) and head \(h\), each sample
+is placed on the pixel-center grid,
+</p>
+
+\[
+x = \text{loc}_{q,h,l,p,0} \cdot W_l - 0.5, \qquad
+y = \text{loc}_{q,h,l,p,1} \cdot H_l - 0.5,
+\]
+
+<p>
+and read with bilinear interpolation from its four neighbouring pixels, using
+\(i_0 = \lfloor y \rfloor\), \(j_0 = \lfloor x \rfloor\), \(\delta_y = y - i_0\), and
+\(\delta_x = x - j_0\):
+</p>
+
+\[
+\begin{aligned}
+S_{q,h,l,p} &= (1 - \delta_y)(1 - \delta_x)\, V_l(i_0, j_0) + (1 - \delta_y)\,\delta_x\, V_l(i_0, j_0 + 1) \\[2pt]
+&\quad + \delta_y (1 - \delta_x)\, V_l(i_0 + 1, j_0) + \delta_y \delta_x\, V_l(i_0 + 1, j_0 + 1)
+\end{aligned}
+\]
+
+<p>
+The output for that query and head is the weighted sum over every level and point, with
+\(w_{q,h,l,p}\) the corresponding entry of <code>attn_weight</code>:
+</p>
+
+\[
+\text{output}_{q,h} = \sum_{l=0}^{L-1} \sum_{p=0}^{P-1} w_{q,h,l,p}\; S_{q,h,l,p}
+\]
+
+<p>
+The attention weights are already normalized (they sum to 1 over the \(L \cdot P\) samples of a
+query and head), so no softmax is needed. All floating-point tensors are <code>float32</code> and
+<code>spatial_shapes</code> is <code>int32</code>.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>output</code> tensor</li>
+  <li>\([0, 1]\) spans a whole feature map, but sampling locations may fall outside that range and
+      are <em>not</em> clamped: any of the four neighbouring pixels that lies outside the feature
+      map contributes zero</li>
+  <li>The per-level row offsets are not supplied &mdash; derive them from
+      <code>spatial_shapes</code>, whose row \(l\) is \((H_l, W_l)\)</li>
+  <li><code>value</code> has shape <code>(sum_l H_l * W_l, num_heads, head_dim)</code>, so head
+      \(h\) of pixel \((i, j)\) at level \(l\) starts at element
+      <code>((start_l + i * W_l + j) * num_heads + h) * head_dim</code></li>
+</ul>
+
+<h2>Example</h2>
+<pre>
+Input:  num_queries = 2, num_heads = 1, head_dim = 2, num_levels = 2, num_points = 1
+        spatial_shapes = [[2, 2],          # level 0 is 2x2 (rows 0..3)
+                          [1, 1]]          # level 1 is 1x1 (row 4)
+        value          = [[[1, 2]], [[3, 4]], [[5, 6]], [[7, 8]],
+                          [[9, 10]]]       # shape (5, 1, 2)
+        sampling_loc   = [[[[[0.25, 0.25]], [[0.5, 0.5]]]],
+                          [[[[0.50, 0.50]], [[0.5, 0.5]]]]]
+        attn_weight    = [[[[0.50], [0.50]]],
+                          [[[0.25], [0.75]]]]
+Output: output         = [[[5.00, 6.00]],
+                          [[7.75, 8.75]]]
+</pre>
+
+<p>
+Query 0 samples level 0 at \(x = 0.25 \cdot 2 - 0.5 = 0\), \(y = 0\), which lands exactly on pixel
+\((0, 0)\) and returns \([1, 2]\); on level 1 it lands on the single pixel \([9, 10]\), so the
+output is \(0.5 \cdot [1, 2] + 0.5 \cdot [9, 10] = [5, 6]\). The level-1 sample also shows the
+out-of-range rule: on a 1&times;1 map the neighbours at row 1 and column 1 do not exist, so they are
+skipped rather than read. Query 1
+samples level 0 at \(x = y = 0.5\), the exact centre of the 2&times;2 map, so all four pixels are
+blended equally into \([4, 5]\), giving
+\(0.25 \cdot [4, 5] + 0.75 \cdot [9, 10] = [7.75, 8.75]\).
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>num_queries</code> &le; 65,536</li>
+  <li>1 &le; <code>num_heads</code> &le; 8</li>
+  <li>1 &le; <code>head_dim</code> &le; 64</li>
+  <li>1 &le; <code>num_levels</code> &le; 8</li>
+  <li>1 &le; <code>num_points</code> &le; 8</li>
+  <li>1 &le; \(H_l\), \(W_l\) &le; 256</li>
+  <li><code>value</code>, <code>sampling_loc</code>, <code>attn_weight</code> and
+      <code>output</code> are 32-bit floats; <code>spatial_shapes</code> is 32-bit signed integers</li>
+  <li>Sampling locations lie in \([-4, 4]\); attention weights lie in \([0, 1]\)</li>
+  <li>Performance is measured with <code>num_queries</code> = 20,400, <code>num_heads</code> = 8,
+      <code>head_dim</code> = 32, <code>num_levels</code> = 4, <code>num_points</code> = 4, and
+      <code>spatial_shapes</code> = [[96, 160], [48, 80], [24, 40], [12, 20]]</li>
+</ul>
