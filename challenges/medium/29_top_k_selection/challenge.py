@@ -8,7 +8,7 @@ from core.challenge_base import ChallengeBase
 class Challenge(ChallengeBase):
     name = "Top K Selection"
     atol = 1e-05
-    rtol = 0
+    rtol = 0.0
     num_gpus = 1
     access_tier = "free"
 
@@ -69,6 +69,15 @@ class Challenge(ChallengeBase):
                 "output": torch.empty(3, device=self.device, dtype=dtype),
                 "N": 4,
                 "k": 3,
+            }
+        )
+        # all_zeros with k == N
+        tests.append(
+            {
+                "input": torch.zeros(4, device=self.device, dtype=dtype),
+                "output": torch.empty(4, device=self.device, dtype=dtype),
+                "N": 4,
+                "k": 4,
             }
         )
         # single_element
