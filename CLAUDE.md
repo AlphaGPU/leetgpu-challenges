@@ -75,7 +75,7 @@ Maps parameter names to `(ctype, direction)` tuples.
 One small, human-readable test case for display. Use literal tensor values.
 
 #### `generate_functional_test(self) -> List[Dict[str, Any]]`
-7-10 test cases with this coverage:
+Use 7-10 test cases as a baseline with this coverage; add cases when needed to cover distinct correctness failures:
 
 | Category | Sizes | Count |
 |----------|-------|-------|
@@ -85,6 +85,14 @@ One small, human-readable test case for display. Use literal tensor values.
 | Realistic | 1K-10K | 1-2 |
 
 Must also include: zero inputs, negative numbers, mixed values.
+
+Design additional coverage around the operation's semantics, not just input sizes:
+
+- Identify plausible incorrect implementations and include targeted, deterministic cases that distinguish them from the correct result. Explain in test comments which mistake each targeted case catches.
+- Cover applicable boundaries within the documented input domain: minimum dimensions, singleton axes, parameter endpoints, tile/block tails, and uneven or non-square dimensions that expose indexing errors.
+- Include operation-specific edge cases where applicable, such as repeated values and ties in selection, winners concentrated in one partition, mask boundaries in attention, or extreme valid values and cancellation in numerical operations. Specify tie and boundary behavior in the problem description.
+- Check at least one small case against independently calculated expected values so the reference implementation is also checked for correctness.
+- Choose and justify tolerances for the operation and input range; they must allow expected floating-point error without accepting incorrect selections, indexing, or missing terms.
 
 #### `generate_performance_test(self) -> Dict[str, Any]`
 One large test case. Size must fit 5x within 16GB (Tesla T4 VRAM).
@@ -193,7 +201,10 @@ Verify every item before submitting. This is the single source of truth — work
 - [ ] `reference_impl` works on both CUDA and XLA — standard PyTorch ops only, no CUDA-only kernels or `torch.cuda.*` API
 - [ ] All tensor allocations use `device=self.device`, never hardcoded `"cuda"`
 - [ ] All 5 required methods present: `reference_impl`, `get_solve_signature`, `generate_example_test`, `generate_functional_test`, `generate_performance_test`
-- [ ] `generate_functional_test` returns 7-10 cases: edge cases (1-4 elements), powers-of-2, non-powers-of-2, realistic sizes, zeros, negatives
+- [ ] `generate_functional_test` covers the 7-10 case baseline: edge cases (1-4 elements), powers-of-2, non-powers-of-2, realistic sizes, zeros, negatives; additional cases cover distinct correctness failures as needed
+- [ ] Targeted deterministic tests catch plausible implementation mistakes and applicable semantic boundaries; test comments explain what each catches
+- [ ] At least one small case has independently calculated expected values checked against the reference implementation
+- [ ] Numerical tolerances are justified for the operation and input range and do not hide incorrect results
 - [ ] `generate_performance_test` fits 5x in 16GB VRAM (Tesla T4)
 
 ### Starter files

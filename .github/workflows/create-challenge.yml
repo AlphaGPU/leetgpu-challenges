@@ -64,7 +64,12 @@ jobs:
           prompt: |
             Read CLAUDE.md and follow the Creation Workflow to create and validate (with `run_challenge.py`) a new LeetGPU coding challenge, then open a PR.
 
-            Before writing any code, think hard about what would make a genuinely interesting GPU programming challenge. List existing challenges (ls challenges/*/), study what's already covered, and brainstorm problems that would teach people something new about GPU programming.
+            Before writing any code, list existing challenges (ls challenges/*/) and read the descriptions and implementations of the closest related challenges. For the challenge you choose, consider the following and summarize your reasoning in the PR description:
+            - Which specific GPU programming concept(s) will a solver learn?
+            - How are those concepts or their application novel compared with the closest existing challenges? Name those challenges and explain the substantive difference; a different model name alone does not establish novelty.
+            - What is a correct but naive approach, and what would an optimized version do differently while preserving the same results?
+            - How, specifically, do the benchmark's shapes, sizes, and data distribution expose that optimization? Identify the bottleneck and explain which work, memory traffic, or synchronization the optimized version reduces.
+            Do not generate a list of candidate challenges.
 
             IMPORTANT — CHECK FOR CONFLICTS WITH OPEN PRs:
             The following open PRs already exist. You MUST avoid picking a challenge number or topic that conflicts with any of these:
@@ -73,14 +78,9 @@ jobs:
 
             Pick the next available challenge number that is NOT already taken by a merged challenge or an open PR. Also avoid creating a challenge on the same topic as any pending PR, even if the number differs.
 
-            THEME — REAL-WORLD INFERENCE KERNELS:
-            Focus on challenges inspired by real-world ML inference workloads. Think about the building blocks of modern neural networks (transformers, diffusion models, LLMs, vision models) and the GPU kernels that make them fast. Good examples:
-            - Fused inference kernels: fused SwiGLU/GeGLU MLP blocks, flash attention, paged attention, speculative decoding verification, quantized matmul (INT8/INT4), fused QKV projection, KV-cache updates
-            - Sequence/token operations: top-k/top-p sampling, beam search step, KV-cache rotation, causal masking
-            - Model architecture blocks: full transformer decoder block (like the existing GPT-2 challenge), mixture-of-experts routing, LoRA forward pass
-            - Online/streaming algorithms: online softmax, streaming attention (process new queries without storing entire rows), continuous batching, prefix caching
-
-            Look at `challenges/medium/74_gpt2_block/` as the gold standard for this style of challenge. The solver should implement a meaningful, self-contained inference building block — not a toy operation.
+            THEME — GPU OPTIMIZATIONS FOR MODERN AI SYSTEMS:
+            Focus on optimizations especially relevant to modern AI systems, particularly LLM inference and LLM training. Build a meaningful, self-contained challenge around a clear optimization opportunity and explain its relevance to an actual workload.
+            Relevant optimization concepts include reducing intermediate memory traffic through fusion, improving data reuse with tiling, avoiding materialization through streaming algorithms, handling irregular or ragged work efficiently, and reducing communication or synchronization in reductions and gradient computations. Use these as context, and check existing coverage before choosing the challenge.
 
             HARD RULES:
             - Do NOT create trivial element-wise challenges. We have way too many (sigmoid, relu, silu, clipping, etc). If your idea is just "apply f(x) to every element", pick something else.
@@ -88,6 +88,8 @@ jobs:
             - Do NOT use a challenge number that is already claimed by an open PR.
             - Prefer medium or hard difficulty. Only create easy if the topic involves a non-trivial GPU concept (not just a map operation).
             - The challenge should require the solver to think about memory access patterns, synchronization, work distribution, or algorithm design — not just write a one-line kernel.
+
+            Design functional tests around the challenge's correctness edge cases and plausible implementation mistakes, following the guidance in CLAUDE.md. In the PR description, identify the mistakes the targeted tests catch.
 
             Before opening the PR, verify every item in the "Checklist" section of CLAUDE.md. Run `pre-commit run --all-files` to lint.
 
