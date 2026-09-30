@@ -8,14 +8,15 @@ _EPS = 1e-3
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
+    def __init__(self, device: str = "cuda"):
         super().__init__(
             name="N-body Gravitational Force",
-            atol=1e-2,
-            rtol=1e-2,
+            atol=1e-02,
+            rtol=1e-02,
             num_gpus=1,
             access_tier="free",
         )
+        self.device = device
 
     def reference_impl(
         self,
@@ -33,7 +34,6 @@ class Challenge(ChallengeBase):
         assert positions.dtype == torch.float32
         assert masses.dtype == torch.float32
         assert forces.dtype == torch.float32
-        assert positions.device.type == "cuda"
 
         CHUNK = 1024
         result = torch.zeros((N, 3), device=positions.device, dtype=positions.dtype)
@@ -60,16 +60,20 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        positions = torch.tensor([[0.0, 0.0, 0.0], [0.0, 3.0, 4.0]], device="cuda", dtype=dtype)
-        masses = torch.tensor([2.0, 1.0], device="cuda", dtype=dtype)
-        forces = torch.zeros((2, 3), device="cuda", dtype=dtype)
+        positions = torch.tensor(
+            [[0.0, 0.0, 0.0], [0.0, 3.0, 4.0]], device=self.device, dtype=dtype
+        )
+        masses = torch.tensor([2.0, 1.0], device=self.device, dtype=dtype)
+        forces = torch.zeros((2, 3), device=self.device, dtype=dtype)
         return {"positions": positions, "masses": masses, "forces": forces, "N": 2}
 
     def _make_test(self, N: int, pos_range: float = 5.0) -> Dict[str, Any]:
         dtype = torch.float32
-        positions = torch.empty((N, 3), device="cuda", dtype=dtype).uniform_(-pos_range, pos_range)
-        masses = torch.empty(N, device="cuda", dtype=dtype).uniform_(0.5, 2.0)
-        forces = torch.zeros((N, 3), device="cuda", dtype=dtype)
+        positions = torch.empty((N, 3), device=self.device, dtype=dtype).uniform_(
+            -pos_range, pos_range
+        )
+        masses = torch.empty(N, device=self.device, dtype=dtype).uniform_(0.5, 2.0)
+        forces = torch.zeros((N, 3), device=self.device, dtype=dtype)
         return {"positions": positions, "masses": masses, "forces": forces, "N": N}
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
@@ -79,9 +83,9 @@ class Challenge(ChallengeBase):
         # N=1: single particle — no other bodies, forces must be zero
         tests.append(
             {
-                "positions": torch.tensor([[1.0, 2.0, 3.0]], device="cuda", dtype=dtype),
-                "masses": torch.tensor([1.5], device="cuda", dtype=dtype),
-                "forces": torch.zeros((1, 3), device="cuda", dtype=dtype),
+                "positions": torch.tensor([[1.0, 2.0, 3.0]], device=self.device, dtype=dtype),
+                "masses": torch.tensor([1.5], device=self.device, dtype=dtype),
+                "forces": torch.zeros((1, 3), device=self.device, dtype=dtype),
                 "N": 1,
             }
         )
@@ -90,20 +94,34 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "positions": torch.tensor(
-                    [[-3.0, 0.0, 0.0], [0.0, 0.0, 0.0]], device="cuda", dtype=dtype
+                    [[-3.0, 0.0, 0.0], [0.0, 0.0, 0.0]], device=self.device, dtype=dtype
                 ),
-                "masses": torch.tensor([1.0, 2.0], device="cuda", dtype=dtype),
-                "forces": torch.zeros((2, 3), device="cuda", dtype=dtype),
+                "masses": torch.tensor([1.0, 2.0], device=self.device, dtype=dtype),
+                "forces": torch.zeros((2, 3), device=self.device, dtype=dtype),
                 "N": 2,
+            }
+        )
+
+        # N=3: mixed positive/negative coordinates, one body at the origin
+        tests.append(
+            {
+                "positions": torch.tensor(
+                    [[-1.0, 2.0, 0.5], [0.0, 0.0, 0.0], [2.5, -1.5, 1.0]],
+                    device=self.device,
+                    dtype=dtype,
+                ),
+                "masses": torch.tensor([3.0, 0.5, 2.0], device=self.device, dtype=dtype),
+                "forces": torch.zeros((3, 3), device=self.device, dtype=dtype),
+                "N": 3,
             }
         )
 
         # N=4: all particles co-located at the origin — zero displacement gives zero forces
         tests.append(
             {
-                "positions": torch.zeros((4, 3), device="cuda", dtype=dtype),
-                "masses": torch.tensor([1.0, 2.0, 3.0, 4.0], device="cuda", dtype=dtype),
-                "forces": torch.zeros((4, 3), device="cuda", dtype=dtype),
+                "positions": torch.zeros((4, 3), device=self.device, dtype=dtype),
+                "masses": torch.tensor([1.0, 2.0, 3.0, 4.0], device=self.device, dtype=dtype),
+                "forces": torch.zeros((4, 3), device=self.device, dtype=dtype),
                 "N": 4,
             }
         )
@@ -125,7 +143,7 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         N = 8192
         dtype = torch.float32
-        positions = torch.empty((N, 3), device="cuda", dtype=dtype).uniform_(-10.0, 10.0)
-        masses = torch.empty(N, device="cuda", dtype=dtype).uniform_(0.1, 10.0)
-        forces = torch.zeros((N, 3), device="cuda", dtype=dtype)
+        positions = torch.empty((N, 3), device=self.device, dtype=dtype).uniform_(-10.0, 10.0)
+        masses = torch.empty(N, device=self.device, dtype=dtype).uniform_(0.1, 10.0)
+        forces = torch.zeros((N, 3), device=self.device, dtype=dtype)
         return {"positions": positions, "masses": masses, "forces": forces, "N": N}

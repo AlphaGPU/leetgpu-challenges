@@ -16,6 +16,35 @@
   <code>array[i * 3 + k]</code> is the <em>k</em>-th coordinate of body <code>i</code>.
 </p>
 
+<svg viewBox="0 0 480 210" width="100%" style="max-width: 480px; height: auto;" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="nb-arrow-pair" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7fb8ff"/>
+    </marker>
+    <marker id="nb-arrow-net" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffa552"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="480" height="210" fill="#222"/>
+
+  <line x1="120" y1="140" x2="250" y2="70" stroke="#666" stroke-width="1" stroke-dasharray="4 4"/>
+  <line x1="120" y1="140" x2="370" y2="150" stroke="#666" stroke-width="1" stroke-dasharray="4 4"/>
+
+  <line x1="120" y1="140" x2="168" y2="114" stroke="#7fb8ff" stroke-width="2" marker-end="url(#nb-arrow-pair)"/>
+  <line x1="120" y1="140" x2="160" y2="142" stroke="#7fb8ff" stroke-width="2" marker-end="url(#nb-arrow-pair)"/>
+  <line x1="120" y1="140" x2="208" y2="116" stroke="#ffa552" stroke-width="4" marker-end="url(#nb-arrow-net)"/>
+
+  <circle cx="120" cy="140" r="13" fill="#4d7ea8" stroke="#cfe3f5" stroke-width="1.5"/>
+  <circle cx="250" cy="70" r="9" fill="#4d7ea8" stroke="#cfe3f5" stroke-width="1.5"/>
+  <circle cx="370" cy="150" r="18" fill="#4d7ea8" stroke="#cfe3f5" stroke-width="1.5"/>
+
+  <text x="120" y="176" fill="#e6e6e6" font-size="13" font-family="sans-serif" text-anchor="middle">body i</text>
+  <text x="250" y="48" fill="#e6e6e6" font-size="13" font-family="sans-serif" text-anchor="middle">m = 1.0</text>
+  <text x="370" y="192" fill="#e6e6e6" font-size="13" font-family="sans-serif" text-anchor="middle">m = 4.0</text>
+  <text x="222" y="110" fill="#ffa552" font-size="13" font-family="sans-serif">net force on i</text>
+  <text x="16" y="28" fill="#9ecbff" font-size="13" font-family="sans-serif">Each body is pulled by every other body; sum the pairwise contributions.</text>
+</svg>
+
 <h2>Implementation Requirements</h2>
 <ul>
   <li>Use only native GPU features (external libraries are not permitted)</li>
@@ -53,6 +82,7 @@
 <ul>
   <li>1 &le; <code>N</code> &le; 65,536</li>
   <li>Positions and forces are <code>float32</code> arrays of shape <code>N</code> &times; 3 in row-major order</li>
+  <li>-10.0 &le; <code>positions[i]</code> &le; 10.0</li>
   <li>0.0 &lt; <code>masses[i]</code> &le; 100.0</li>
   <li>Performance is measured with <code>N</code> = 8,192</li>
 </ul>
