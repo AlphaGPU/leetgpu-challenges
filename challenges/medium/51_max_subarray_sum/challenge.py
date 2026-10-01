@@ -25,8 +25,8 @@ class Challenge(ChallengeBase):
         # Compute the sum of the first window_size elements (the initial window)
         current_sum = input[:window_size].sum()
 
-        # Initialize max_sum with the sum of the first window
-        max_sum = current_sum
+        # Preserve the first window's sum across in-place updates to current_sum
+        max_sum = current_sum.clone()
 
         # Slide the window across the array from index window_size to N - 1
         for i in range(window_size, N):
@@ -70,6 +70,46 @@ class Challenge(ChallengeBase):
                 "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 4,
                 "window_size": 3,
+            }
+        )
+
+        # first_window_is_maximum: expected 9, not -8
+        tests.append(
+            {
+                "input": torch.tensor([9, -8], device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
+                "N": 2,
+                "window_size": 1,
+            }
+        )
+
+        # first_window_is_maximum_negative: expected -1, not -9
+        tests.append(
+            {
+                "input": torch.tensor([-1, -9], device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
+                "N": 2,
+                "window_size": 1,
+            }
+        )
+
+        # first_window_is_maximum_multi_element: expected 14, not 1
+        tests.append(
+            {
+                "input": torch.tensor([9, 5, -4, 3, -7], device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
+                "N": 5,
+                "window_size": 2,
+            }
+        )
+
+        # single_window: no sliding updates, expected 1
+        tests.append(
+            {
+                "input": torch.tensor([9, -8], device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
+                "N": 2,
+                "window_size": 2,
             }
         )
 
