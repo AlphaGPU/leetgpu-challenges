@@ -1,0 +1,43 @@
+<p>
+  Given a 2D image of shape <code>H</code> &times; <code>W</code> containing 32-bit floating point values,
+  compute its integral image (also known as a summed area table). The value at each output position
+  <code>output[i][j]</code> is the sum of all input values in the rectangle from the top-left corner
+  <code>(0, 0)</code> to position <code>(i, j)</code>, inclusive. All values are stored in row-major order.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>output</code></li>
+  <li>Read exclusively from <code>input</code> and write exclusively to <code>output</code> (do not update <code>input</code>)</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+Input (\(3 \times 3\)):
+\[
+\begin{bmatrix}
+1.0 & 2.0 & 3.0 \\
+4.0 & 5.0 & 6.0 \\
+7.0 & 8.0 & 9.0
+\end{bmatrix}
+\]
+Output (\(3 \times 3\)):
+\[
+\begin{bmatrix}
+1.0 & 3.0 & 6.0 \\
+5.0 & 12.0 & 21.0 \\
+12.0 & 27.0 & 45.0
+\end{bmatrix}
+\]
+For example, \(\text{output}[1][1] = \text{input}[0][0] + \text{input}[0][1] + \text{input}[1][0] + \text{input}[1][1] = 1 + 2 + 4 + 5 = 12\).
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>H</code>, <code>W</code> &le; 16,384</li>
+  <li>Input values are in the range [-100, 100]</li>
+  <li>All values are 32-bit floats</li>
+  <li>Performance is measured with <code>H</code> = 8,192, <code>W</code> = 8,192</li>
+</ul>
