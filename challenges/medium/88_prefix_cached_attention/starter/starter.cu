@@ -1,0 +1,5 @@
+#include <cuda_runtime.h>
+
+// Q, K, V, output are device pointers
+extern "C" void solve(const float* Q, const float* K, const float* V, float* output, int num_heads,
+                      int cache_len, int new_len, int head_dim) {}
