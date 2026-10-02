@@ -1,0 +1,116 @@
+<p>
+In Mixture-of-Experts (MoE) neural networks, a router assigns each input token to one of
+<code>E</code> expert networks. Before those experts can execute in parallel, tokens must be
+<em>dispatched</em>: reorganized from their original sequence order into contiguous per-expert
+buffers. Given <code>T</code> tokens of feature dimension <code>D</code> and their expert
+assignments, fill each expert's slice of the output buffer with the tokens routed to that
+expert, preserving the original token order within each expert's group.
+</p>
+
+<svg width="540" height="230" viewBox="0 0 540 230" style="display:block; margin:20px auto;" xmlns="http://www.w3.org/2000/svg">
+  <rect width="540" height="230" rx="8" fill="#222"/>
+
+  <!-- Title -->
+  <text x="270" y="22" text-anchor="middle" fill="#ccc" font-family="monospace" font-size="12">MoE Token Dispatch (T=4, E=2)</text>
+
+  <!-- Left: input tokens -->
+  <text x="80" y="48" text-anchor="middle" fill="#aaa" font-family="monospace" font-size="11">x  [T, D]</text>
+
+  <!-- Token 0 → expert 0 (blue) -->
+  <rect x="20" y="55" width="120" height="28" rx="4" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="80" y="73" text-anchor="middle" fill="#4a9eff" font-family="monospace" font-size="11">token 0  →  expert 0</text>
+
+  <!-- Token 1 → expert 1 (green) -->
+  <rect x="20" y="90" width="120" height="28" rx="4" fill="#1a3a2a" stroke="#4adf7f" stroke-width="1.5"/>
+  <text x="80" y="108" text-anchor="middle" fill="#4adf7f" font-family="monospace" font-size="11">token 1  →  expert 1</text>
+
+  <!-- Token 2 → expert 0 (blue) -->
+  <rect x="20" y="125" width="120" height="28" rx="4" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="80" y="143" text-anchor="middle" fill="#4a9eff" font-family="monospace" font-size="11">token 2  →  expert 0</text>
+
+  <!-- Token 3 → expert 1 (green) -->
+  <rect x="20" y="160" width="120" height="28" rx="4" fill="#1a3a2a" stroke="#4adf7f" stroke-width="1.5"/>
+  <text x="80" y="178" text-anchor="middle" fill="#4adf7f" font-family="monospace" font-size="11">token 3  →  expert 1</text>
+
+  <!-- Arrows for expert 0 tokens -->
+  <line x1="140" y1="69" x2="195" y2="90" stroke="#4a9eff" stroke-width="1.5" marker-end="url(#arrowblue)"/>
+  <line x1="140" y1="139" x2="195" y2="110" stroke="#4a9eff" stroke-width="1.5" marker-end="url(#arrowblue)"/>
+
+  <!-- Arrows for expert 1 tokens -->
+  <line x1="140" y1="104" x2="195" y2="155" stroke="#4adf7f" stroke-width="1.5" marker-end="url(#arrowgreen)"/>
+  <line x1="140" y1="174" x2="195" y2="170" stroke="#4adf7f" stroke-width="1.5" marker-end="url(#arrowgreen)"/>
+
+  <!-- Arrow markers -->
+  <defs>
+    <marker id="arrowblue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#4a9eff"/>
+    </marker>
+    <marker id="arrowgreen" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#4adf7f"/>
+    </marker>
+  </defs>
+
+  <!-- Right: expert 0 buffer -->
+  <text x="370" y="48" text-anchor="middle" fill="#aaa" font-family="monospace" font-size="11">dispatched_x  [E, capacity, D]</text>
+
+  <text x="280" y="78" fill="#4a9eff" font-family="monospace" font-size="10">expert 0</text>
+  <rect x="200" y="83" width="160" height="24" rx="3" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.2"/>
+  <text x="280" y="99" text-anchor="middle" fill="#4a9eff" font-family="monospace" font-size="10">slot 0: token 0 features</text>
+  <rect x="200" y="108" width="160" height="24" rx="3" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.2"/>
+  <text x="280" y="124" text-anchor="middle" fill="#4a9eff" font-family="monospace" font-size="10">slot 1: token 2 features</text>
+
+  <!-- Right: expert 1 buffer -->
+  <text x="280" y="148" fill="#4adf7f" font-family="monospace" font-size="10">expert 1</text>
+  <rect x="200" y="153" width="160" height="24" rx="3" fill="#1a3a2a" stroke="#4adf7f" stroke-width="1.2"/>
+  <text x="280" y="169" text-anchor="middle" fill="#4adf7f" font-family="monospace" font-size="10">slot 0: token 1 features</text>
+  <rect x="200" y="178" width="160" height="24" rx="3" fill="#1a3a2a" stroke="#4adf7f" stroke-width="1.2"/>
+  <text x="280" y="194" text-anchor="middle" fill="#4adf7f" font-family="monospace" font-size="10">slot 1: token 3 features</text>
+
+  <!-- token_counts label -->
+  <text x="280" y="218" text-anchor="middle" fill="#888" font-family="monospace" font-size="10">token_counts = [2, 2]</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<p>
+Your <code>solve</code> function signature must not be changed. No external libraries beyond
+those already imported. Write outputs to <code>dispatched_x</code> and
+<code>token_counts</code> in place.
+</p>
+<p>
+For each expert <code>e</code>, <code>dispatched_x[e, :token_counts[e], :]</code> must
+contain exactly the tokens assigned to expert <code>e</code>, in the same relative order
+they appear in the original token sequence (i.e., token index ascending). Entries at
+positions <code>token_counts[e]</code> and beyond may be left as zero.
+</p>
+
+<h2>Example</h2>
+<p>
+Given <code>T</code> = 4 tokens of dimension <code>D</code> = 3 routed to
+<code>E</code> = 2 experts (capacity = 4):
+</p>
+
+<p>Input tokens \(x\):</p>
+<p>$$x = \begin{bmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \\ 1 & 1 & 0 \end{bmatrix}$$</p>
+
+<p>Expert assignments:</p>
+<pre>expert_idx = [0, 1, 0, 1]</pre>
+
+<p>Output token counts:</p>
+<pre>token_counts = [2, 2]</pre>
+
+<p>\(\texttt{dispatched\_x}[0]\) &mdash; expert 0 receives tokens 0 and 2 (in original order):</p>
+<p>$$\begin{bmatrix} 1 & 0 & 0 \\ 0 & 0 & 1 \end{bmatrix}$$</p>
+
+<p>\(\texttt{dispatched\_x}[1]\) &mdash; expert 1 receives tokens 1 and 3 (in original order):</p>
+<p>$$\begin{bmatrix} 0 & 1 & 0 \\ 1 & 1 & 0 \end{bmatrix}$$</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>T</code> &le; 65,536</li>
+  <li>1 &le; <code>D</code> &le; 2,048</li>
+  <li>2 &le; <code>E</code> &le; 64</li>
+  <li><code>capacity</code> = <code>T</code> (always sufficient for any routing assignment)</li>
+  <li>All values in <code>expert_idx</code> are in the range [0, <code>E</code> &minus; 1]</li>
+  <li><code>x</code> values are <code>float32</code>; <code>expert_idx</code> and <code>token_counts</code> are <code>int32</code></li>
+  <li>Performance is measured with <code>T</code> = 16,384, <code>D</code> = 512, <code>E</code> = 8</li>
+</ul>
