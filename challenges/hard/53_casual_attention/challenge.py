@@ -144,7 +144,7 @@ class Challenge(ChallengeBase):
             "Q": RandTensor((M, d), -1.0, 1.0),
             "K": RandTensor((M, d), -1.0, 1.0),
             "V": RandTensor((M, d), -1.0, 1.0),
-    "output": OutTensor((M, d)),
+                "output": OutTensor((M, d)),
             "M": M,
             "d": d,
         }
