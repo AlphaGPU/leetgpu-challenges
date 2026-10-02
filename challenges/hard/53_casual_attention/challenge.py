@@ -141,10 +141,10 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         M, d = 5000, 128
         return {
-                    "Q": RandTensor((M, d), -1.0, 1.0),
-                    "K": RandTensor((M, d), -1.0, 1.0),
-                    "V": RandTensor((M, d), -1.0, 1.0),
-            "output": OutTensor((M, d)),
+            "Q": RandTensor((M, d), -1.0, 1.0),
+            "K": RandTensor((M, d), -1.0, 1.0),
+            "V": RandTensor((M, d), -1.0, 1.0),
+    "output": OutTensor((M, d)),
             "M": M,
             "d": d,
         }
