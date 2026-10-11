@@ -20,18 +20,19 @@ class Challenge(ChallengeBase):
         assert input.dtype == torch.int32
         assert output.dtype == torch.int32
 
+        # 2D inclusive prefix sum, padded with a zero row and column
         psum = input.cumsum(dim=0).cumsum(dim=1)
-        padded = torch.zeros((N+1, N+1), dtype=torch.int32)
+        padded = torch.zeros((N + 1, N + 1), dtype=torch.int32, device=input.device)
         padded[1:, 1:] = psum
 
+        # Sum of every window_size x window_size window via the inclusion-exclusion identity
         top_left = padded[:-window_size, :-window_size]
         top_right = padded[:-window_size, window_size:]
         bottom_left = padded[window_size:, :-window_size]
         bottom_right = padded[window_size:, window_size:]
         window_sums = bottom_right - top_right - bottom_left + top_left
 
-        max_sum = torch.max(window_sums)
-        output[0] = max_sum
+        output[0] = torch.max(window_sums)
 
     def get_solve_signature(self) -> Dict[str, Any]:
         return {
@@ -56,56 +57,73 @@ class Challenge(ChallengeBase):
         dtype = torch.int32
         tests = []
 
-        # basic_example
+        # all_negative_values
         tests.append({
-            "input": torch.tensor([[-1, -2, -3], [-4, -5, -1], [-5, -1, -7]], device="cuda", dtype=dtype),
+            "input": torch.tensor(
+                [[-1, -2, -3], [-4, -5, -1], [-5, -1, -7]], device="cuda", dtype=dtype
+            ),
             "output": torch.empty(1, device="cuda", dtype=dtype),
             "N": 3,
             "window_size": 2
         })
 
-        # all_same_value
+        # single_element
         tests.append({
-            "input": torch.tensor([[2]*16] * 16, device="cuda", dtype=dtype),
+            "input": torch.tensor([[-7]], device="cuda", dtype=dtype),
+            "output": torch.empty(1, device="cuda", dtype=dtype),
+            "N": 1,
+            "window_size": 1
+        })
+
+        # all_zeros
+        tests.append({
+            "input": torch.zeros((2, 2), device="cuda", dtype=dtype),
+            "output": torch.empty(1, device="cuda", dtype=dtype),
+            "N": 2,
+            "window_size": 2
+        })
+
+        # mixed_signs_small
+        tests.append({
+            "input": torch.tensor(
+                [[0, -3, 4, 1], [2, 5, -6, 0], [-1, 7, 2, -8], [3, 0, -2, 6]],
+                device="cuda",
+                dtype=dtype
+            ),
+            "output": torch.empty(1, device="cuda", dtype=dtype),
+            "N": 4,
+            "window_size": 3
+        })
+
+        # all_same_value, window covers the whole matrix
+        tests.append({
+            "input": torch.full((16, 16), 2, device="cuda", dtype=dtype),
             "output": torch.empty(1, device="cuda", dtype=dtype),
             "N": 16,
             "window_size": 16
         })
 
+        # window_size of 1 reduces to a plain maximum
         tests.append({
-            "input": torch.tensor([[2]*16] * 16, device="cuda", dtype=dtype),
+            "input": torch.randint(-10, 11, (32, 32), device="cuda", dtype=dtype),
             "output": torch.empty(1, device="cuda", dtype=dtype),
-            "N": 16,
-            "window_size": 15
-        })
-
-        tests.append({
-            "input": torch.tensor([[2]*16] * 16, device="cuda", dtype=dtype),
-            "output": torch.empty(1, device="cuda", dtype=dtype),
-            "N": 16,
+            "N": 32,
             "window_size": 1
         })
 
-        # all_minus_value
+        # all_negative_values, non-power-of-2 size
         tests.append({
-            "input": torch.tensor([[-10]*10]*10, device="cuda", dtype=dtype),
+            "input": torch.randint(-10, 0, (100, 100), device="cuda", dtype=dtype),
             "output": torch.empty(1, device="cuda", dtype=dtype),
-            "N": 10,
-            "window_size": 5
+            "N": 100,
+            "window_size": 37
         })
 
+        # mixed values, non-power-of-2 size
         tests.append({
-            "input": torch.randint(-10, 0, (123, 123), device="cuda", dtype=dtype),
+            "input": torch.randint(-10, 11, (255, 255), device="cuda", dtype=dtype),
             "output": torch.empty(1, device="cuda", dtype=dtype),
-            "N": 123,
-            "window_size": 7
-        })
-
-        # increasing_sequence
-        tests.append({
-            "input": torch.randint(-10, 11, (123, 123), device="cuda", dtype=dtype),
-            "output": torch.empty(1, device="cuda", dtype=dtype),
-            "N": 123,
+            "N": 255,
             "window_size": 7
         })
 

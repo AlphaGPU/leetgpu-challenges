@@ -1,5 +1,7 @@
 <p>
-    Implement a program that computes the maximum sum of any contiguous 2D subarray of length exactly <code>window_size x window_size</code>. You are given an array <code>input</code> of length <code>N x N</code> consisting of 32-bit signed integers, and an integer <code>window_size</code>.
+    Implement a program that finds the maximum sum over all contiguous <code>window_size</code> &times; <code>window_size</code> subarrays of a square matrix.
+    You are given a matrix <code>input</code> of shape <code>N</code> &times; <code>N</code> consisting of 32-bit signed integers, and an integer <code>window_size</code>.
+    There are <code>(N - window_size + 1)</code> &times; <code>(N - window_size + 1)</code> such subarrays; write the largest of their sums to <code>output[0]</code>.
 </p>
 
 <h2>Implementation Requirements</h2>
@@ -30,6 +32,8 @@ Output: output = -11
 <h2>Constraints</h2>
 <ul>
     <li>1 &le; <code>N</code> &le; 5,000</li>
-    <li>-10 &le; <code>input[i]</code> &le; 10</li>
+    <li>-10 &le; <code>input[i][j]</code> &le; 10</li>
     <li>1 &le; <code>window_size</code> &le; <code>N</code></li>
+    <li><code>input</code> and <code>output</code> are 32-bit signed integer tensors; <code>output</code> has exactly one element</li>
+    <li>Performance is measured with <code>N</code> = 5,000, <code>window_size</code> = 2,500</li>
 </ul>
