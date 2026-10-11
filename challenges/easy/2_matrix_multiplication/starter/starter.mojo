@@ -1,13 +1,13 @@
-from std.gpu.host import DeviceContext
-from std.gpu import block_dim, block_idx, thread_idx
+from max.gpu.host import DeviceContext
+from max.gpu import block_dim, block_idx, thread_idx
 from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
 def matrix_multiplication_kernel(
-    A: UnsafePointer[Float32, MutExternalOrigin],
-    B: UnsafePointer[Float32, MutExternalOrigin],
-    C: UnsafePointer[Float32, MutExternalOrigin],
+    A: UnsafePointer[Float32, MutAnyOrigin],
+    B: UnsafePointer[Float32, MutAnyOrigin],
+    C: UnsafePointer[Float32, MutAnyOrigin],
     M: Int32,
     N: Int32,
     K: Int32,
@@ -18,9 +18,9 @@ def matrix_multiplication_kernel(
 # A, B, C are device pointers (i.e. pointers to memory on the GPU)
 @export
 def solve(
-    A: UnsafePointer[Float32, MutExternalOrigin],
-    B: UnsafePointer[Float32, MutExternalOrigin],
-    C: UnsafePointer[Float32, MutExternalOrigin],
+    A: UnsafePointer[Float32, MutAnyOrigin],
+    B: UnsafePointer[Float32, MutAnyOrigin],
+    C: UnsafePointer[Float32, MutAnyOrigin],
     M: Int32,
     N: Int32,
     K: Int32,
@@ -31,7 +31,7 @@ def solve(
     var grid_dim_x = ceildiv(K, BLOCK_SIZE)
     var grid_dim_y = ceildiv(M, BLOCK_SIZE)
 
-    var _kernel = ctx.compile_function[matrix_multiplication_kernel, matrix_multiplication_kernel]()
+    var _kernel = ctx.compile_function[matrix_multiplication_kernel]()
     ctx.enqueue_function(
         _kernel,
         A,

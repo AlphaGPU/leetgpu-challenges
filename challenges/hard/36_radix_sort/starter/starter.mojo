@@ -1,13 +1,13 @@
-from std.gpu.host import DeviceContext
-from std.gpu import block_dim, block_idx, thread_idx
+from max.gpu.host import DeviceContext
+from max.gpu import block_dim, block_idx, thread_idx
 from std.memory import UnsafePointer
 
 
 # input, output are device pointers
 @export
 def solve(
-    input: UnsafePointer[UInt32, MutExternalOrigin],
-    output: UnsafePointer[UInt32, MutExternalOrigin],
+    input: UnsafePointer[UInt32, MutAnyOrigin],
+    output: UnsafePointer[UInt32, MutAnyOrigin],
     N: Int32,
 ) raises:
     pass
