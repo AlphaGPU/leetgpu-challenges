@@ -1,12 +1,12 @@
-from std.gpu.host import DeviceContext
-from std.gpu import block_dim, block_idx, thread_idx
+from max.gpu.host import DeviceContext
+from max.gpu import block_dim, block_idx, thread_idx
 from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
 def rgb_to_grayscale_kernel(
-    input: UnsafePointer[Float32, MutExternalOrigin],
-    output: UnsafePointer[Float32, MutExternalOrigin],
+    input: UnsafePointer[Float32, MutAnyOrigin],
+    output: UnsafePointer[Float32, MutAnyOrigin],
     width: Int32,
     height: Int32,
 ):
@@ -16,8 +16,8 @@ def rgb_to_grayscale_kernel(
 # input, output are device pointers
 @export
 def solve(
-    input: UnsafePointer[Float32, MutExternalOrigin],
-    output: UnsafePointer[Float32, MutExternalOrigin],
+    input: UnsafePointer[Float32, MutAnyOrigin],
+    output: UnsafePointer[Float32, MutAnyOrigin],
     width: Int32,
     height: Int32,
 ) raises:
@@ -26,7 +26,7 @@ def solve(
     var ctx = DeviceContext()
     var num_blocks = ceildiv(total_pixels, BLOCK_SIZE)
 
-    var _kernel = ctx.compile_function[rgb_to_grayscale_kernel, rgb_to_grayscale_kernel]()
+    var _kernel = ctx.compile_function[rgb_to_grayscale_kernel]()
     ctx.enqueue_function(
         _kernel, input, output, width, height, grid_dim=num_blocks, block_dim=BLOCK_SIZE
     )

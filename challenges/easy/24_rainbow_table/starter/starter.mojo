@@ -1,5 +1,5 @@
-from std.gpu.host import DeviceContext
-from std.gpu import block_dim, block_idx, thread_idx
+from max.gpu.host import DeviceContext
+from max.gpu import block_dim, block_idx, thread_idx
 from std.memory import UnsafePointer
 from std.math import ceildiv
 
@@ -11,15 +11,15 @@ def fnv1a_hash(input: UInt32) -> UInt32:
     var hash: UInt32 = OFFSET_BASIS
 
     for byte_pos in range(4):
-        var byte_val: UInt32 = (input >> (byte_pos * 8)) & UInt32(0xFF)
+        var byte_val: UInt32 = (input >> UInt32(byte_pos * 8)) & UInt32(0xFF)
         hash = (hash ^ byte_val) * FNV_PRIME
 
     return hash
 
 
 def fnv1a_hash_kernel(
-    input: UnsafePointer[Int32, MutExternalOrigin],
-    output: UnsafePointer[UInt32, MutExternalOrigin],
+    input: UnsafePointer[Int32, MutAnyOrigin],
+    output: UnsafePointer[UInt32, MutAnyOrigin],
     N: Int32,
     R: Int32,
 ):
@@ -29,8 +29,8 @@ def fnv1a_hash_kernel(
 # input, output are device pointers (i.e. pointers to memory on the GPU)
 @export
 def solve(
-    input: UnsafePointer[Int32, MutExternalOrigin],
-    output: UnsafePointer[UInt32, MutExternalOrigin],
+    input: UnsafePointer[Int32, MutAnyOrigin],
+    output: UnsafePointer[UInt32, MutAnyOrigin],
     N: Int32,
     R: Int32,
 ) raises:
@@ -39,7 +39,7 @@ def solve(
 
     var blocksPerGrid = ceildiv(N, threadsPerBlock)
 
-    var _kernel = ctx.compile_function[fnv1a_hash_kernel, fnv1a_hash_kernel]()
+    var _kernel = ctx.compile_function[fnv1a_hash_kernel]()
     ctx.enqueue_function(
         _kernel, input, output, N, R, grid_dim=blocksPerGrid, block_dim=threadsPerBlock
     )
