@@ -17,5 +17,5 @@ def solve(
     weight_decay: float,
     t: int,
 ) -> tuple[jax.Array, jax.Array, jax.Array]:
-    # return (params, m, v) tensors directly
+    # return output tensor directly
     pass
