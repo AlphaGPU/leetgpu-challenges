@@ -1,12 +1,12 @@
-from std.gpu.host import DeviceContext
-from std.gpu import block_dim, block_idx, thread_idx
+from max.gpu.host import DeviceContext
+from max.gpu import block_dim, block_idx, thread_idx
 from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
 def silu_kernel(
-    input: UnsafePointer[Float32, MutExternalOrigin],
-    output: UnsafePointer[Float32, MutExternalOrigin],
+    input: UnsafePointer[Float32, MutAnyOrigin],
+    output: UnsafePointer[Float32, MutAnyOrigin],
     N: Int32,
 ):
     pass
@@ -15,8 +15,8 @@ def silu_kernel(
 # input, output are device pointers
 @export
 def solve(
-    input: UnsafePointer[Float32, MutExternalOrigin],
-    output: UnsafePointer[Float32, MutExternalOrigin],
+    input: UnsafePointer[Float32, MutAnyOrigin],
+    output: UnsafePointer[Float32, MutAnyOrigin],
     N: Int32,
 ) raises:
     var threadsPerBlock: Int32 = 256
@@ -24,7 +24,7 @@ def solve(
 
     var blocksPerGrid = ceildiv(N, threadsPerBlock)
 
-    var _kernel = ctx.compile_function[silu_kernel, silu_kernel]()
+    var _kernel = ctx.compile_function[silu_kernel]()
     ctx.enqueue_function(
         _kernel, input, output, N, grid_dim=blocksPerGrid, block_dim=threadsPerBlock
     )

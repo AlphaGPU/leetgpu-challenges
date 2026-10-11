@@ -1,12 +1,12 @@
-from std.gpu.host import DeviceContext
-from std.gpu import block_dim, block_idx, thread_idx
+from max.gpu.host import DeviceContext
+from max.gpu import block_dim, block_idx, thread_idx
 from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
 def matrix_transpose_kernel(
-    input: UnsafePointer[Float32, MutExternalOrigin],
-    output: UnsafePointer[Float32, MutExternalOrigin],
+    input: UnsafePointer[Float32, MutAnyOrigin],
+    output: UnsafePointer[Float32, MutAnyOrigin],
     rows: Int32,
     cols: Int32,
 ):
@@ -16,8 +16,8 @@ def matrix_transpose_kernel(
 # input, output are device pointers (i.e. pointers to memory on the GPU)
 @export
 def solve(
-    input: UnsafePointer[Float32, MutExternalOrigin],
-    output: UnsafePointer[Float32, MutExternalOrigin],
+    input: UnsafePointer[Float32, MutAnyOrigin],
+    output: UnsafePointer[Float32, MutAnyOrigin],
     rows: Int32,
     cols: Int32,
 ) raises:
@@ -27,7 +27,7 @@ def solve(
     var grid_dim_x = ceildiv(cols, BLOCK_SIZE)
     var grid_dim_y = ceildiv(rows, BLOCK_SIZE)
 
-    var _kernel = ctx.compile_function[matrix_transpose_kernel, matrix_transpose_kernel]()
+    var _kernel = ctx.compile_function[matrix_transpose_kernel]()
     ctx.enqueue_function(
         _kernel,
         input,
