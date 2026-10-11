@@ -49,7 +49,7 @@
       never zero.</li>
 </ul>
 
-<h2>Example 1</h2>
+<h2>Example 1:</h2>
 <pre>
 N = 2, t = 1
 params = [1.0, -1.0]
@@ -67,7 +67,7 @@ step  = lr * m_hat / (sqrt(v_hat) + eps) = [0.1, -0.1]
 params -> [0.9, -0.9]
 </pre>
 
-<h2>Example 2</h2>
+<h2>Example 2:</h2>
 <pre>
 N = 1, t = 1
 params = [1.0]
@@ -97,5 +97,5 @@ params -> 0.999 - 0.1 = 0.899
   <li>1e-12 &le; <code>eps</code> &le; 1e-2</li>
   <li>0 &le; <code>weight_decay</code> &le; 1</li>
   <li><code>v</code> is always non-negative; <code>m</code> may be negative</li>
-  <li>Performance is measured with <code>N</code> = 4,096&times;4,096 = 16,777,216</li>
+  <li>Performance is measured with <code>N</code> = 16,777,216, <code>t</code> = 1,000</li>
 </ul>

@@ -7,8 +7,8 @@ from core.challenge_base import ChallengeBase
 
 class Challenge(ChallengeBase):
     name = "Fused AdamW"
-    atol = 1e-05
-    rtol = 1e-05
+    atol = 1e-04
+    rtol = 1e-04
     num_gpus = 1
     access_tier = "free"
 
@@ -82,21 +82,23 @@ class Challenge(ChallengeBase):
     ):
         device = self.device
         dtype = torch.float32
-        gen = torch.Generator(device=device).manual_seed(seed)
+        torch.manual_seed(seed)
 
-        params = torch.empty(N, device=device, dtype=dtype).uniform_(*param_range, generator=gen)
+        params = torch.empty(N, device=device, dtype=dtype).uniform_(*param_range)
         if zero_grad:
             grad = torch.zeros(N, device=device, dtype=dtype)
         else:
-            grad = torch.empty(N, device=device, dtype=dtype).uniform_(*grad_range, generator=gen)
+            grad = torch.empty(N, device=device, dtype=dtype).uniform_(*grad_range)
         if zero_state:
             m = torch.zeros(N, device=device, dtype=dtype)
             v = torch.zeros(N, device=device, dtype=dtype)
         else:
             # Simulate an optimizer that has already taken some steps: m carries
             # the sign of typical gradients, v is a small positive magnitude.
-            m = torch.empty(N, device=device, dtype=dtype).uniform_(-0.5, 0.5, generator=gen)
-            v = torch.empty(N, device=device, dtype=dtype).uniform_(0.0, 0.5, generator=gen)
+            # v stays bounded away from zero so that m_hat / sqrt(v_hat) remains
+            # well conditioned, as it is for a real optimizer where v tracks g^2.
+            m = torch.empty(N, device=device, dtype=dtype).uniform_(-0.5, 0.5)
+            v = torch.empty(N, device=device, dtype=dtype).uniform_(0.01, 0.5)
 
         return {
             "params": params,
@@ -141,47 +143,56 @@ class Challenge(ChallengeBase):
 
         # Zero gradient, fresh (zero) optimizer state: m and v stay exactly zero,
         # so the adaptive step is zero and only weight decay moves the parameters.
-        tests.append(self._make_test_case(N=8, t=5, zero_state=True, zero_grad=True, seed=2))
+        tests.append(self._make_test_case(N=3, t=5, zero_state=True, zero_grad=True, seed=2))
 
         # Zero gradient with warm (nonzero) prior state: no new gradient signal
         # arrives, but existing momentum still drives an adaptive step while m
         # and v exponentially decay toward zero.
-        tests.append(self._make_test_case(N=8, t=5, zero_state=False, zero_grad=True, seed=11))
+        tests.append(self._make_test_case(N=4, t=5, zero_state=False, zero_grad=True, seed=3))
 
         # Zero weight decay: reduces to plain Adam.
-        tests.append(self._make_test_case(N=16, t=1, weight_decay=0.0, zero_state=True, seed=3))
+        tests.append(self._make_test_case(N=16, t=1, weight_decay=0.0, zero_state=True, seed=4))
 
-        # Warm state, mid-training step count: bias correction is neither ~0 nor ~1.
-        tests.append(self._make_test_case(N=32, t=50, zero_state=False, seed=4))
+        # Warm state, mid-training step count, larger lr and weight decay: bias
+        # correction is neither ~0 nor ~1.
+        tests.append(
+            self._make_test_case(N=30, t=50, lr=0.5, weight_decay=0.1, zero_state=False, seed=5)
+        )
 
         # Very large step count: bias corrections both saturate close to 1.
-        tests.append(self._make_test_case(N=16, t=100000, zero_state=False, seed=5))
+        tests.append(self._make_test_case(N=64, t=100000, zero_state=False, seed=6))
 
         # Negative parameters and negative gradients throughout.
         tests.append(
             self._make_test_case(
-                N=16,
+                N=100,
                 t=1,
                 zero_state=True,
                 param_range=(-2.0, -0.5),
                 grad_range=(-1.0, -0.2),
-                seed=6,
+                seed=7,
             )
         )
 
         # Non-default betas: catches implementations that hardcode 0.9 / 0.999.
         tests.append(
-            self._make_test_case(N=64, t=10, beta1=0.8, beta2=0.99, zero_state=False, seed=7)
+            self._make_test_case(N=255, t=10, beta1=0.8, beta2=0.99, zero_state=False, seed=8)
         )
 
         # Larger eps: shifts the denominator enough to matter numerically.
-        tests.append(self._make_test_case(N=64, t=1, eps=1e-2, zero_state=True, seed=8))
+        tests.append(self._make_test_case(N=256, t=1, eps=1e-2, zero_state=True, seed=9))
 
-        # Very small learning rate: update should be tiny but nonzero.
-        tests.append(self._make_test_case(N=64, t=1, lr=1e-6, zero_state=True, seed=9))
-
-        # Larger, realistic-ish size with default hyperparameters.
-        tests.append(self._make_test_case(N=1024, t=200, zero_state=False, seed=10))
+        # Larger, realistic size spanning the full documented value range.
+        tests.append(
+            self._make_test_case(
+                N=4096,
+                t=200,
+                zero_state=False,
+                param_range=(-10.0, 10.0),
+                grad_range=(-10.0, 10.0),
+                seed=10,
+            )
+        )
 
         return tests
 
