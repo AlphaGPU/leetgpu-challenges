@@ -35,6 +35,22 @@ The review script and config run from the **base** branch and PR code is never e
 - **Optional GitHub App identity:** secrets `REVIEW_APP_ID` and `REVIEW_APP_PRIVATE_KEY`.
 - Unit tests: `node --test .github/review-bot/`.
 
+## FAQ
+
+### Does my solution's time include compilation?
+No. The score is only the kernel run time:
+
+- **CUDA / Mojo** are compiled on the server before your run starts.
+- **CuTe DSL** is compiled with `cute.compile` before the timer starts.
+- **Triton / PyTorch / JAX** JIT-compile on the first calls, which happen during the functional tests and 2 warmup runs. Those are not scored.
+
+The reported time is the **median of 15 timed runs** on the performance test. Each run gets freshly generated inputs and an L2 cache flush first. The timer covers your `solve` call plus a device sync. It includes Python launch overhead for Python-based languages, but not compilation.
+
+Compilation does count toward the overall **wall-clock limit** of a submission (about 40 s for everything: compile, all tests, warmup and timed runs). A very slow compile can cause a timeout even when the kernel itself is fast.
+
+### Why did a tiny code change make my kernel noticeably faster or slower?
+Run-to-run variance on shared GPUs is a few percent. Changes to indexing can also change what the compiler emits, for example vectorized vs. scalar loads or extra integer ops in the address math. Compare a few submissions before reading much into a single result.
+
 ## License
 
 This problem set is licensed under the [CC BY-NC-ND 4.0 license](LICENSE).
