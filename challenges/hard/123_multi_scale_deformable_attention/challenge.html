@@ -1,0 +1,198 @@
+<p>
+Implement multi-scale deformable attention, the kernel at the heart of detectors such as Deformable
+DETR, Grounding DINO and BEVFormer. Instead of attending to every position of a feature map, each
+query predicts a handful of <em>sampling locations</em> per attention head and per feature-pyramid
+level, reads the feature map at those (fractional) locations with bilinear interpolation, and
+combines the samples with pre-computed attention weights. The feature maps of all
+<code>num_levels</code> levels are concatenated into one <code>value</code> tensor, so the kernel
+must turn a level index plus a normalized coordinate into a row of that flat tensor.
+</p>
+<p>
+The levels are stored back to back in <code>value</code>, level <code>l</code> having shape
+<code>(H_l, W_l)</code> in row-major order, so its first row sits at the exclusive prefix sum
+<code>level_start[l]</code> of the level sizes <code>H_l &times; W_l</code>. For a query <code>q</code>, head
+<code>h</code>, level <code>l</code> and point <code>p</code>, the normalized location
+<code>(loc_x, loc_y)</code> is mapped to the pixel grid of its own level and interpolated:
+</p>
+<p>
+\[ x = loc_x \cdot W_l - 0.5 \qquad y = loc_y \cdot H_l - 0.5 \]
+\[ x_0 = \lfloor x \rfloor,\quad y_0 = \lfloor y \rfloor, \quad
+   dx = x - x_0, \quad dy = y - y_0 \]
+\[ \text{sample}_{q,h,l,p} = \sum_{i=0}^{1}\sum_{j=0}^{1}
+   w_{ij}\; \text{pixel}_l\!\left(y_0 + i,\; x_0 + j\right), \qquad
+   w_{ij} = \big(i\,dy + (1-i)(1-dy)\big)\big(j\,dx + (1-j)(1-dx)\big) \]
+\[ \text{pixel}_l(r, c) = \begin{cases}
+   value[\,level\_start[l] + r\,W_l + c,\; h,\; :\,] & 0 \le r < H_l \text{ and } 0 \le c < W_l \\
+   0 & \text{otherwise} \end{cases} \]
+\[ output[q, h, :] = \sum_{l=0}^{num\_levels-1} \sum_{p=0}^{num\_points-1}
+   attn\_weight[q, h, l, p] \cdot \text{sample}_{q,h,l,p} \]
+</p>
+<p>
+Sampling locations are not clamped: a location may fall outside <code>[0, 1]</code>, in which case
+the corners that land outside the level's grid contribute zero (zero padding, as in
+<code>grid_sample</code> with <code>align_corners=False</code>). The attention weights are already
+normalized by the caller and must be used exactly as given. All feature data is
+<code>float32</code>; <code>spatial_shapes</code> is <code>int32</code>.
+</p>
+
+<svg width="760" height="430" viewBox="0 0 760 430" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <rect width="760" height="430" fill="#222" rx="10"/>
+  <text x="380" y="28" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">One sample: level index + normalized location &rarr; bilinear read of the flattened pyramid</text>
+
+  <!-- flattened value tensor -->
+  <text x="40" y="58" fill="#aaa" font-family="monospace" font-size="12">value rows</text>
+  <rect x="140" y="46" width="240" height="26" fill="#1d4ed8" rx="3"/>
+  <rect x="380" y="46" width="120" height="26" fill="#2563eb" rx="3"/>
+  <rect x="500" y="46" width="60" height="26" fill="#60a5fa" rx="3"/>
+  <text x="260" y="64" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">level 0: H0&middot;W0 rows</text>
+  <text x="440" y="64" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">level 1</text>
+  <text x="530" y="64" fill="#0b1220" font-family="monospace" font-size="11" text-anchor="middle">level 2</text>
+  <line x1="140" y1="76" x2="140" y2="84" stroke="#888" stroke-width="1"/>
+  <line x1="380" y1="76" x2="380" y2="84" stroke="#888" stroke-width="1"/>
+  <line x1="500" y1="76" x2="500" y2="84" stroke="#888" stroke-width="1"/>
+  <text x="140" y="98" fill="#888" font-family="monospace" font-size="10" text-anchor="middle">0</text>
+  <text x="380" y="98" fill="#888" font-family="monospace" font-size="10" text-anchor="middle">level_start[1]</text>
+  <text x="505" y="98" fill="#888" font-family="monospace" font-size="10" text-anchor="middle">level_start[2]</text>
+  <text x="600" y="56" fill="#aaa" font-family="monospace" font-size="11">each row holds</text>
+  <text x="600" y="70" fill="#aaa" font-family="monospace" font-size="11">num_heads &times; head_dim</text>
+
+  <!-- level grid with the sampling point -->
+  <text x="130" y="134" fill="#aaa" font-family="monospace" font-size="12" text-anchor="middle">level l grid (H_l &times; W_l)</text>
+  <rect x="70" y="144" width="120" height="120" fill="#2d2d2d" stroke="#555" stroke-width="1"/>
+  <line x1="110" y1="144" x2="110" y2="264" stroke="#555" stroke-width="1"/>
+  <line x1="150" y1="144" x2="150" y2="264" stroke="#555" stroke-width="1"/>
+  <line x1="70" y1="184" x2="190" y2="184" stroke="#555" stroke-width="1"/>
+  <line x1="70" y1="224" x2="190" y2="224" stroke="#555" stroke-width="1"/>
+  <rect x="110" y="184" width="40" height="40" fill="#0f766e" fill-opacity="0.5" stroke="#2dd4bf" stroke-width="1.5"/>
+  <circle cx="134" cy="208" r="4.5" fill="#f472b6"/>
+  <text x="130" y="288" fill="#aaa" font-family="monospace" font-size="11" text-anchor="middle">x = loc_x&middot;W_l &minus; 0.5</text>
+  <text x="130" y="304" fill="#aaa" font-family="monospace" font-size="11" text-anchor="middle">y = loc_y&middot;H_l &minus; 0.5</text>
+
+  <line x1="196" y1="204" x2="286" y2="204" stroke="#888" stroke-width="1.4" marker-end="url(#arr123)"/>
+  <text x="241" y="196" fill="#888" font-family="monospace" font-size="10" text-anchor="middle">zoom</text>
+
+  <!-- bilinear zoom -->
+  <rect x="300" y="144" width="130" height="130" fill="#2d2d2d" stroke="#2dd4bf" stroke-width="1.5"/>
+  <circle cx="300" cy="144" r="7" fill="#1d4ed8"/>
+  <circle cx="430" cy="144" r="7" fill="#1d4ed8"/>
+  <circle cx="300" cy="274" r="7" fill="#1d4ed8"/>
+  <circle cx="430" cy="274" r="7" fill="#1d4ed8"/>
+  <circle cx="378" cy="196" r="4.5" fill="#f472b6"/>
+  <line x1="300" y1="196" x2="430" y2="196" stroke="#f472b6" stroke-width="0.8" stroke-dasharray="3 3"/>
+  <line x1="378" y1="144" x2="378" y2="274" stroke="#f472b6" stroke-width="0.8" stroke-dasharray="3 3"/>
+  <text x="296" y="134" fill="#ccc" font-family="monospace" font-size="10" text-anchor="end">(y0, x0)</text>
+  <text x="434" y="134" fill="#ccc" font-family="monospace" font-size="10">(y0, x0+1)</text>
+  <text x="296" y="292" fill="#ccc" font-family="monospace" font-size="10" text-anchor="end">(y0+1, x0)</text>
+  <text x="434" y="292" fill="#ccc" font-family="monospace" font-size="10">(y0+1, x0+1)</text>
+  <text x="365" y="212" fill="#f472b6" font-family="monospace" font-size="10" text-anchor="end">dx</text>
+  <text x="388" y="170" fill="#f472b6" font-family="monospace" font-size="10">dy</text>
+  <text x="365" y="316" fill="#aaa" font-family="monospace" font-size="11" text-anchor="middle">row = level_start[l] + r&middot;W_l + c</text>
+
+  <!-- accumulation -->
+  <rect x="470" y="144" width="250" height="130" fill="#2d2d2d" rx="6"/>
+  <text x="484" y="166" fill="#ccc" font-family="monospace" font-size="11">sample = &Sigma; w_ij &middot; pixel(y0+i, x0+j)</text>
+  <rect x="484" y="180" width="222" height="24" fill="#b45309" rx="3"/>
+  <text x="595" y="197" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">&times; attn_weight[q, h, l, p]</text>
+  <rect x="484" y="212" width="222" height="24" fill="#9333ea" rx="3"/>
+  <text x="595" y="229" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">&Sigma; over num_levels &times; num_points</text>
+  <rect x="484" y="244" width="222" height="20" fill="#0f766e" rx="3"/>
+  <text x="595" y="258" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">output[q, h, :]  (head_dim values)</text>
+
+  <rect x="40" y="340" width="680" height="70" fill="#2d2d2d" rx="6"/>
+  <text x="380" y="362" fill="#ccc" font-family="monospace" font-size="11" text-anchor="middle">every (query, head) reduces num_levels &times; num_points interpolated samples into one head_dim vector</text>
+  <text x="380" y="380" fill="#ccc" font-family="monospace" font-size="11" text-anchor="middle">corners that fall outside the level grid contribute zero, so locations may leave [0, 1]</text>
+  <text x="380" y="398" fill="#ccc" font-family="monospace" font-size="11" text-anchor="middle">each level uses its own H_l, W_l: the same normalized location lands on a different pixel per level</text>
+
+  <defs>
+    <marker id="arr123" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3 z" fill="#888"/>
+    </marker>
+  </defs>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the function <code>solve(value, spatial_shapes, sampling_loc, attn_weight, output, num_queries, num_heads, head_dim, num_levels, num_points)</code>.</li>
+  <li>Do not change the function signature or use external libraries beyond the standard GPU framework.</li>
+  <li><code>value</code> has shape <code>(total_spatial, num_heads, head_dim)</code>, where <code>total_spatial</code> is the sum of <code>H_l &times; W_l</code> over all levels.</li>
+  <li><code>spatial_shapes</code> has shape <code>(num_levels, 2)</code> and holds <code>(H_l, W_l)</code> per level as <code>int32</code>; the level offsets are the exclusive prefix sum of <code>H_l &times; W_l</code>.</li>
+  <li><code>sampling_loc</code> has shape <code>(num_queries, num_heads, num_levels, num_points, 2)</code>, the last dimension being <code>(loc_x, loc_y)</code> normalized by the width and height of that level.</li>
+  <li><code>attn_weight</code> has shape <code>(num_queries, num_heads, num_levels, num_points)</code> and is applied as given; do not re-normalize it.</li>
+  <li>Use bilinear interpolation with the half-pixel convention above and zero padding for corners outside the level grid.</li>
+  <li>Write the result into the provided <code>output</code> buffer of shape <code>(num_queries, num_heads, head_dim)</code>.</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  With <code>num_queries</code> = 2, <code>num_heads</code> = 1, <code>head_dim</code> = 1,
+  <code>num_levels</code> = 2, <code>num_points</code> = 1 and
+  <code>spatial_shapes</code> = <code>[(2, 2), (1, 1)]</code>, the five rows of
+  <code>value</code> are the 2&times;2 map of level 0 followed by the 1&times;1 map of level 1:
+</p>
+<p>
+  \[
+  \text{level }0 =
+  \begin{bmatrix}
+  1 & 2 \\
+  3 & 4
+  \end{bmatrix}
+  \qquad
+  \text{level }1 =
+  \begin{bmatrix}
+  10
+  \end{bmatrix}
+  \qquad
+  value =
+  \begin{bmatrix}
+  1 & 2 & 3 & 4 & 10
+  \end{bmatrix}^{\top}
+  \]
+</p>
+<p>
+  Sampling locations (one point per level, per query) and attention weights:
+  \[
+  sampling\_loc =
+  \begin{bmatrix}
+  (0.5, 0.5) & (0.5, 0.5) \\
+  (1.0, 1.0) & (0.5, 0.5)
+  \end{bmatrix}
+  \qquad
+  attn\_weight =
+  \begin{bmatrix}
+  0.5 & 0.5 \\
+  0.75 & 0.25
+  \end{bmatrix}
+  \]
+</p>
+<p>
+  <strong>Output</strong> (2&times;1&times;1):
+  \[
+  \begin{bmatrix}
+  6.25 \\
+  3.25
+  \end{bmatrix}
+  \]
+</p>
+<p>
+  Query 0 samples the center of level 0 at <code>x = y = 0.5</code>, which averages all four pixels
+  to <code>2.5</code>, and the single pixel of level 1 at <code>x = y = 0</code>, giving
+  <code>10</code>; the weighted sum is <code>0.5 &times; 2.5 + 0.5 &times; 10 = 6.25</code>.
+  Query 0's level-1 location is exactly on a pixel center, so <code>dx = dy = 0</code> and the three
+  phantom corners get weight zero. Query 1 samples level 0 at <code>x = y = 1.5</code>, where only
+  the <code>(1, 1)</code> corner is inside the grid, so the sample is
+  <code>0.25 &times; 4 = 1.0</code>, and the total is
+  <code>0.75 &times; 1.0 + 0.25 &times; 10 = 3.25</code>.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>num_queries</code> &le; 25,000</li>
+  <li>1 &le; <code>num_heads</code> &le; 16</li>
+  <li>1 &le; <code>head_dim</code> &le; 64</li>
+  <li>1 &le; <code>num_levels</code> &le; 8</li>
+  <li>1 &le; <code>num_points</code> &le; 8</li>
+  <li>1 &le; <code>H_l</code>, <code>W_l</code> &le; 128 and <code>total_spatial</code> &le; 25,000</li>
+  <li><code>sampling_loc</code> values lie in <code>[-0.25, 1.25]</code>; <code>attn_weight</code> values lie in <code>[-5, 5]</code></li>
+  <li><code>value</code>, <code>sampling_loc</code>, <code>attn_weight</code> and <code>output</code> are <code>float32</code>; <code>spatial_shapes</code> is <code>int32</code></li>
+  <li>Performance is measured with <code>num_queries</code> = 21,760, <code>num_heads</code> = 8, <code>head_dim</code> = 32, <code>num_levels</code> = 4, <code>num_points</code> = 4 and <code>spatial_shapes</code> = [(128, 128), (64, 64), (32, 32), (16, 16)]</li>
+</ul>
