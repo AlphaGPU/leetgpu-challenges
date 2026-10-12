@@ -1,0 +1,138 @@
+<p>
+  When decoding a token against a long KV cache, Flash-Decoding splits the KV cache into
+  <code>num_splits</code> chunks and computes a partial attention output on each chunk in
+  parallel. Each partial output <code>partial_out[s]</code> is the softmax of that chunk's
+  scores applied to that chunk's values, and each <code>partial_lse[s]</code> is the
+  log-sum-exp of the chunk's scores. This kernel merges the per-chunk results into the
+  final attention output using the log-sum-exp trick, so no chunk's contribution overflows
+  when scores span very different magnitudes.
+</p>
+
+<svg width="660" height="276" viewBox="0 0 660 276" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto; font-family:monospace;">
+  <rect width="660" height="276" rx="8" fill="#222"/>
+  <defs>
+    <marker id="arrskv" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6" fill="none" stroke="#888" stroke-width="1"/>
+    </marker>
+  </defs>
+
+  <text x="350" y="16" text-anchor="middle" fill="#666" font-size="10">one head, num_splits = 4</text>
+
+  <!-- Row 1: KV cache chunks -->
+  <text x="14" y="44" fill="#888" font-size="10">KV</text>
+  <rect x="60" y="26" width="136" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="128" y="44" text-anchor="middle" fill="#8ec4f0" font-size="10">chunk 0</text>
+  <rect x="208" y="26" width="136" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="276" y="44" text-anchor="middle" fill="#8ec4f0" font-size="10">chunk 1</text>
+  <rect x="356" y="26" width="136" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="424" y="44" text-anchor="middle" fill="#8ec4f0" font-size="10">chunk 2</text>
+  <rect x="504" y="26" width="136" height="26" rx="4" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="572" y="44" text-anchor="middle" fill="#8ec4f0" font-size="10">chunk 3</text>
+
+  <path d="M 128,52 L 128,64" stroke="#888" stroke-width="1" marker-end="url(#arrskv)"/>
+  <path d="M 276,52 L 276,64" stroke="#888" stroke-width="1" marker-end="url(#arrskv)"/>
+  <path d="M 424,52 L 424,64" stroke="#888" stroke-width="1" marker-end="url(#arrskv)"/>
+  <path d="M 572,52 L 572,64" stroke="#888" stroke-width="1" marker-end="url(#arrskv)"/>
+
+  <!-- Row 2: partial results (input to this kernel) -->
+  <text x="14" y="90" fill="#888" font-size="10">partial</text>
+  <rect x="60" y="68" width="136" height="42" rx="4" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
+  <text x="128" y="84" text-anchor="middle" fill="#c060e0" font-size="9">out[0] = (head_dim)</text>
+  <text x="128" y="100" text-anchor="middle" fill="#e0a040" font-size="9">lse[0] = 2.0</text>
+  <rect x="208" y="68" width="136" height="42" rx="4" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
+  <text x="276" y="84" text-anchor="middle" fill="#c060e0" font-size="9">out[1] = (head_dim)</text>
+  <text x="276" y="100" text-anchor="middle" fill="#e0a040" font-size="9">lse[1] = 1.0</text>
+  <rect x="356" y="68" width="136" height="42" rx="4" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
+  <text x="424" y="84" text-anchor="middle" fill="#c060e0" font-size="9">out[2] = (head_dim)</text>
+  <text x="424" y="100" text-anchor="middle" fill="#e0a040" font-size="9">lse[2] = 3.0</text>
+  <rect x="504" y="68" width="136" height="42" rx="4" fill="#1a1a1a" stroke="#666" stroke-width="1"/>
+  <text x="572" y="84" text-anchor="middle" fill="#c060e0" font-size="9">out[3] = (head_dim)</text>
+  <text x="572" y="100" text-anchor="middle" fill="#e0a040" font-size="9">lse[3] = 0.0</text>
+
+  <path d="M 128,110 L 128,124" stroke="#888" stroke-width="1" marker-end="url(#arrskv)"/>
+  <path d="M 276,110 L 276,124" stroke="#888" stroke-width="1" marker-end="url(#arrskv)"/>
+  <path d="M 424,110 L 424,124" stroke="#888" stroke-width="1" marker-end="url(#arrskv)"/>
+  <path d="M 572,110 L 572,124" stroke="#888" stroke-width="1" marker-end="url(#arrskv)"/>
+
+  <!-- Row 3: stable rescale -->
+  <rect x="60" y="126" width="580" height="34" rx="5" fill="#1a1a1a" stroke="#e0a040" stroke-width="1"/>
+  <text x="350" y="141" text-anchor="middle" fill="#e0a040" font-size="10">m = max(2.0, 1.0, 3.0, 0.0) = 3.0 &#x2192; w[s] = exp(lse[s] &#x2212; m)</text>
+  <text x="350" y="154" text-anchor="middle" fill="#aaa" font-size="9">w = (0.368, 0.135, 1.000, 0.050), &#x3a3; w = 1.553</text>
+
+  <!-- Row 4: normalized weights -->
+  <text x="14" y="194" fill="#888" font-size="10">weights</text>
+  <rect x="60" y="176" width="136" height="26" rx="4" fill="#1a3a1a" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="128" y="193" text-anchor="middle" fill="#7fd99f" font-size="10">0.237</text>
+  <rect x="208" y="176" width="136" height="26" rx="4" fill="#1a3a1a" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="276" y="193" text-anchor="middle" fill="#7fd99f" font-size="10">0.087</text>
+  <rect x="356" y="176" width="136" height="26" rx="4" fill="#1a3a1a" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="424" y="193" text-anchor="middle" fill="#7fd99f" font-size="10">0.644</text>
+  <rect x="504" y="176" width="136" height="26" rx="4" fill="#1a3a1a" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="572" y="193" text-anchor="middle" fill="#7fd99f" font-size="10">0.032</text>
+
+  <path d="M 128,202 L 128,216" stroke="#888" stroke-width="1" marker-end="url(#arrskv)"/>
+  <path d="M 276,202 L 276,216" stroke="#888" stroke-width="1" marker-end="url(#arrskv)"/>
+  <path d="M 424,202 L 424,216" stroke="#888" stroke-width="1" marker-end="url(#arrskv)"/>
+  <path d="M 572,202 L 572,216" stroke="#888" stroke-width="1" marker-end="url(#arrskv)"/>
+
+  <!-- Row 5: merged output -->
+  <text x="14" y="238" fill="#888" font-size="10">output</text>
+  <rect x="60" y="218" width="580" height="42" rx="5" fill="#1e3a5f" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="350" y="234" text-anchor="middle" fill="#8ec4f0" font-size="10">output[h, :] = 0.237&#x00b7;out[0] + 0.087&#x00b7;out[1] + 0.644&#x00b7;out[2] + 0.032&#x00b7;out[3]</text>
+  <text x="350" y="250" text-anchor="middle" fill="#888" font-size="9">chunks with larger lse dominate the merge</text>
+</svg>
+
+<p>
+  For each head \(h\) and each embedding dimension \(d\), given the split log-sum-exps
+  \(\ell_{s,h} = \text{partial_lse}[s, h]\) and partial outputs
+  \(o_{s,h,d} = \text{partial_out}[s, h, d]\), let
+  \[
+  m_h = \max_{s} \ell_{s,h}, \qquad
+  w_{s,h} = \exp\!\bigl(\ell_{s,h} - m_h\bigr).
+  \]
+  The merged attention output is the per-split-weighted average
+  \[
+  \text{output}[h, d] \;=\; \frac{\sum_{s=0}^{S-1} w_{s,h} \cdot o_{s,h,d}}{\sum_{s=0}^{S-1} w_{s,h}}.
+  \]
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li><code>partial_out</code> has shape <code>(num_splits, num_heads, head_dim)</code> with <code>float32</code> values</li>
+  <li><code>partial_lse</code> has shape <code>(num_splits, num_heads)</code> with <code>float32</code> values</li>
+  <li>Subtract \(m_h\) before exponentiating to keep the merge numerically stable</li>
+  <li>The final result must be stored in the <code>output</code> tensor with shape <code>(num_heads, head_dim)</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+  With <code>num_splits</code> = 2, <code>num_heads</code> = 2, <code>head_dim</code> = 2, each
+  split contributes one \((\text{num_heads} \times \text{head_dim})\) partial output and one
+  log-sum-exp per head. Rows index heads:
+  \[
+  \text{partial_out}[0] = \begin{bmatrix} 1 & 2 \\ 4 & 0 \end{bmatrix}, \qquad
+  \text{partial_lse}[0] = \begin{bmatrix} 0 & \ln 3 \end{bmatrix}
+  \]
+  \[
+  \text{partial_out}[1] = \begin{bmatrix} 3 & 4 \\ 0 & 8 \end{bmatrix}, \qquad
+  \text{partial_lse}[1] = \begin{bmatrix} 0 & 0 \end{bmatrix}
+  \]
+  The two heads merge differently. Head 0 has equal log-sum-exps, so its weights are
+  \(\tfrac{1}{2},\tfrac{1}{2}\); head 1 has log-sum-exps of \(\ln 3\) and \(0\), so its
+  weights are \(\tfrac{3}{4},\tfrac{1}{4}\). The result is
+  \[
+  \text{output} = \begin{bmatrix} 2 & 3 \\ 3 & 2 \end{bmatrix}.
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>num_splits</code> &le; 256</li>
+  <li>1 &le; <code>num_heads</code> &le; 128</li>
+  <li>1 &le; <code>head_dim</code> &le; 256</li>
+  <li>All tensors are <code>float32</code></li>
+  <li>Performance is measured with <code>num_splits</code> = 128, <code>num_heads</code> = 64, <code>head_dim</code> = 128</li>
+</ul>
