@@ -5,6 +5,27 @@
   the connected component containing <code>i</code>.
 </p>
 
+<svg width="420" height="170" viewBox="0 0 420 170" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <rect width="420" height="170" rx="8" fill="#222"/>
+  <!-- Component {0,1,2}: label 0 (blue) -->
+  <line x1="50" y1="70" x2="130" y2="70" stroke="#ccc" stroke-width="2"/>
+  <line x1="130" y1="70" x2="210" y2="70" stroke="#ccc" stroke-width="2"/>
+  <circle cx="50" cy="70" r="18" fill="#4477bb"/>
+  <text x="50" y="75" text-anchor="middle" fill="#fff" font-family="monospace" font-size="14">0</text>
+  <circle cx="130" cy="70" r="18" fill="#4477bb"/>
+  <text x="130" y="75" text-anchor="middle" fill="#fff" font-family="monospace" font-size="14">1</text>
+  <circle cx="210" cy="70" r="18" fill="#4477bb"/>
+  <text x="210" y="75" text-anchor="middle" fill="#fff" font-family="monospace" font-size="14">2</text>
+  <text x="130" y="125" text-anchor="middle" fill="#aaa" font-family="sans-serif" font-size="12">label = 0</text>
+  <!-- Component {3,4}: label 3 (orange) -->
+  <line x1="300" y1="70" x2="380" y2="70" stroke="#ccc" stroke-width="2"/>
+  <circle cx="300" cy="70" r="18" fill="#cc7744"/>
+  <text x="300" y="75" text-anchor="middle" fill="#fff" font-family="monospace" font-size="14">3</text>
+  <circle cx="380" cy="70" r="18" fill="#cc7744"/>
+  <text x="380" y="75" text-anchor="middle" fill="#fff" font-family="monospace" font-size="14">4</text>
+  <text x="340" y="125" text-anchor="middle" fill="#aaa" font-family="sans-serif" font-size="12">label = 3</text>
+</svg>
+
 <h2>Implementation Requirements</h2>
 <ul>
   <li>Use only native features (external libraries are not permitted)</li>
@@ -36,7 +57,7 @@ Explanation:
   <li>1 &le; <code>N</code> &le; 1,000,000</li>
   <li>1 &le; <code>M</code> &le; 5,000,000</li>
   <li>0 &le; <code>src[e]</code>, <code>dst[e]</code> &lt; <code>N</code> for all edges</li>
-  <li>The graph may contain self-loops and duplicate edges</li>
+  <li>The graph may contain self-loops and duplicate edges; vertices that appear in no edge form their own component</li>
   <li>All values are 32-bit integers (<code>int32</code>)</li>
   <li>Performance is measured with <code>N</code> = 1,000,000, <code>M</code> = 5,000,000</li>
 </ul>
