@@ -71,11 +71,6 @@ class Challenge(ChallengeBase):
         assert x_scales.dtype == torch.uint8
         assert w_scales.dtype == torch.uint8
         assert y.dtype == torch.float16
-        assert x_q.device.type == "cuda"
-        assert x_scales.device.type == "cuda"
-        assert w_q.device.type == "cuda"
-        assert w_scales.device.type == "cuda"
-        assert y.device.type == "cuda"
 
         # Decode packed FP4 operands to float32.
         x_fp4 = _decode_fp4_packed(x_q, M, K)
@@ -109,7 +104,7 @@ class Challenge(ChallengeBase):
 
     def _make_test_case(self, M: int, N: int, K: int, zero_x: bool = False, alpha: float = 1.0):
         assert K % BLOCK_SIZE == 0, "K must be divisible by 16"
-        device = "cuda"
+        device = self.device
         if zero_x:
             x_q = torch.zeros(M, K // 2, dtype=torch.uint8, device=device)
         else:
@@ -136,7 +131,7 @@ class Challenge(ChallengeBase):
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
-        device = "cuda"
+        device = self.device
         M, N, K = 2, 2, 16
 
         # x row 0: sixteen FP4 values = 1.0 (nibble 0x2) -> 8 bytes of 0x22
