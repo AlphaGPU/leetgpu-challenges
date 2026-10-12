@@ -7,6 +7,18 @@
 </p>
 
 <p>
+  <strong>How this differs from INT8 KV-Cache Attention:</strong> that challenge stores each key/value
+  as plain per-token <code>int8</code>, so dequantization is a single elementwise multiply
+  (<code>K_int8 &times; k_scale</code>). Here, each key was first multiplied by a random orthogonal
+  rotation \(\Pi\) and then quantized coordinate-wise to a shared low-bit codebook of <code>C</code>
+  centroids (e.g. <code>C</code> = 16 is 4 bits per coordinate, each index stored in a
+  <code>uint8</code>), plus a 1-bit sign sketch of the quantization residual. Dequantizing therefore
+  requires a codebook lookup, undoing the rotation with a \(D \times D\) matrix product, and adding
+  a projected residual correction. Only the raw scores \(Q \tilde{K}^T\) are produced (no
+  \(1/\sqrt{D}\) scaling, softmax, or value cache).
+</p>
+
+<p>
   <strong>Background - how the keys were compressed</strong> (Not part of the challenge):
 </p>
 <ol>

@@ -7,14 +7,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="TurboQuant KV Cache Attention",
-            atol=1e-3,
-            rtol=1e-3,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "TurboQuant KV Cache Attention"
+    atol = 1e-03
+    rtol = 1e-03
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -47,14 +44,6 @@ class Challenge(ChallengeBase):
         assert S_mat.dtype == torch.float32
         assert codebook.dtype == torch.float32
         assert scores.dtype == torch.float32
-        assert Q.device.type == "cuda"
-        assert K_idx.device.type == "cuda"
-        assert qjl_signs.device.type == "cuda"
-        assert gamma.device.type == "cuda"
-        assert Pi.device.type == "cuda"
-        assert S_mat.device.type == "cuda"
-        assert codebook.device.type == "cuda"
-        assert scores.device.type == "cuda"
 
         # Stage 1: MSE dequantization — lookup centroids, rotate back
         K_centroids = codebook[K_idx.long()]  # [S, D]
@@ -87,12 +76,12 @@ class Challenge(ChallengeBase):
         }
 
     def _make_rotation(self, D):
-        G = torch.randn(D, D, device="cuda")
+        G = torch.randn(D, D, device=self.device)
         Q, _ = torch.linalg.qr(G)
         return Q
 
     def _make_codebook(self, C, scale=1.0):
-        return torch.linspace(-scale, scale, C, device="cuda", dtype=torch.float32)
+        return torch.linspace(-scale, scale, C, device=self.device, dtype=torch.float32)
 
     def _encode_keys(self, K, Pi, S_mat, codebook):
         """Simulate TurboQuant_prod encoding: rotate, quantize, compute QJL on residual."""
@@ -120,7 +109,7 @@ class Challenge(ChallengeBase):
 
     def _make_test_case(self, B, S_seq, D, C, zero_q=False, seed=42):
         torch.manual_seed(seed)
-        device = "cuda"
+        device = self.device
 
         Pi = self._make_rotation(D)
         S_mat = torch.randn(D, D, device=device, dtype=torch.float32)
@@ -153,7 +142,7 @@ class Challenge(ChallengeBase):
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
-        device = "cuda"
+        device = self.device
         B, S, D, C = 2, 3, 2, 4
 
         Q = torch.tensor([[1.0, 0.0], [0.0, 1.0]], device=device, dtype=torch.float32)
