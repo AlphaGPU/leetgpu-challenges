@@ -42,14 +42,11 @@ def _decode_fp4_packed(packed: torch.Tensor, rows: int, cols: int) -> torch.Tens
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="NVFP4 Matrix Multiplication",
-            atol=1e-01,
-            rtol=5e-02,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "NVFP4 Matrix Multiplication"
+    atol = 1e-01
+    rtol = 5e-02
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
