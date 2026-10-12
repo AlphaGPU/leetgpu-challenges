@@ -26,9 +26,6 @@ class Challenge(ChallengeBase):
         assert src.shape == (M,)
         assert dst.shape == (M,)
         assert labels.shape == (N,)
-        assert src.device.type == "cuda"
-        assert dst.device.type == "cuda"
-        assert labels.device.type == "cuda"
 
         # Label propagation: labels[i] converges to the minimum vertex ID
         # in the connected component containing vertex i.
