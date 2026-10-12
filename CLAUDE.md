@@ -135,6 +135,7 @@ Must compile/run without errors but not solve the problem. No comments except th
 - Easy problems: provide kernel scaffold with grid/block setup
 - Medium/Hard problems: empty `solve` function only
 - Match the exact style of existing starters in each framework
+- Mojo: use Mojo 1.1 style — `max.gpu` imports, `MutAnyOrigin`, single-arg `ctx.compile_function[kernel]()`
 
 **Reference files** (read these for exact format):
 - CUDA: `challenges/easy/1_vector_add/starter/starter.cu`

@@ -88,6 +88,8 @@ jobs:
             - Do NOT use a challenge number that is already claimed by an open PR.
             - Prefer medium or hard difficulty. Only create easy if the topic involves a non-trivial GPU concept (not just a map operation).
             - The challenge should require the solver to think about memory access patterns, synchronization, work distribution, or algorithm design — not just write a one-line kernel.
+            - Python allocations in challenge.py use `device=self.device` — never hardcoded `device="cuda"`.
+            - Mojo starters use Mojo 1.1 style: `max.gpu` imports (not `std.gpu`), `MutAnyOrigin` (not `MutExternalOrigin`), and single-arg `ctx.compile_function[kernel]()`. Match `challenges/easy/1_vector_add/starter/starter.mojo`.
 
             Design functional tests around the challenge's correctness edge cases and plausible implementation mistakes, following the guidance in CLAUDE.md. In the PR description, identify the mistakes the targeted tests catch.
 
