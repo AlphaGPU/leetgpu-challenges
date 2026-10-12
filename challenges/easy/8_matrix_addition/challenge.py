@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Matrix Addition", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Matrix Addition"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, A: torch.Tensor, B: torch.Tensor, C: torch.Tensor, N: int):
         assert A.shape == (N, N)
@@ -31,9 +32,9 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         N = 2
-        A = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="cuda", dtype=dtype)
-        B = torch.tensor([[5.0, 6.0], [7.0, 8.0]], device="cuda", dtype=dtype)
-        C = torch.empty(N, N, device="cuda", dtype=dtype)
+        A = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device=self.device, dtype=dtype)
+        B = torch.tensor([[5.0, 6.0], [7.0, 8.0]], device=self.device, dtype=dtype)
+        C = torch.empty(N, N, device=self.device, dtype=dtype)
         return {
             "A": A,
             "B": B,
@@ -48,9 +49,9 @@ class Challenge(ChallengeBase):
         # basic_2x2
         test_cases.append(
             {
-                "A": torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="cuda", dtype=dtype),
-                "B": torch.tensor([[5.0, 6.0], [7.0, 8.0]], device="cuda", dtype=dtype),
-                "C": torch.zeros((2, 2), device="cuda", dtype=dtype),
+                "A": torch.tensor([[1.0, 2.0], [3.0, 4.0]], device=self.device, dtype=dtype),
+                "B": torch.tensor([[5.0, 6.0], [7.0, 8.0]], device=self.device, dtype=dtype),
+                "C": torch.zeros((2, 2), device=self.device, dtype=dtype),
                 "N": 2,
             }
         )
@@ -58,9 +59,9 @@ class Challenge(ChallengeBase):
         # all_zeros_4x4
         test_cases.append(
             {
-                "A": torch.zeros((4, 4), device="cuda", dtype=dtype),
-                "B": torch.zeros((4, 4), device="cuda", dtype=dtype),
-                "C": torch.zeros((4, 4), device="cuda", dtype=dtype),
+                "A": torch.zeros((4, 4), device=self.device, dtype=dtype),
+                "B": torch.zeros((4, 4), device=self.device, dtype=dtype),
+                "C": torch.zeros((4, 4), device=self.device, dtype=dtype),
                 "N": 4,
             }
         )
@@ -69,12 +70,16 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "A": torch.tensor(
-                    [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], device="cuda", dtype=dtype
+                    [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+                    device=self.device,
+                    dtype=dtype,
                 ),
                 "B": torch.tensor(
-                    [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], device="cuda", dtype=dtype
+                    [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+                    device=self.device,
+                    dtype=dtype,
                 ),
-                "C": torch.zeros((3, 3), device="cuda", dtype=dtype),
+                "C": torch.zeros((3, 3), device=self.device, dtype=dtype),
                 "N": 3,
             }
         )
@@ -82,9 +87,9 @@ class Challenge(ChallengeBase):
         # negative_values_2x2
         test_cases.append(
             {
-                "A": torch.tensor([[-1.0, -2.0], [-3.0, -4.0]], device="cuda", dtype=dtype),
-                "B": torch.tensor([[-5.0, -6.0], [-7.0, -8.0]], device="cuda", dtype=dtype),
-                "C": torch.zeros((2, 2), device="cuda", dtype=dtype),
+                "A": torch.tensor([[-1.0, -2.0], [-3.0, -4.0]], device=self.device, dtype=dtype),
+                "B": torch.tensor([[-5.0, -6.0], [-7.0, -8.0]], device=self.device, dtype=dtype),
+                "C": torch.zeros((2, 2), device=self.device, dtype=dtype),
                 "N": 2,
             }
         )
@@ -92,9 +97,9 @@ class Challenge(ChallengeBase):
         # mixed_positive_negative_2x2
         test_cases.append(
             {
-                "A": torch.tensor([[1.0, -2.0], [-3.0, 4.0]], device="cuda", dtype=dtype),
-                "B": torch.tensor([[-1.0, 2.0], [3.0, -4.0]], device="cuda", dtype=dtype),
-                "C": torch.zeros((2, 2), device="cuda", dtype=dtype),
+                "A": torch.tensor([[1.0, -2.0], [-3.0, 4.0]], device=self.device, dtype=dtype),
+                "B": torch.tensor([[-1.0, 2.0], [3.0, -4.0]], device=self.device, dtype=dtype),
+                "C": torch.zeros((2, 2), device=self.device, dtype=dtype),
                 "N": 2,
             }
         )
@@ -102,9 +107,9 @@ class Challenge(ChallengeBase):
         # single_element_1x1
         test_cases.append(
             {
-                "A": torch.tensor([[42.0]], device="cuda", dtype=dtype),
-                "B": torch.tensor([[8.0]], device="cuda", dtype=dtype),
-                "C": torch.zeros((1, 1), device="cuda", dtype=dtype),
+                "A": torch.tensor([[42.0]], device=self.device, dtype=dtype),
+                "B": torch.tensor([[8.0]], device=self.device, dtype=dtype),
+                "C": torch.zeros((1, 1), device=self.device, dtype=dtype),
                 "N": 1,
             }
         )
@@ -112,9 +117,9 @@ class Challenge(ChallengeBase):
         # large_N_16x16
         test_cases.append(
             {
-                "A": torch.empty((16, 16), device="cuda", dtype=dtype).uniform_(-10.0, 10.0),
-                "B": torch.empty((16, 16), device="cuda", dtype=dtype).uniform_(-10.0, 10.0),
-                "C": torch.zeros((16, 16), device="cuda", dtype=dtype),
+                "A": torch.empty((16, 16), device=self.device, dtype=dtype).uniform_(-10.0, 10.0),
+                "B": torch.empty((16, 16), device=self.device, dtype=dtype).uniform_(-10.0, 10.0),
+                "C": torch.zeros((16, 16), device=self.device, dtype=dtype),
                 "N": 16,
             }
         )
@@ -123,12 +128,16 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "A": torch.tensor(
-                    [[0.000001, 0.0000001], [0.00000001, 0.000000001]], device="cuda", dtype=dtype
+                    [[0.000001, 0.0000001], [0.00000001, 0.000000001]],
+                    device=self.device,
+                    dtype=dtype,
                 ),
                 "B": torch.tensor(
-                    [[0.000001, 0.0000001], [0.00000001, 0.000000001]], device="cuda", dtype=dtype
+                    [[0.000001, 0.0000001], [0.00000001, 0.000000001]],
+                    device=self.device,
+                    dtype=dtype,
                 ),
-                "C": torch.zeros((2, 2), device="cuda", dtype=dtype),
+                "C": torch.zeros((2, 2), device=self.device, dtype=dtype),
                 "N": 2,
             }
         )
@@ -137,12 +146,16 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "A": torch.tensor(
-                    [[1000000.0, 10000000.0], [-1000000.0, -10000000.0]], device="cuda", dtype=dtype
+                    [[1000000.0, 10000000.0], [-1000000.0, -10000000.0]],
+                    device=self.device,
+                    dtype=dtype,
                 ),
                 "B": torch.tensor(
-                    [[1000000.0, -10000000.0], [-1000000.0, 10000000.0]], device="cuda", dtype=dtype
+                    [[1000000.0, -10000000.0], [-1000000.0, 10000000.0]],
+                    device=self.device,
+                    dtype=dtype,
                 ),
-                "C": torch.zeros((2, 2), device="cuda", dtype=dtype),
+                "C": torch.zeros((2, 2), device=self.device, dtype=dtype),
                 "N": 2,
             }
         )
@@ -150,9 +163,9 @@ class Challenge(ChallengeBase):
         # non_power_of_two_size_7x7
         test_cases.append(
             {
-                "A": torch.empty((7, 7), device="cuda", dtype=dtype).uniform_(-5.0, 5.0),
-                "B": torch.empty((7, 7), device="cuda", dtype=dtype).uniform_(-5.0, 5.0),
-                "C": torch.zeros((7, 7), device="cuda", dtype=dtype),
+                "A": torch.empty((7, 7), device=self.device, dtype=dtype).uniform_(-5.0, 5.0),
+                "B": torch.empty((7, 7), device=self.device, dtype=dtype).uniform_(-5.0, 5.0),
+                "C": torch.zeros((7, 7), device=self.device, dtype=dtype),
                 "N": 7,
             }
         )
@@ -160,9 +173,9 @@ class Challenge(ChallengeBase):
         # medium_size_32x32
         test_cases.append(
             {
-                "A": torch.empty((32, 32), device="cuda", dtype=dtype).uniform_(-100.0, 100.0),
-                "B": torch.empty((32, 32), device="cuda", dtype=dtype).uniform_(-100.0, 100.0),
-                "C": torch.zeros((32, 32), device="cuda", dtype=dtype),
+                "A": torch.empty((32, 32), device=self.device, dtype=dtype).uniform_(-100.0, 100.0),
+                "B": torch.empty((32, 32), device=self.device, dtype=dtype).uniform_(-100.0, 100.0),
+                "C": torch.zeros((32, 32), device=self.device, dtype=dtype),
                 "N": 32,
             }
         )
@@ -173,8 +186,8 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         N = 4096
         return {
-            "A": torch.empty(N, N, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0),
-            "B": torch.empty(N, N, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0),
-            "C": torch.zeros(N, N, device="cuda", dtype=dtype),
+            "A": torch.empty(N, N, device=self.device, dtype=dtype).uniform_(-1000.0, 1000.0),
+            "B": torch.empty(N, N, device=self.device, dtype=dtype).uniform_(-1000.0, 1000.0),
+            "C": torch.zeros(N, N, device=self.device, dtype=dtype),
             "N": N,
         }

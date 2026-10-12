@@ -3,6 +3,101 @@
   For an input array <code>[a, b, c, d, ...]</code>, the prefix sum is <code>[a, a+b, a+b+c, a+b+c+d, ...]</code>.
 </p>
 
+<svg width="450" height="200" viewBox="0 0 450 200" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+      <polygon points="0 0, 6 2, 0 4" fill="#4477bb"/>
+    </marker>
+  </defs>
+  <rect width="450" height="200" rx="8" fill="#222"/>
+  <!-- Labels -->
+  <text x="18" y="48" fill="#888" font-family="monospace" font-size="11" text-anchor="middle">input</text>
+  <text x="18" y="168" fill="#888" font-family="monospace" font-size="10" text-anchor="middle">prefix</text>
+  <text x="18" y="180" fill="#888" font-family="monospace" font-size="10" text-anchor="middle">sum</text>
+  <!-- Input cells -->
+  <g font-family="monospace" font-size="13" text-anchor="middle">
+    <rect x="50" y="30" width="42" height="28" rx="4" fill="#333" stroke="#777" stroke-width="1"/>
+    <text x="71" y="49" fill="#ccc">1</text>
+    <rect x="97" y="30" width="42" height="28" rx="4" fill="#333" stroke="#777" stroke-width="1"/>
+    <text x="118" y="49" fill="#ccc">2</text>
+    <rect x="144" y="30" width="42" height="28" rx="4" fill="#333" stroke="#777" stroke-width="1"/>
+    <text x="165" y="49" fill="#ccc">3</text>
+    <rect x="191" y="30" width="42" height="28" rx="4" fill="#333" stroke="#777" stroke-width="1"/>
+    <text x="212" y="49" fill="#ccc">4</text>
+    <rect x="238" y="30" width="42" height="28" rx="4" fill="#333" stroke="#777" stroke-width="1"/>
+    <text x="259" y="49" fill="#ccc">5</text>
+    <rect x="285" y="30" width="42" height="28" rx="4" fill="#333" stroke="#777" stroke-width="1"/>
+    <text x="306" y="49" fill="#ccc">6</text>
+    <rect x="332" y="30" width="42" height="28" rx="4" fill="#333" stroke="#777" stroke-width="1"/>
+    <text x="353" y="49" fill="#ccc">7</text>
+    <rect x="379" y="30" width="42" height="28" rx="4" fill="#333" stroke="#777" stroke-width="1"/>
+    <text x="400" y="49" fill="#ccc">8</text>
+  </g>
+  <!-- Output cells -->
+  <g font-family="monospace" font-size="13" text-anchor="middle">
+    <rect x="50" y="150" width="42" height="28" rx="4" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+    <text x="71" y="169" fill="#ccc">1</text>
+    <rect x="97" y="150" width="42" height="28" rx="4" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+    <text x="118" y="169" fill="#ccc">3</text>
+    <rect x="144" y="150" width="42" height="28" rx="4" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+    <text x="165" y="169" fill="#ccc">6</text>
+    <rect x="191" y="150" width="42" height="28" rx="4" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+    <text x="212" y="169" fill="#ccc">10</text>
+    <rect x="238" y="150" width="42" height="28" rx="4" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+    <text x="259" y="169" fill="#ccc">15</text>
+    <rect x="285" y="150" width="42" height="28" rx="4" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+    <text x="306" y="169" fill="#ccc">21</text>
+    <rect x="332" y="150" width="42" height="28" rx="4" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+    <text x="353" y="169" fill="#ccc">28</text>
+    <rect x="379" y="150" width="42" height="28" rx="4" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+    <text x="400" y="169" fill="#ccc">36</text>
+  </g>
+  <!-- Arrows: output[0] <- input[0] -->
+  <line x1="71" y1="58" x2="71" y2="150" stroke="#4477bb" stroke-opacity="1.0" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+  <!-- output[1] <- input[0..1] -->
+  <line x1="71" y1="58" x2="118" y2="150" stroke="#4477bb" stroke-opacity="0.4" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="118" y1="58" x2="118" y2="150" stroke="#4477bb" stroke-opacity="1.0" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+  <!-- output[2] <- input[0..2] -->
+  <line x1="71" y1="58" x2="165" y2="150" stroke="#4477bb" stroke-opacity="0.3" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="118" y1="58" x2="165" y2="150" stroke="#4477bb" stroke-opacity="0.5" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="165" y1="58" x2="165" y2="150" stroke="#4477bb" stroke-opacity="1.0" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+  <!-- output[3] <- input[0..3] -->
+  <line x1="71" y1="58" x2="212" y2="150" stroke="#4477bb" stroke-opacity="0.25" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="118" y1="58" x2="212" y2="150" stroke="#4477bb" stroke-opacity="0.4" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="165" y1="58" x2="212" y2="150" stroke="#4477bb" stroke-opacity="0.6" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="212" y1="58" x2="212" y2="150" stroke="#4477bb" stroke-opacity="1.0" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+  <!-- output[4] <- input[0..4] -->
+  <line x1="71" y1="58" x2="259" y2="150" stroke="#4477bb" stroke-opacity="0.2" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="118" y1="58" x2="259" y2="150" stroke="#4477bb" stroke-opacity="0.3" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="165" y1="58" x2="259" y2="150" stroke="#4477bb" stroke-opacity="0.45" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="212" y1="58" x2="259" y2="150" stroke="#4477bb" stroke-opacity="0.65" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="259" y1="58" x2="259" y2="150" stroke="#4477bb" stroke-opacity="1.0" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+  <!-- output[5] <- input[0..5] -->
+  <line x1="71" y1="58" x2="306" y2="150" stroke="#4477bb" stroke-opacity="0.18" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="118" y1="58" x2="306" y2="150" stroke="#4477bb" stroke-opacity="0.28" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="165" y1="58" x2="306" y2="150" stroke="#4477bb" stroke-opacity="0.38" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="212" y1="58" x2="306" y2="150" stroke="#4477bb" stroke-opacity="0.5" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="259" y1="58" x2="306" y2="150" stroke="#4477bb" stroke-opacity="0.7" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="306" y1="58" x2="306" y2="150" stroke="#4477bb" stroke-opacity="1.0" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+  <!-- output[6] <- input[0..6] -->
+  <line x1="71" y1="58" x2="353" y2="150" stroke="#4477bb" stroke-opacity="0.15" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="118" y1="58" x2="353" y2="150" stroke="#4477bb" stroke-opacity="0.22" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="165" y1="58" x2="353" y2="150" stroke="#4477bb" stroke-opacity="0.32" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="212" y1="58" x2="353" y2="150" stroke="#4477bb" stroke-opacity="0.42" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="259" y1="58" x2="353" y2="150" stroke="#4477bb" stroke-opacity="0.55" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="306" y1="58" x2="353" y2="150" stroke="#4477bb" stroke-opacity="0.75" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="353" y1="58" x2="353" y2="150" stroke="#4477bb" stroke-opacity="1.0" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+  <!-- output[7] <- input[0..7] -->
+  <line x1="71" y1="58" x2="400" y2="150" stroke="#4477bb" stroke-opacity="0.12" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="118" y1="58" x2="400" y2="150" stroke="#4477bb" stroke-opacity="0.2" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="165" y1="58" x2="400" y2="150" stroke="#4477bb" stroke-opacity="0.28" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="212" y1="58" x2="400" y2="150" stroke="#4477bb" stroke-opacity="0.38" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="259" y1="58" x2="400" y2="150" stroke="#4477bb" stroke-opacity="0.48" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="306" y1="58" x2="400" y2="150" stroke="#4477bb" stroke-opacity="0.6" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="353" y1="58" x2="400" y2="150" stroke="#4477bb" stroke-opacity="0.8" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <line x1="400" y1="58" x2="400" y2="150" stroke="#4477bb" stroke-opacity="1.0" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+</svg>
+
 <h2>Implementation Requirements</h2>
 <ul>
   <li>Use only GPU native features (external libraries are not permitted)</li>

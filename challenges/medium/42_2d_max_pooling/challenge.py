@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="2D Max Pooling", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "2D Max Pooling"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -53,13 +54,13 @@ class Challenge(ChallengeBase):
 
         # Create input tensor: [[[[1, 2, 3], [4, 5, 6], [7, 8, 9]]]]
         input_tensor = torch.tensor(
-            [[[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]]], device="cuda", dtype=dtype
+            [[[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]]], device=self.device, dtype=dtype
         )
 
         # Calculate output dimensions
         H_out = (H + 2 * padding - kernel_size) // stride + 1
         W_out = (W + 2 * padding - kernel_size) // stride + 1
-        output_tensor = torch.empty(N * C * H_out * W_out, device="cuda", dtype=dtype)
+        output_tensor = torch.empty(N * C * H_out * W_out, device=self.device, dtype=dtype)
 
         return {
             "input": input_tensor.flatten(),
@@ -98,10 +99,10 @@ class Challenge(ChallengeBase):
                     ]
                 ]
             ],
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
-        output_tensor = torch.empty(N * C * H_out * W_out, device="cuda", dtype=dtype)
+        output_tensor = torch.empty(N * C * H_out * W_out, device=self.device, dtype=dtype)
 
         test_cases.append(
             {
@@ -123,8 +124,8 @@ class Challenge(ChallengeBase):
         H_out = (H + 2 * padding - kernel_size) // stride + 1
         W_out = (W + 2 * padding - kernel_size) // stride + 1
 
-        input_tensor = torch.randn(N, C, H, W, device="cuda", dtype=dtype)
-        output_tensor = torch.empty(N * C * H_out * W_out, device="cuda", dtype=dtype)
+        input_tensor = torch.randn(N, C, H, W, device=self.device, dtype=dtype)
+        output_tensor = torch.empty(N * C * H_out * W_out, device=self.device, dtype=dtype)
 
         test_cases.append(
             {
@@ -146,8 +147,8 @@ class Challenge(ChallengeBase):
         H_out = (H + 2 * padding - kernel_size) // stride + 1
         W_out = (W + 2 * padding - kernel_size) // stride + 1
 
-        input_tensor = torch.randn(N, C, H, W, device="cuda", dtype=dtype)
-        output_tensor = torch.empty(N * C * H_out * W_out, device="cuda", dtype=dtype)
+        input_tensor = torch.randn(N, C, H, W, device=self.device, dtype=dtype)
+        output_tensor = torch.empty(N * C * H_out * W_out, device=self.device, dtype=dtype)
 
         test_cases.append(
             {
@@ -169,8 +170,8 @@ class Challenge(ChallengeBase):
         H_out = (H + 2 * padding - kernel_size) // stride + 1
         W_out = (W + 2 * padding - kernel_size) // stride + 1
 
-        input_tensor = torch.randn(N, C, H, W, device="cuda", dtype=dtype)
-        output_tensor = torch.empty(N * C * H_out * W_out, device="cuda", dtype=dtype)
+        input_tensor = torch.randn(N, C, H, W, device=self.device, dtype=dtype)
+        output_tensor = torch.empty(N * C * H_out * W_out, device=self.device, dtype=dtype)
 
         test_cases.append(
             {
@@ -192,8 +193,8 @@ class Challenge(ChallengeBase):
         H_out = (H + 2 * padding - kernel_size) // stride + 1
         W_out = (W + 2 * padding - kernel_size) // stride + 1
 
-        input_tensor = torch.tensor([[[[1.0, 2.0], [3.0, 4.0]]]], device="cuda", dtype=dtype)
-        output_tensor = torch.empty(N * C * H_out * W_out, device="cuda", dtype=dtype)
+        input_tensor = torch.tensor([[[[1.0, 2.0], [3.0, 4.0]]]], device=self.device, dtype=dtype)
+        output_tensor = torch.empty(N * C * H_out * W_out, device=self.device, dtype=dtype)
 
         test_cases.append(
             {
@@ -216,9 +217,9 @@ class Challenge(ChallengeBase):
         W_out = (W + 2 * padding - kernel_size) // stride + 1
 
         input_tensor = torch.tensor(
-            [[[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]]], device="cuda", dtype=dtype
+            [[[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]]], device=self.device, dtype=dtype
         )
-        output_tensor = torch.empty(N * C * H_out * W_out, device="cuda", dtype=dtype)
+        output_tensor = torch.empty(N * C * H_out * W_out, device=self.device, dtype=dtype)
 
         test_cases.append(
             {
@@ -251,10 +252,10 @@ class Challenge(ChallengeBase):
                     ]
                 ]
             ],
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
-        output_tensor = torch.empty(N * C * H_out * W_out, device="cuda", dtype=dtype)
+        output_tensor = torch.empty(N * C * H_out * W_out, device=self.device, dtype=dtype)
 
         test_cases.append(
             {
@@ -277,16 +278,18 @@ class Challenge(ChallengeBase):
         W_out = (W + 2 * padding - kernel_size) // stride + 1
 
         # Create structured input with different patterns per channel
-        input_tensor = torch.zeros(N, C, H, W, device="cuda", dtype=dtype)
-        input_tensor[0, 0, :, :] = torch.arange(H * W, device="cuda", dtype=dtype).reshape(H, W)
+        input_tensor = torch.zeros(N, C, H, W, device=self.device, dtype=dtype)
+        input_tensor[0, 0, :, :] = torch.arange(H * W, device=self.device, dtype=dtype).reshape(
+            H, W
+        )
         input_tensor[0, 1, :, :] = (
-            torch.arange(H * W, device="cuda", dtype=dtype).reshape(H, W).flip(0)
+            torch.arange(H * W, device=self.device, dtype=dtype).reshape(H, W).flip(0)
         )
         input_tensor[0, 2, :, :] = (
-            torch.arange(H * W, device="cuda", dtype=dtype).reshape(H, W).flip(1)
+            torch.arange(H * W, device=self.device, dtype=dtype).reshape(H, W).flip(1)
         )
 
-        output_tensor = torch.empty(N * C * H_out * W_out, device="cuda", dtype=dtype)
+        output_tensor = torch.empty(N * C * H_out * W_out, device=self.device, dtype=dtype)
 
         test_cases.append(
             {
@@ -321,10 +324,10 @@ class Challenge(ChallengeBase):
                     ]
                 ]
             ],
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
-        output_tensor = torch.empty(N * C * H_out * W_out, device="cuda", dtype=dtype)
+        output_tensor = torch.empty(N * C * H_out * W_out, device=self.device, dtype=dtype)
 
         test_cases.append(
             {
@@ -346,8 +349,8 @@ class Challenge(ChallengeBase):
         H_out = (H + 2 * padding - kernel_size) // stride + 1
         W_out = (W + 2 * padding - kernel_size) // stride + 1
 
-        input_tensor = torch.randn(N, C, H, W, device="cuda", dtype=dtype)
-        output_tensor = torch.empty(N * C * H_out * W_out, device="cuda", dtype=dtype)
+        input_tensor = torch.randn(N, C, H, W, device=self.device, dtype=dtype)
+        output_tensor = torch.empty(N * C * H_out * W_out, device=self.device, dtype=dtype)
 
         test_cases.append(
             {
@@ -377,8 +380,8 @@ class Challenge(ChallengeBase):
 
         # Use seeded random for reproducible performance tests
         torch.manual_seed(123)
-        input_tensor = torch.randn(N, C, H, W, device="cuda", dtype=dtype)
-        output_tensor = torch.empty(N * C * H_out * W_out, device="cuda", dtype=dtype)
+        input_tensor = torch.randn(N, C, H, W, device=self.device, dtype=dtype)
+        output_tensor = torch.empty(N * C * H_out * W_out, device=self.device, dtype=dtype)
 
         return {
             "input": input_tensor.flatten(),

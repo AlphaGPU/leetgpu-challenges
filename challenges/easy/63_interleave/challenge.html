@@ -5,6 +5,75 @@
   <code>[A[0], B[0], A[1], B[1], A[2], B[2], ...]</code>
 </p>
 
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 180" width="400" height="180"
+     style="display:block; margin:20px auto;" font-family="monospace" font-size="11">
+  <defs>
+    <marker id="arrBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4477bb"/>
+    </marker>
+    <marker id="arrGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#44aa66"/>
+    </marker>
+  </defs>
+  <rect width="400" height="180" rx="8" fill="#222"/>
+
+  <!-- Label A -->
+  <text x="60" y="20" fill="#ccc" font-size="13" text-anchor="middle" font-weight="bold">A</text>
+  <!-- Array A cells -->
+  <rect x="10"  y="26" width="40" height="28" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="30"  y="45" text-anchor="middle" fill="#ccc">a&#x2080;</text>
+  <rect x="54"  y="26" width="40" height="28" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="74"  y="45" text-anchor="middle" fill="#ccc">a&#x2081;</text>
+  <rect x="98"  y="26" width="40" height="28" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="118" y="45" text-anchor="middle" fill="#ccc">a&#x2082;</text>
+  <rect x="142" y="26" width="40" height="28" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="162" y="45" text-anchor="middle" fill="#ccc">a&#x2083;</text>
+
+  <!-- Label B -->
+  <text x="310" y="20" fill="#ccc" font-size="13" text-anchor="middle" font-weight="bold">B</text>
+  <!-- Array B cells -->
+  <rect x="220" y="26" width="40" height="28" rx="3" fill="#1e3d2d" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="240" y="45" text-anchor="middle" fill="#ccc">b&#x2080;</text>
+  <rect x="264" y="26" width="40" height="28" rx="3" fill="#1e3d2d" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="284" y="45" text-anchor="middle" fill="#ccc">b&#x2081;</text>
+  <rect x="308" y="26" width="40" height="28" rx="3" fill="#1e3d2d" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="328" y="45" text-anchor="middle" fill="#ccc">b&#x2082;</text>
+  <rect x="352" y="26" width="40" height="28" rx="3" fill="#1e3d2d" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="372" y="45" text-anchor="middle" fill="#ccc">b&#x2083;</text>
+
+  <!-- Label output -->
+  <text x="200" y="108" fill="#ccc" font-size="13" text-anchor="middle" font-weight="bold">output</text>
+  <!-- Output array cells (alternating blue/green) -->
+  <rect x="10"  y="114" width="42" height="28" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="31"  y="133" text-anchor="middle" fill="#ccc">a&#x2080;</text>
+  <rect x="56"  y="114" width="42" height="28" rx="3" fill="#1e3d2d" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="77"  y="133" text-anchor="middle" fill="#ccc">b&#x2080;</text>
+  <rect x="102" y="114" width="42" height="28" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="123" y="133" text-anchor="middle" fill="#ccc">a&#x2081;</text>
+  <rect x="148" y="114" width="42" height="28" rx="3" fill="#1e3d2d" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="169" y="133" text-anchor="middle" fill="#ccc">b&#x2081;</text>
+  <rect x="194" y="114" width="42" height="28" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="215" y="133" text-anchor="middle" fill="#ccc">a&#x2082;</text>
+  <rect x="240" y="114" width="42" height="28" rx="3" fill="#1e3d2d" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="261" y="133" text-anchor="middle" fill="#ccc">b&#x2082;</text>
+  <rect x="286" y="114" width="42" height="28" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <text x="307" y="133" text-anchor="middle" fill="#ccc">a&#x2083;</text>
+  <rect x="332" y="114" width="42" height="28" rx="3" fill="#1e3d2d" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="353" y="133" text-anchor="middle" fill="#ccc">b&#x2083;</text>
+
+  <!-- Curved arrows from A to output (dashed, blue) -->
+  <path d="M30,54 C30,80 31,90 31,114" stroke="#4477bb" stroke-width="1.2" stroke-dasharray="4,3" fill="none" marker-end="url(#arrBlue)"/>
+  <path d="M74,54 C74,78 123,90 123,114" stroke="#4477bb" stroke-width="1.2" stroke-dasharray="4,3" fill="none" marker-end="url(#arrBlue)"/>
+  <path d="M118,54 C118,78 215,90 215,114" stroke="#4477bb" stroke-width="1.2" stroke-dasharray="4,3" fill="none" marker-end="url(#arrBlue)"/>
+  <path d="M162,54 C162,78 307,90 307,114" stroke="#4477bb" stroke-width="1.2" stroke-dasharray="4,3" fill="none" marker-end="url(#arrBlue)"/>
+
+  <!-- Curved arrows from B to output (dashed, green) -->
+  <path d="M240,54 C240,78 77,90 77,114" stroke="#44aa66" stroke-width="1.2" stroke-dasharray="4,3" fill="none" marker-end="url(#arrGreen)"/>
+  <path d="M284,54 C284,78 169,90 169,114" stroke="#44aa66" stroke-width="1.2" stroke-dasharray="4,3" fill="none" marker-end="url(#arrGreen)"/>
+  <path d="M328,54 C328,78 261,90 261,114" stroke="#44aa66" stroke-width="1.2" stroke-dasharray="4,3" fill="none" marker-end="url(#arrGreen)"/>
+  <path d="M372,54 C372,78 353,90 353,114" stroke="#44aa66" stroke-width="1.2" stroke-dasharray="4,3" fill="none" marker-end="url(#arrGreen)"/>
+</svg>
+
 <h2>Implementation Requirements</h2>
 <ul>
   <li>Use only native features (external libraries are not permitted)</li>

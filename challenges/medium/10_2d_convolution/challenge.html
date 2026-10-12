@@ -4,6 +4,92 @@
   where it fully overlaps with the input.
 </p>
 
+<svg width="440" height="220" viewBox="0 0 440 220" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <rect width="440" height="220" rx="8" fill="#222"/>
+
+  <!-- Input label -->
+  <text x="18" y="22" fill="#ccc" font-family="sans-serif" font-size="12" font-weight="bold">Input (4x4)</text>
+
+  <!-- 4x4 input grid -->
+  <g transform="translate(10,30)">
+    <!-- Row 0 -->
+    <rect x="0" y="0" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="18" y="23" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">1</text>
+    <rect x="38" y="0" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="56" y="23" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">2</text>
+    <rect x="76" y="0" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="94" y="23" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">3</text>
+    <rect x="114" y="0" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="132" y="23" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">4</text>
+    <!-- Row 1 -->
+    <rect x="0" y="38" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="18" y="61" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">5</text>
+    <rect x="38" y="38" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="56" y="61" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">6</text>
+    <rect x="76" y="38" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="94" y="61" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">7</text>
+    <rect x="114" y="38" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="132" y="61" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">8</text>
+    <!-- Row 2 -->
+    <rect x="0" y="76" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="18" y="99" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">9</text>
+    <rect x="38" y="76" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="56" y="99" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">10</text>
+    <rect x="76" y="76" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="94" y="99" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">11</text>
+    <rect x="114" y="76" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="132" y="99" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">12</text>
+    <!-- Row 3 -->
+    <rect x="0" y="114" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="18" y="137" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">13</text>
+    <rect x="38" y="114" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="56" y="137" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">14</text>
+    <rect x="76" y="114" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="94" y="137" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">15</text>
+    <rect x="114" y="114" width="36" height="36" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+    <text x="132" y="137" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">16</text>
+
+    <!-- Kernel overlay on top-left 2x2 -->
+    <rect x="-2" y="-2" width="78" height="78" rx="4" fill="#1e2d4d" fill-opacity="0.55" stroke="#4477bb" stroke-width="2.5"/>
+  </g>
+
+  <!-- Kernel label and grid -->
+  <text x="195" y="22" fill="#ccc" font-family="sans-serif" font-size="12" font-weight="bold">Kernel (2x2)</text>
+  <g transform="translate(195,30)">
+    <rect x="0" y="0" width="36" height="36" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+    <text x="18" y="23" fill="#88bbff" font-family="monospace" font-size="13" text-anchor="middle">0</text>
+    <rect x="38" y="0" width="36" height="36" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+    <text x="56" y="23" fill="#88bbff" font-family="monospace" font-size="13" text-anchor="middle">1</text>
+    <rect x="0" y="38" width="36" height="36" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+    <text x="18" y="61" fill="#88bbff" font-family="monospace" font-size="13" text-anchor="middle">1</text>
+    <rect x="38" y="38" width="36" height="36" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+    <text x="56" y="61" fill="#88bbff" font-family="monospace" font-size="13" text-anchor="middle">0</text>
+  </g>
+
+  <!-- Arrow from kernel area to result -->
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#ccc"/>
+    </marker>
+  </defs>
+  <line x1="275" y1="68" x2="305" y2="68" stroke="#ccc" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+  <!-- Output cell -->
+  <text x="320" y="22" fill="#ccc" font-family="sans-serif" font-size="12" font-weight="bold">Output[0][0]</text>
+  <rect x="340" y="38" width="50" height="50" rx="5" fill="#1a3a1a" stroke="#44bb44" stroke-width="2"/>
+  <text x="365" y="70" fill="#66dd66" font-family="monospace" font-size="18" font-weight="bold" text-anchor="middle">7</text>
+
+  <!-- Computation breakdown -->
+  <text x="10" y="190" fill="#999" font-family="monospace" font-size="11">1×0 + 2×1 + 5×1 + 6×0 = 0 + 2 + 5 + 0 =</text>
+  <text x="325" y="190" fill="#66dd66" font-family="monospace" font-size="11" font-weight="bold">7</text>
+
+  <!-- Legend -->
+  <rect x="10" y="204" width="10" height="10" rx="2" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+  <text x="24" y="213" fill="#777" font-family="sans-serif" font-size="10">kernel position</text>
+  <rect x="110" y="204" width="10" height="10" rx="2" fill="#1a3a1a" stroke="#44bb44" stroke-width="1"/>
+  <text x="124" y="213" fill="#777" font-family="sans-serif" font-size="10">output cell</text>
+</svg>
+
 <p>
   The input consists of:
 <ul>

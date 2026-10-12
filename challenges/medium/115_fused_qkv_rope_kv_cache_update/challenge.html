@@ -1,0 +1,228 @@
+<p>
+  Implement the fused <strong>QKV projection + rotary embedding + KV-cache update</strong> that
+  every LLaMA-style attention layer runs at the start of a decoding step. A batch of
+  <code>B</code> sequences each contribute a single new token, whose hidden state is row
+  <code>b</code> of <code>x</code> (shape <code>[B, d_model]</code>). One fused weight matrix
+  <code>W_qkv</code> (shape <code>[d_model, (H_q + 2 &times; H_kv) &times; D]</code>) produces the
+  query, key, and value projections in a single matrix multiply. Rotary positional embeddings are
+  applied to the query and key (never to the value), and the rotated key and the value are written
+  into the slot <code>positions[b]</code> of the paged KV cache. All tensors are
+  <code>float32</code> except <code>positions</code>, which is <code>int32</code>.
+</p>
+
+<p>
+  For each sequence <code>b</code>, let <code>qkv = x[b] &times; W_qkv</code>. The first
+  <code>H_q &times; D</code> values of <code>qkv</code> are the query heads, the next
+  <code>H_kv &times; D</code> values are the key heads, and the last <code>H_kv &times; D</code>
+  values are the value heads (grouped-query attention uses <code>H_kv &le; H_q</code>). Each group
+  is reshaped row-major into <code>[heads, D]</code>.
+</p>
+
+<p>
+  Rotation uses the precomputed table <code>cos_sin_cache</code> of shape
+  <code>[S_max, D]</code>, whose row <code>p</code> stores <code>D/2</code> cosines followed by
+  <code>D/2</code> sines. With <code>p = positions[b]</code>,
+  <code>c = cos_sin_cache[p, 0 : D/2]</code> and <code>s = cos_sin_cache[p, D/2 : D]</code>, the
+  rotate-half transform of a head vector <code>t</code> of length <code>D</code> is:
+</p>
+
+<p style="text-align:center;">
+  \( \text{RoPE}(t)_{j} = t_{j}\,c_{j} - t_{j + D/2}\,s_{j}, \qquad
+     \text{RoPE}(t)_{j + D/2} = t_{j + D/2}\,c_{j} + t_{j}\,s_{j}, \qquad 0 \le j < D/2 \)
+</p>
+
+<p>
+  The outputs are then, for every sequence <code>b</code>, every query head <code>hq</code>, and
+  every KV head <code>h</code>:
+</p>
+
+<p style="text-align:center;">
+  \( \text{Q_out}[b, hq, :] = \text{RoPE}(q[b, hq, :]) \)
+</p>
+<p style="text-align:center;">
+  \( \text{K_cache}[b, h, \text{positions}[b], :] = \text{RoPE}(k[b, h, :]), \qquad
+     \text{V_cache}[b, h, \text{positions}[b], :] = v[b, h, :] \)
+</p>
+
+<p>
+  Every other slot of <code>K_cache</code> and <code>V_cache</code> must keep the value it had on
+  entry.
+</p>
+
+<svg width="700" height="360" viewBox="0 0 700 360" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto; font-family:monospace;">
+  <rect width="700" height="360" fill="#222" rx="8"/>
+  <defs>
+    <marker id="qkvarr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#888"/>
+    </marker>
+    <marker id="qkvarrm" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#cc44cc"/>
+    </marker>
+  </defs>
+
+  <text x="450" y="20" fill="#999" font-size="10" text-anchor="middle">
+    qkv = x[b] &#xb7; W_qkv &#x2192; (H_q + 2&#xb7;H_kv)&#xb7;D values
+  </text>
+
+  <rect x="16" y="34" width="56" height="34" rx="4" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="44" y="56" fill="#ccc" font-size="11" text-anchor="middle">x[b]</text>
+  <text x="44" y="84" fill="#666" font-size="8" text-anchor="middle">[d_model]</text>
+
+  <line x1="72" y1="51" x2="102" y2="51" stroke="#888" stroke-width="1.5" marker-end="url(#qkvarr)"/>
+
+  <rect x="106" y="34" width="80" height="34" rx="4" fill="#444" stroke="#888" stroke-width="1.5"/>
+  <text x="146" y="56" fill="#ccc" font-size="11" text-anchor="middle">&#xb7; W_qkv</text>
+
+  <line x1="186" y1="51" x2="216" y2="51" stroke="#888" stroke-width="1.5" marker-end="url(#qkvarr)"/>
+
+  <rect x="220" y="34" width="240" height="34" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="340" y="56" fill="#ccc" font-size="11" text-anchor="middle">Q (H_q &#xb7; D)</text>
+  <rect x="460" y="34" width="110" height="34" fill="#1a5a3a" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="515" y="56" fill="#ccc" font-size="10" text-anchor="middle">K (H_kv &#xb7; D)</text>
+  <rect x="570" y="34" width="110" height="34" fill="#5a3a1a" stroke="#cc8844" stroke-width="1.5"/>
+  <text x="625" y="56" fill="#ccc" font-size="10" text-anchor="middle">V (H_kv &#xb7; D)</text>
+
+  <line x1="340" y1="68" x2="340" y2="106" stroke="#5588cc" stroke-width="1.5" marker-end="url(#qkvarr)"/>
+  <line x1="515" y1="68" x2="515" y2="106" stroke="#44aa66" stroke-width="1.5" marker-end="url(#qkvarr)"/>
+  <line x1="625" y1="68" x2="625" y2="188" stroke="#cc8844" stroke-width="1.5" marker-end="url(#qkvarr)"/>
+
+  <rect x="30" y="110" width="225" height="36" rx="4" fill="#3a1a3a" stroke="#cc44cc" stroke-width="1.5"/>
+  <text x="142" y="127" fill="#ccc" font-size="10" text-anchor="middle">cos_sin_cache[pos[b]]</text>
+  <text x="142" y="140" fill="#999" font-size="8" text-anchor="middle">cos = [0 : D/2], sin = [D/2 : D]</text>
+
+  <line x1="255" y1="128" x2="271" y2="128" stroke="#cc44cc" stroke-width="1.5" marker-end="url(#qkvarrm)"/>
+
+  <rect x="275" y="110" width="305" height="36" rx="4" fill="#1a3a5a" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="427" y="133" fill="#ccc" font-size="11" text-anchor="middle">RoPE rotate-half (Q and K only)</text>
+
+  <line x1="330" y1="146" x2="152" y2="188" stroke="#888" stroke-width="1.5" marker-end="url(#qkvarr)"/>
+  <line x1="480" y1="146" x2="404" y2="188" stroke="#888" stroke-width="1.5" marker-end="url(#qkvarr)"/>
+
+  <rect x="30" y="192" width="200" height="38" rx="4" fill="#3a1a3a" stroke="#cc44cc" stroke-width="1.5"/>
+  <text x="130" y="209" fill="#ccc" font-size="11" text-anchor="middle">Q_out[b]</text>
+  <text x="130" y="223" fill="#999" font-size="8" text-anchor="middle">[H_q, D]</text>
+
+  <rect x="270" y="192" width="200" height="38" rx="4" fill="#1a5a3a" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="370" y="216" fill="#ccc" font-size="10" text-anchor="middle">K_cache[b, :, pos[b], :]</text>
+
+  <rect x="500" y="192" width="170" height="38" rx="4" fill="#5a3a1a" stroke="#cc8844" stroke-width="1.5"/>
+  <text x="585" y="216" fill="#ccc" font-size="10" text-anchor="middle">V_cache[b, :, pos[b], :]</text>
+
+  <text x="400" y="262" fill="#999" font-size="10" text-anchor="middle">
+    one (b, h) row of the cache: S_max slots
+  </text>
+
+  <rect x="200" y="270" width="40" height="30" fill="#3a3a3a" stroke="#222" stroke-width="1"/>
+  <rect x="240" y="270" width="40" height="30" fill="#3a3a3a" stroke="#222" stroke-width="1"/>
+  <rect x="280" y="270" width="40" height="30" fill="#3a3a3a" stroke="#222" stroke-width="1"/>
+  <rect x="320" y="270" width="40" height="30" fill="#3a3a3a" stroke="#222" stroke-width="1"/>
+  <rect x="360" y="270" width="40" height="30" fill="#3a3a3a" stroke="#222" stroke-width="1"/>
+  <rect x="400" y="270" width="40" height="30" fill="#1a5a3a" stroke="#44aa66" stroke-width="1.5"/>
+  <rect x="440" y="270" width="40" height="30" fill="#3a3a3a" stroke="#222" stroke-width="1"/>
+  <rect x="480" y="270" width="40" height="30" fill="#3a3a3a" stroke="#222" stroke-width="1"/>
+  <rect x="520" y="270" width="40" height="30" fill="#3a3a3a" stroke="#222" stroke-width="1"/>
+  <rect x="560" y="270" width="40" height="30" fill="#3a3a3a" stroke="#222" stroke-width="1"/>
+  <rect x="200" y="270" width="400" height="30" fill="none" stroke="#555" stroke-width="1"/>
+
+  <text x="420" y="316" fill="#44aa66" font-size="10" text-anchor="middle">pos[b]</text>
+  <text x="400" y="340" fill="#999" font-size="10" text-anchor="middle">
+    only slot pos[b] is written &#x2014; every other slot keeps its previous contents
+  </text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>
+    The rotated queries must be stored in <code>Q_out</code>, and the rotated keys and the values
+    must be written in place into <code>K_cache</code> and <code>V_cache</code>
+  </li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  <strong>Input:</strong> <code>B</code> = 1, <code>d_model</code> = 2, <code>H_q</code> = 1,
+  <code>H_kv</code> = 1, <code>D</code> = 2, <code>S_max</code> = 2
+</p>
+<p>
+  \(x\) (\(1 \times 2\)):
+  \[
+  x = \begin{bmatrix} 1.0 & 0.0 \end{bmatrix}
+  \]
+  \(W_\text{qkv}\) (\(2 \times 6\)):
+  \[
+  W_\text{qkv} =
+  \begin{bmatrix}
+  1.0 & 0.0 & 0.0 & 1.0 & 1.0 & 1.0 \\
+  0.0 & 1.0 & 1.0 & 0.0 & 2.0 & 2.0
+  \end{bmatrix}
+  \]
+  \(\text{cos_sin_cache}\) (\(2 \times 2\)):
+  \[
+  \text{cos_sin_cache} =
+  \begin{bmatrix} 1.0 & 0.0 \\ 0.5403023 & 0.8414710 \end{bmatrix}
+  \]
+  \(\text{positions} = \begin{bmatrix} 1 \end{bmatrix}\), and \(K_\text{cache}\),
+  \(V_\text{cache}\) (each \(1 \times 1 \times 2 \times 2\)) start filled with zeros.
+</p>
+<p>
+  Intermediate steps: the fused projection gives
+  \[
+  qkv = x \cdot W_\text{qkv} = \begin{bmatrix} 1.0 & 0.0 & 0.0 & 1.0 & 1.0 & 1.0 \end{bmatrix}
+  \]
+  so \(q = \begin{bmatrix} 1.0 & 0.0 \end{bmatrix}\),
+  \(k = \begin{bmatrix} 0.0 & 1.0 \end{bmatrix}\),
+  \(v = \begin{bmatrix} 1.0 & 1.0 \end{bmatrix}\). With
+  \(\text{positions}[0] = 1\) we read \(c = 0.5403023\), \(s = 0.8414710\), giving
+  \[
+  \text{RoPE}(q) = \begin{bmatrix} 0.5403023 & 0.8414710 \end{bmatrix}, \qquad
+  \text{RoPE}(k) = \begin{bmatrix} -0.8414710 & 0.5403023 \end{bmatrix}
+  \]
+</p>
+<p>
+  <strong>Output:</strong>
+  \[
+  \text{Q_out}[0] = \begin{bmatrix} 0.5403023 & 0.8414710 \end{bmatrix}
+  \]
+  \[
+  \text{K_cache}[0, 0] = \begin{bmatrix} 0.0 & 0.0 \\ -0.8414710 & 0.5403023 \end{bmatrix},
+  \qquad
+  \text{V_cache}[0, 0] = \begin{bmatrix} 0.0 & 0.0 \\ 1.0 & 1.0 \end{bmatrix}
+  \]
+  Slot <code>0</code> of both caches is untouched; only slot <code>1</code> is written.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 1,024</li>
+  <li>1 &le; <code>d_model</code> &le; 8,192</li>
+  <li>1 &le; <code>H_kv</code> &le; <code>H_q</code> &le; 128, and <code>H_q</code> is a multiple of <code>H_kv</code></li>
+  <li><code>D</code> is even, 2 &le; <code>D</code> &le; 128</li>
+  <li>1 &le; <code>S_max</code> &le; 4,096</li>
+  <li>0 &le; <code>positions[b]</code> &lt; <code>S_max</code> for every <code>b</code></li>
+  <li><code>positions</code> is <code>int32</code>; every other tensor is <code>float32</code></li>
+  <li>Values of <code>x</code>, <code>W_qkv</code>, <code>K_cache</code>, and <code>V_cache</code> are in the range [-10, 10]</li>
+  <li>
+    Performance is measured with <code>B</code> = 64, <code>d_model</code> = 4,096,
+    <code>H_q</code> = 32, <code>H_kv</code> = 8, <code>D</code> = 128,
+    <code>S_max</code> = 2,048
+  </li>
+</ul>
+
+<h2>References</h2>
+<ul>
+  <li>
+    Su et al.,
+    <a href="https://arxiv.org/abs/2104.09864" target="_blank" rel="noopener noreferrer"
+       style="color:#60a5fa; text-decoration:underline">RoFormer: Enhanced Transformer with Rotary Position Embedding</a>
+    (arXiv:2104.09864) &mdash; introduces rotary positional embeddings.
+  </li>
+  <li>
+    Ainslie et al.,
+    <a href="https://arxiv.org/abs/2305.13245" target="_blank" rel="noopener noreferrer"
+       style="color:#60a5fa; text-decoration:underline">GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints</a>
+    (arXiv:2305.13245) &mdash; the grouped-query layout that makes <code>H_kv</code> smaller than <code>H_q</code>.
+  </li>
+</ul>
