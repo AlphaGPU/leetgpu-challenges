@@ -1,0 +1,88 @@
+<p>
+  Given <code>N</code> bodies in 3D space, each with a position vector
+  <code>(x, y, z)</code> and a scalar mass, compute the gravitational force acting on each body
+  due to all other bodies. The softened gravitational force on body <code>i</code> is:
+</p>
+<p>
+  \[
+    \mathbf{F}_i = \sum_{j \neq i} m_j
+      \frac{\mathbf{r}_j - \mathbf{r}_i}
+           {\left(|\mathbf{r}_j - \mathbf{r}_i|^2 + \varepsilon^2\right)^{3/2}}
+  \]
+</p>
+<p>
+  where \(\varepsilon = 10^{-3}\) is a softening factor that prevents singularities when two
+  bodies occupy the same position. Positions and forces are stored in row-major order:
+  <code>array[i * 3 + k]</code> is the <em>k</em>-th coordinate of body <code>i</code>.
+</p>
+
+<svg viewBox="0 0 480 210" width="100%" style="max-width: 480px; height: auto;" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="nb-arrow-pair" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7fb8ff"/>
+    </marker>
+    <marker id="nb-arrow-net" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffa552"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="480" height="210" fill="#222"/>
+
+  <line x1="120" y1="140" x2="250" y2="70" stroke="#666" stroke-width="1" stroke-dasharray="4 4"/>
+  <line x1="120" y1="140" x2="370" y2="150" stroke="#666" stroke-width="1" stroke-dasharray="4 4"/>
+
+  <line x1="120" y1="140" x2="168" y2="114" stroke="#7fb8ff" stroke-width="2" marker-end="url(#nb-arrow-pair)"/>
+  <line x1="120" y1="140" x2="160" y2="142" stroke="#7fb8ff" stroke-width="2" marker-end="url(#nb-arrow-pair)"/>
+  <line x1="120" y1="140" x2="208" y2="116" stroke="#ffa552" stroke-width="4" marker-end="url(#nb-arrow-net)"/>
+
+  <circle cx="120" cy="140" r="13" fill="#4d7ea8" stroke="#cfe3f5" stroke-width="1.5"/>
+  <circle cx="250" cy="70" r="9" fill="#4d7ea8" stroke="#cfe3f5" stroke-width="1.5"/>
+  <circle cx="370" cy="150" r="18" fill="#4d7ea8" stroke="#cfe3f5" stroke-width="1.5"/>
+
+  <text x="120" y="176" fill="#e6e6e6" font-size="13" font-family="sans-serif" text-anchor="middle">body i</text>
+  <text x="250" y="48" fill="#e6e6e6" font-size="13" font-family="sans-serif" text-anchor="middle">m = 1.0</text>
+  <text x="370" y="192" fill="#e6e6e6" font-size="13" font-family="sans-serif" text-anchor="middle">m = 4.0</text>
+  <text x="222" y="110" fill="#ffa552" font-size="13" font-family="sans-serif">net force on i</text>
+  <text x="16" y="28" fill="#9ecbff" font-size="13" font-family="sans-serif">Each body is pulled by every other body; sum the pairwise contributions.</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native GPU features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The computed force for each body must be written to <code>forces</code></li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input (<code>N</code> = 2):<br>
+  positions:
+  \[
+  \begin{bmatrix}
+  0.0 & 0.0 & 0.0 \\
+  0.0 & 3.0 & 4.0
+  \end{bmatrix}
+  \]
+  masses:
+  \[
+  \begin{bmatrix}
+  2.0 & 1.0
+  \end{bmatrix}
+  \]
+  Output:<br>
+  forces:
+  \[
+  \begin{bmatrix}
+  0.000 & 0.024 & 0.032 \\
+  0.000 & -0.048 & -0.064
+  \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 65,536</li>
+  <li>Positions and forces are <code>float32</code> arrays of shape <code>N</code> &times; 3 in row-major order</li>
+  <li>-10.0 &le; <code>positions[i]</code> &le; 10.0</li>
+  <li>0.0 &lt; <code>masses[i]</code> &le; 100.0</li>
+  <li>Performance is measured with <code>N</code> = 8,192</li>
+</ul>
