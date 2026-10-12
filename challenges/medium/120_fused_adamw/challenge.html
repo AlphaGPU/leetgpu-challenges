@@ -89,13 +89,14 @@ params -> 0.999 - 0.1 = 0.899
   <li>1 &le; <code>N</code> &le; 16,777,216</li>
   <li>1 &le; <code>t</code> &le; 100,000</li>
   <li><code>params</code>, <code>grad</code>, <code>m</code>, and <code>v</code>
-      are float32</li>
+      are float32 vectors of length <code>N</code></li>
   <li>Values in <code>params</code> and <code>grad</code> are in the range
       [&minus;10, 10]</li>
+  <li>Values in <code>m</code> are in the range [&minus;10, 10]; values in
+      <code>v</code> are in the range [0, 100]</li>
   <li>0 &lt; <code>lr</code> &le; 1</li>
   <li>0 &le; <code>beta1</code>, <code>beta2</code> &lt; 1</li>
   <li>1e-12 &le; <code>eps</code> &le; 1e-2</li>
   <li>0 &le; <code>weight_decay</code> &le; 1</li>
-  <li><code>v</code> is always non-negative; <code>m</code> may be negative</li>
   <li>Performance is measured with <code>N</code> = 16,777,216, <code>t</code> = 1,000</li>
 </ul>
