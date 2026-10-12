@@ -129,6 +129,57 @@ class Challenge(ChallengeBase):
                     "k": k,
                 }
             )
+        # Ties and duplicates at k=100: the k-th value is repeated many times,
+        # so the answer needs every copy of each tied winner up to exactly k.
+        N, k = 1048576, 100
+        input = torch.empty(N, device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+        # 40 copies of 300, 40 copies of 200, then 200 copies of 150 straddling
+        # the k boundary, all scattered across the array.
+        vals = torch.cat(
+            [
+                torch.full((40,), 300.0, device=self.device, dtype=dtype),
+                torch.full((40,), 200.0, device=self.device, dtype=dtype),
+                torch.full((200,), 150.0, device=self.device, dtype=dtype),
+            ]
+        )
+        g = torch.Generator(device="cpu").manual_seed(29)
+        pos = torch.randperm(N, generator=g)[: vals.numel()].to(self.device)
+        input[pos] = vals
+        tests.append(
+            {
+                "input": input,
+                "output": torch.empty(k, device=self.device, dtype=dtype),
+                "N": N,
+                "k": k,
+            }
+        )
+        # k=100 winners packed into one contiguous block at the very end of a
+        # large non-power-of-two input, with duplicate values among them.
+        N, k = 10000019, 100
+        input = torch.empty(N, device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
+        input[N - k :] = torch.arange(k, device=self.device, dtype=dtype).div(2).floor() + 10.0
+        tests.append(
+            {
+                "input": input,
+                "output": torch.empty(k, device=self.device, dtype=dtype),
+                "N": N,
+                "k": k,
+            }
+        )
+        # Many duplicates of the global maximum (more than k copies) plus
+        # all-negative background.
+        N, k = 4194304, 100
+        input = torch.empty(N, device=self.device, dtype=dtype).uniform_(-1000.0, -1.0)
+        pos = torch.randperm(N, generator=g)[:150].to(self.device)
+        input[pos] = 5.0
+        tests.append(
+            {
+                "input": input,
+                "output": torch.empty(k, device=self.device, dtype=dtype),
+                "N": N,
+                "k": k,
+            }
+        )
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
