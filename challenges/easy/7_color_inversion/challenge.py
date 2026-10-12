@@ -20,7 +20,8 @@ class Challenge(ChallengeBase):
         image_reshaped = image.view(height, width, 4)
 
         # Invert RGB channels (first 3 channels), keep alpha unchanged
-        image_reshaped[:, :, :3] = 255 - image_reshaped[:, :, :3]
+        inverted_rgb = 255 - image_reshaped[:, :, :3].clone()
+        image_reshaped[:, :, :3] = inverted_rgb
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {

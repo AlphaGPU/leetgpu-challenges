@@ -1,13 +1,13 @@
-from std.gpu.host import DeviceContext
+from max.gpu.host import DeviceContext
 from std.memory import UnsafePointer
 
 
 # A, B, C are device pointers (i.e. pointers to memory on the GPU)
 @export
 def solve(
-    A: UnsafePointer[Float32, MutExternalOrigin],
-    B: UnsafePointer[Float32, MutExternalOrigin],
-    C: UnsafePointer[Float32, MutExternalOrigin],
+    A: UnsafePointer[Float32, MutAnyOrigin],
+    B: UnsafePointer[Float32, MutAnyOrigin],
+    C: UnsafePointer[Float32, MutAnyOrigin],
     M: Int32,
     N: Int32,
 ) raises:

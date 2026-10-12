@@ -1,0 +1,37 @@
+<p>
+  Write a GPU program that applies the Gaussian Error Linear Unit (GELU) activation element-wise to
+  a vector of 32-bit floating point numbers. For each element <code>x</code> in the input vector
+  <code>X</code>, compute the exact (erf-based) GELU and store the result in the output vector
+  <code>Y</code>:
+  \[
+  \text{GELU}(x) = x \cdot \Phi(x) = \frac{x}{2}\left(1 + \text{erf}\left(\frac{x}{\sqrt{2}}\right)\right)
+  \]
+  GELU is the activation used in the feed-forward blocks of BERT, GPT-2 and ViT.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in vector <code>Y</code></li>
+  <li>Use the exact erf form, not the tanh approximation</li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>
+Input:  X = [0.0, 1.0, -1.0, 2.0]
+Output: Y = [0.0, 0.8413, -0.1587, 1.9545]
+</pre>
+
+<h2>Example 2:</h2>
+<pre>
+Input:  X = [0.5, -0.5, 3.0, -3.0]
+Output: Y = [0.3457, -0.1543, 2.9959, -0.0041]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 100,000,000</li>
+  <li>Input values are finite 32-bit floating point numbers</li>
+  <li>Performance is measured with <code>N</code> = 50,000,000</li>
+</ul>

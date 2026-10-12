@@ -2,12 +2,6 @@ name: Lint Starter Code
 
 on:
   pull_request:
-    paths:
-      - 'challenges/**'
-      - 'scripts/**'
-      - '.clang-format'
-      - 'pyproject.toml'
-      - '.github/workflows/lint.yml'
   push:
     branches:
       - main

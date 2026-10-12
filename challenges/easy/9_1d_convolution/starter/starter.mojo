@@ -1,13 +1,13 @@
-from std.gpu.host import DeviceContext
-from std.gpu import block_dim, block_idx, thread_idx
+from max.gpu.host import DeviceContext
+from max.gpu import block_dim, block_idx, thread_idx
 from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
 def convolution_1d_kernel(
-    input: UnsafePointer[Float32, MutExternalOrigin],
-    kernel: UnsafePointer[Float32, MutExternalOrigin],
-    output: UnsafePointer[Float32, MutExternalOrigin],
+    input: UnsafePointer[Float32, MutAnyOrigin],
+    kernel: UnsafePointer[Float32, MutAnyOrigin],
+    output: UnsafePointer[Float32, MutAnyOrigin],
     input_size: Int32,
     kernel_size: Int32,
 ):
@@ -17,9 +17,9 @@ def convolution_1d_kernel(
 # input, kernel, output are device pointers (i.e. pointers to memory on the GPU)
 @export
 def solve(
-    input: UnsafePointer[Float32, MutExternalOrigin],
-    kernel: UnsafePointer[Float32, MutExternalOrigin],
-    output: UnsafePointer[Float32, MutExternalOrigin],
+    input: UnsafePointer[Float32, MutAnyOrigin],
+    kernel: UnsafePointer[Float32, MutAnyOrigin],
+    output: UnsafePointer[Float32, MutAnyOrigin],
     input_size: Int32,
     kernel_size: Int32,
 ) raises:
@@ -29,7 +29,7 @@ def solve(
 
     var blocksPerGrid = ceildiv(output_size, threadsPerBlock)
 
-    var _kernel = ctx.compile_function[convolution_1d_kernel, convolution_1d_kernel]()
+    var _kernel = ctx.compile_function[convolution_1d_kernel]()
     ctx.enqueue_function(
         _kernel,
         input,
