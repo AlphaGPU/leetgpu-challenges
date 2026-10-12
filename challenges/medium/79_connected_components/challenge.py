@@ -35,7 +35,7 @@ class Challenge(ChallengeBase):
 
         # Label propagation: labels[i] converges to the minimum vertex ID
         # in the connected component containing vertex i.
-        comp = torch.arange(N, dtype=torch.int32, device="cuda")
+        comp = torch.arange(N, dtype=torch.int32, device=self.device)
 
         if M > 0:
             # Build undirected edge list (each edge appears in both directions)
@@ -70,9 +70,9 @@ class Challenge(ChallengeBase):
         # Edges: (0,1), (1,2), (3,4)
         # Components: {0,1,2} -> label 0, {3,4} -> label 3
         N, M = 5, 3
-        src = torch.tensor([0, 1, 3], dtype=torch.int32, device="cuda")
-        dst = torch.tensor([1, 2, 4], dtype=torch.int32, device="cuda")
-        labels = torch.zeros(N, dtype=torch.int32, device="cuda")
+        src = torch.tensor([0, 1, 3], dtype=torch.int32, device=self.device)
+        dst = torch.tensor([1, 2, 4], dtype=torch.int32, device=self.device)
+        labels = torch.zeros(N, dtype=torch.int32, device=self.device)
         return {"src": src, "dst": dst, "labels": labels, "N": N, "M": M}
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
@@ -81,9 +81,9 @@ class Challenge(ChallengeBase):
         # Test 1: Single vertex, no edges
         tests.append(
             {
-                "src": torch.zeros(1, dtype=torch.int32, device="cuda"),
-                "dst": torch.zeros(1, dtype=torch.int32, device="cuda"),
-                "labels": torch.zeros(1, dtype=torch.int32, device="cuda"),
+                "src": torch.zeros(1, dtype=torch.int32, device=self.device),
+                "dst": torch.zeros(1, dtype=torch.int32, device=self.device),
+                "labels": torch.zeros(1, dtype=torch.int32, device=self.device),
                 "N": 1,
                 "M": 1,
             }
@@ -92,9 +92,9 @@ class Challenge(ChallengeBase):
         # Test 2: Two vertices, one edge (single component)
         tests.append(
             {
-                "src": torch.tensor([0], dtype=torch.int32, device="cuda"),
-                "dst": torch.tensor([1], dtype=torch.int32, device="cuda"),
-                "labels": torch.zeros(2, dtype=torch.int32, device="cuda"),
+                "src": torch.tensor([0], dtype=torch.int32, device=self.device),
+                "dst": torch.tensor([1], dtype=torch.int32, device=self.device),
+                "labels": torch.zeros(2, dtype=torch.int32, device=self.device),
                 "N": 2,
                 "M": 1,
             }
@@ -103,9 +103,9 @@ class Challenge(ChallengeBase):
         # Test 3: Four isolated vertices (no edges; each is its own component)
         tests.append(
             {
-                "src": torch.tensor([0], dtype=torch.int32, device="cuda"),
-                "dst": torch.tensor([0], dtype=torch.int32, device="cuda"),
-                "labels": torch.zeros(4, dtype=torch.int32, device="cuda"),
+                "src": torch.tensor([0], dtype=torch.int32, device=self.device),
+                "dst": torch.tensor([0], dtype=torch.int32, device=self.device),
+                "labels": torch.zeros(4, dtype=torch.int32, device=self.device),
                 "N": 4,
                 "M": 1,
             }
@@ -114,9 +114,9 @@ class Challenge(ChallengeBase):
         # Test 4: Two disjoint pairs
         tests.append(
             {
-                "src": torch.tensor([0, 2], dtype=torch.int32, device="cuda"),
-                "dst": torch.tensor([1, 3], dtype=torch.int32, device="cuda"),
-                "labels": torch.zeros(4, dtype=torch.int32, device="cuda"),
+                "src": torch.tensor([0, 2], dtype=torch.int32, device=self.device),
+                "dst": torch.tensor([1, 3], dtype=torch.int32, device=self.device),
+                "labels": torch.zeros(4, dtype=torch.int32, device=self.device),
                 "N": 4,
                 "M": 2,
             }
@@ -126,9 +126,9 @@ class Challenge(ChallengeBase):
         N, M = 8, 7
         tests.append(
             {
-                "src": torch.arange(0, M, dtype=torch.int32, device="cuda"),
-                "dst": torch.arange(1, N, dtype=torch.int32, device="cuda"),
-                "labels": torch.zeros(N, dtype=torch.int32, device="cuda"),
+                "src": torch.arange(0, M, dtype=torch.int32, device=self.device),
+                "dst": torch.arange(1, N, dtype=torch.int32, device=self.device),
+                "labels": torch.zeros(N, dtype=torch.int32, device=self.device),
                 "N": N,
                 "M": M,
             }
@@ -138,9 +138,9 @@ class Challenge(ChallengeBase):
         N, M = 16, 15
         tests.append(
             {
-                "src": torch.zeros(M, dtype=torch.int32, device="cuda"),
-                "dst": torch.arange(1, N, dtype=torch.int32, device="cuda"),
-                "labels": torch.zeros(N, dtype=torch.int32, device="cuda"),
+                "src": torch.zeros(M, dtype=torch.int32, device=self.device),
+                "dst": torch.arange(1, N, dtype=torch.int32, device=self.device),
+                "labels": torch.zeros(N, dtype=torch.int32, device=self.device),
                 "N": N,
                 "M": M,
             }
@@ -160,9 +160,9 @@ class Challenge(ChallengeBase):
         src_list, dst_list = zip(*edges)
         tests.append(
             {
-                "src": torch.tensor(src_list, dtype=torch.int32, device="cuda"),
-                "dst": torch.tensor(dst_list, dtype=torch.int32, device="cuda"),
-                "labels": torch.zeros(N, dtype=torch.int32, device="cuda"),
+                "src": torch.tensor(src_list, dtype=torch.int32, device=self.device),
+                "dst": torch.tensor(dst_list, dtype=torch.int32, device=self.device),
+                "labels": torch.zeros(N, dtype=torch.int32, device=self.device),
                 "N": N,
                 "M": M,
             }
@@ -175,9 +175,9 @@ class Challenge(ChallengeBase):
         M = len(src_list)
         tests.append(
             {
-                "src": torch.tensor(src_list, dtype=torch.int32, device="cuda"),
-                "dst": torch.tensor(dst_list, dtype=torch.int32, device="cuda"),
-                "labels": torch.zeros(N, dtype=torch.int32, device="cuda"),
+                "src": torch.tensor(src_list, dtype=torch.int32, device=self.device),
+                "dst": torch.tensor(dst_list, dtype=torch.int32, device=self.device),
+                "labels": torch.zeros(N, dtype=torch.int32, device=self.device),
                 "N": N,
                 "M": M,
             }
@@ -188,9 +188,9 @@ class Challenge(ChallengeBase):
         N, M = 1000, 3000
         tests.append(
             {
-                "src": torch.randint(0, N, (M,), dtype=torch.int32, device="cuda"),
-                "dst": torch.randint(0, N, (M,), dtype=torch.int32, device="cuda"),
-                "labels": torch.zeros(N, dtype=torch.int32, device="cuda"),
+                "src": torch.randint(0, N, (M,), dtype=torch.int32, device=self.device),
+                "dst": torch.randint(0, N, (M,), dtype=torch.int32, device=self.device),
+                "labels": torch.zeros(N, dtype=torch.int32, device=self.device),
                 "N": N,
                 "M": M,
             }
@@ -203,9 +203,9 @@ class Challenge(ChallengeBase):
         M = len(src_list)
         tests.append(
             {
-                "src": torch.tensor(src_list, dtype=torch.int32, device="cuda"),
-                "dst": torch.tensor(dst_list, dtype=torch.int32, device="cuda"),
-                "labels": torch.zeros(N, dtype=torch.int32, device="cuda"),
+                "src": torch.tensor(src_list, dtype=torch.int32, device=self.device),
+                "dst": torch.tensor(dst_list, dtype=torch.int32, device=self.device),
+                "labels": torch.zeros(N, dtype=torch.int32, device=self.device),
                 "N": N,
                 "M": M,
             }
@@ -217,7 +217,7 @@ class Challenge(ChallengeBase):
         torch.manual_seed(42)
         N = 1_000_000
         M = 5_000_000
-        src = torch.randint(0, N, (M,), dtype=torch.int32, device="cuda")
-        dst = torch.randint(0, N, (M,), dtype=torch.int32, device="cuda")
-        labels = torch.zeros(N, dtype=torch.int32, device="cuda")
+        src = torch.randint(0, N, (M,), dtype=torch.int32, device=self.device)
+        dst = torch.randint(0, N, (M,), dtype=torch.int32, device=self.device)
+        labels = torch.zeros(N, dtype=torch.int32, device=self.device)
         return {"src": src, "dst": dst, "labels": labels, "N": N, "M": M}
