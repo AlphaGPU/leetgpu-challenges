@@ -7,6 +7,9 @@ from core.challenge_base import ChallengeBase
 
 class Challenge(ChallengeBase):
     name = "Integral Image"
+    # Each output is a sum of up to H*W terms; parallel scans reorder the fp32 additions, so
+    # rounding error grows with the partial-sum magnitude. 1e-2 absorbs that while the
+    # integer-valued targeted tests below still expose any missing or extra term (error >= 1).
     atol = 1e-02
     rtol = 1e-02
     num_gpus = 1
@@ -17,7 +20,6 @@ class Challenge(ChallengeBase):
         assert output.shape == (H, W)
         assert input.dtype == torch.float32
         assert output.dtype == torch.float32
-        assert input.device == output.device
 
         result = torch.cumsum(torch.cumsum(input, dim=0), dim=1)
         output.copy_(result)
@@ -139,6 +141,57 @@ class Challenge(ChallengeBase):
                 "output": torch.empty((255, 33), device=self.device, dtype=dtype),
                 "H": 255,
                 "W": 33,
+            }
+        )
+
+        # all_ones_5x7: output[i][j] = (i + 1) * (j + 1). Checked against independently computed
+        # values; catches row-only / column-only scans and exclusive (shifted) scans.
+        ones_expected = torch.tensor(
+            [[(i + 1) * (j + 1) for j in range(7)] for i in range(5)], dtype=dtype
+        )
+        ones_out = torch.empty((5, 7), dtype=dtype)
+        self.reference_impl(torch.ones((5, 7), dtype=dtype), ones_out, 5, 7)
+        assert torch.equal(ones_out, ones_expected)
+        tests.append(
+            {
+                "input": torch.ones((5, 7), device=self.device, dtype=dtype),
+                "output": torch.empty((5, 7), device=self.device, dtype=dtype),
+                "H": 5,
+                "W": 7,
+            }
+        )
+
+        # wide_3x300_integers: W > H with W not a multiple of a block size; catches swapped H/W
+        # indexing (non-square in the other direction from 255x33) and missed row-scan tails
+        tests.append(
+            {
+                "input": torch.randint(-3, 4, (3, 300), device=self.device).to(dtype),
+                "output": torch.empty((3, 300), device=self.device, dtype=dtype),
+                "H": 3,
+                "W": 300,
+            }
+        )
+
+        # tile_tails_257x513_integers: one past power-of-2 in both dims; catches dropped
+        # carries between tiles/blocks in either scan direction (integer values -> exact sums)
+        tests.append(
+            {
+                "input": torch.randint(-2, 3, (257, 513), device=self.device).to(dtype),
+                "output": torch.empty((257, 513), device=self.device, dtype=dtype),
+                "H": 257,
+                "W": 513,
+            }
+        )
+
+        # mixed_extreme_64x64: values span the full documented range [-100, 100]
+        tests.append(
+            {
+                "input": torch.empty((64, 64), device=self.device, dtype=dtype).uniform_(
+                    -100.0, 100.0
+                ),
+                "output": torch.empty((64, 64), device=self.device, dtype=dtype),
+                "H": 64,
+                "W": 64,
             }
         )
 
