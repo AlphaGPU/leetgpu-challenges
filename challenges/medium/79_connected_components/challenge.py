@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Connected Components",
-            atol=0,
-            rtol=0,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Connected Components"
+    atol = 0
+    rtol = 0
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
