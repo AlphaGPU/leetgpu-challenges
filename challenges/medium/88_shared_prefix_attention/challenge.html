@@ -1,0 +1,67 @@
+<p>
+Implement <em>shared-prefix (cascade) attention</em>, used when many sequences in a batch share the
+same prompt prefix (e.g. a long system prompt or few-shot examples). All
+<code>batch_size</code> sequences share one cached key/value prefix of <code>prefix_len</code>
+tokens, stored only once, and each sequence also has its own <code>suffix_len</code> suffix
+tokens. Each query token attends to every prefix token and causally to its own sequence's suffix
+tokens. All tensors are <code>float32</code>. A naive kernel re-reads the shared prefix once per
+sequence. A fast kernel reads it once for the whole batch and merges the prefix and suffix
+softmax partial results.
+</p>
+
+<p>
+For sequence \(b\), head \(h\) and suffix query \(i\):
+\[
+\text{output}[b,h,i] = \operatorname{softmax}\!\left(\frac{q\,[K_{\text{prefix}}[h];\;K_{\text{suffix}}[b,h,0..i]]^\top}{\sqrt{d}}\right)[V_{\text{prefix}}[h];\;V_{\text{suffix}}[b,h,0..i]]
+\]
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement <code>solve(Q, K_prefix, V_prefix, K_suffix, V_suffix, output, batch_size, num_heads, prefix_len, suffix_len, head_dim)</code>.</li>
+  <li>Do not change the function signature or use external libraries beyond the standard GPU frameworks.</li>
+  <li>Write the result into <code>output</code>.</li>
+  <li>Shapes (row-major, contiguous): <code>Q</code>, <code>K_suffix</code>, <code>V_suffix</code>, <code>output</code> are
+    <code>(batch_size, num_heads, suffix_len, head_dim)</code>; <code>K_prefix</code>, <code>V_prefix</code> are
+    <code>(num_heads, prefix_len, head_dim)</code> and are shared by every sequence.</li>
+  <li>Use scale <code>1 / sqrt(head_dim)</code>. Suffix query <code>i</code> sees all prefix keys and suffix keys
+    <code>0..i</code> (inclusive) of its own sequence only; it never sees other sequences' suffixes.</li>
+  <li><code>prefix_len</code> may be 0, in which case this is plain causal attention over the suffix.</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  <code>batch_size</code> = 2, <code>num_heads</code> = 1, <code>prefix_len</code> = 2,
+  <code>suffix_len</code> = 2, <code>head_dim</code> = 2 (head dimension omitted below).
+</p>
+<p>
+  \(K_{\text{prefix}} = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}\),
+  \(V_{\text{prefix}} = \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}\)
+</p>
+<p>
+  Sequence 0: \(Q = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}\),
+  \(K_{\text{suffix}} = \begin{bmatrix} 1 & 1 \\ 0 & 0 \end{bmatrix}\),
+  \(V_{\text{suffix}} = \begin{bmatrix} 5 & 6 \\ 7 & 8 \end{bmatrix}\)
+</p>
+<p>
+  Sequence 1: \(Q = \begin{bmatrix} 1 & 1 \\ 0 & 0 \end{bmatrix}\),
+  \(K_{\text{suffix}} = \begin{bmatrix} 0 & 1 \\ 1 & 0 \end{bmatrix}\),
+  \(V_{\text{suffix}} = \begin{bmatrix} -1 & -2 \\ 0 & 0 \end{bmatrix}\)
+</p>
+<p>
+  <strong>Output</strong> (rounded to 4 decimals):<br>
+  Sequence 0: \(\begin{bmatrix} 3.0000 & 4.0000 \\ 4.0000 & 5.0000 \end{bmatrix}\),
+  Sequence 1: \(\begin{bmatrix} 1.0000 & 1.3333 \\ 0.7500 & 1.0000 \end{bmatrix}\)
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>batch_size</code> &le; 64</li>
+  <li>1 &le; <code>num_heads</code> &le; 64</li>
+  <li>0 &le; <code>prefix_len</code> &le; 8,192</li>
+  <li>1 &le; <code>suffix_len</code> &le; 1,024</li>
+  <li>1 &le; <code>head_dim</code> &le; 128</li>
+  <li>All values are <code>float32</code>; tolerance is <code>1e-4</code> absolute and relative</li>
+  <li>Performance is measured with <code>batch_size</code> = 16, <code>num_heads</code> = 32,
+    <code>prefix_len</code> = 4,096, <code>suffix_len</code> = 256, <code>head_dim</code> = 128</li>
+</ul>
