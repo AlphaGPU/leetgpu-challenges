@@ -1,14 +1,14 @@
-from std.gpu.host import DeviceContext
-from std.gpu import block_dim, block_idx, thread_idx
+from max.gpu.host import DeviceContext
+from max.gpu import block_dim, block_idx, thread_idx
 from std.memory import UnsafePointer
 from std.math import ceildiv
 
 
 @export
 def solve(
-    A: UnsafePointer[Float16, MutExternalOrigin],
-    B: UnsafePointer[Float16, MutExternalOrigin],
-    C: UnsafePointer[Float16, MutExternalOrigin],
+    A: UnsafePointer[Float16, MutAnyOrigin],
+    B: UnsafePointer[Float16, MutAnyOrigin],
+    C: UnsafePointer[Float16, MutAnyOrigin],
     M: Int32,
     N: Int32,
     K: Int32,

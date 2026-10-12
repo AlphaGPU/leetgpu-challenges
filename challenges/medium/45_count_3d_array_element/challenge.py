@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Count 3D Array Element", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Count 3D Array Element"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self, input: torch.Tensor, output: torch.Tensor, N: int, M: int, K: int, P: int
@@ -38,9 +39,9 @@ class Challenge(ChallengeBase):
         dtype = torch.int32
 
         input = torch.tensor(
-            [[[1, 2, 3], [4, 5, 1]], [[1, 1, 1], [2, 2, 2]]], device="cuda", dtype=dtype
+            [[[1, 2, 3], [4, 5, 1]], [[1, 1, 1], [2, 2, 2]]], device=self.device, dtype=dtype
         )
-        output = torch.empty(1, device="cuda", dtype=dtype)
+        output = torch.empty(1, device=self.device, dtype=dtype)
         return {
             "input": input,
             "output": output,
@@ -58,9 +59,11 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "input": torch.tensor(
-                    [[[1, 2, 3], [4, 5, 1]], [[1, 1, 1], [2, 2, 2]]], device="cuda", dtype=dtype
+                    [[[1, 2, 3], [4, 5, 1]], [[1, 1, 1], [2, 2, 2]]],
+                    device=self.device,
+                    dtype=dtype,
                 ),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 2,
                 "M": 2,
                 "K": 3,
@@ -71,8 +74,8 @@ class Challenge(ChallengeBase):
         # all_same_value
         tests.append(
             {
-                "input": torch.tensor([[[2] * 16] * 3] * 15, device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.tensor([[[2] * 16] * 3] * 15, device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 15,
                 "M": 3,
                 "K": 16,
@@ -83,8 +86,8 @@ class Challenge(ChallengeBase):
         # increasing_sequence
         tests.append(
             {
-                "input": torch.randint(1, 11, (50, 50, 50), device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.randint(1, 11, (50, 50, 50), device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 50,
                 "M": 50,
                 "K": 50,
@@ -95,8 +98,8 @@ class Challenge(ChallengeBase):
         # medium_size
         tests.append(
             {
-                "input": torch.randint(1, 101, (100, 100, 100), device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.randint(1, 101, (100, 100, 100), device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 100,
                 "M": 100,
                 "K": 100,
@@ -107,8 +110,8 @@ class Challenge(ChallengeBase):
         # large_size
         tests.append(
             {
-                "input": torch.randint(1, 11, (100, 200, 300), device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.randint(1, 11, (100, 200, 300), device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 100,
                 "M": 200,
                 "K": 300,
@@ -120,8 +123,8 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.int32
-        input = torch.randint(1, 3, (500, 500, 500), device="cuda", dtype=dtype)
-        output = torch.empty(1, device="cuda", dtype=dtype)
+        input = torch.randint(1, 3, (500, 500, 500), device=self.device, dtype=dtype)
+        output = torch.empty(1, device=self.device, dtype=dtype)
         return {
             "input": input,
             "output": output,

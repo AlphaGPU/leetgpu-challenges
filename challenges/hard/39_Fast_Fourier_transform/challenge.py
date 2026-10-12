@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Fast Fourier Transform", atol=1e-3, rtol=1e-3, num_gpus=1, access_tier="free"
-        )
+    name = "Fast Fourier Transform"
+    atol = 0.001
+    rtol = 0.001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, signal: torch.Tensor, spectrum: torch.Tensor, N: int):
         """
@@ -50,8 +51,10 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         N = 4
         # Impulse signal δ[n] = 1 when n=0 else 0 (expected flat spectrum)
-        signal = torch.tensor([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], device="cuda", dtype=dtype)
-        spectrum = torch.empty(2 * N, device="cuda", dtype=dtype)
+        signal = torch.tensor(
+            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], device=self.device, dtype=dtype
+        )
+        spectrum = torch.empty(2 * N, device=self.device, dtype=dtype)
         return {"signal": signal, "spectrum": spectrum, "N": N}
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
@@ -60,14 +63,14 @@ class Challenge(ChallengeBase):
 
         # 1. Constant signal  (all ones) – DC spike only
         N = 8
-        const_sig = torch.ones(2 * N, device="cuda", dtype=dtype)
+        const_sig = torch.ones(2 * N, device=self.device, dtype=dtype)
         const_spec = torch.empty_like(const_sig)
         cases.append({"signal": const_sig, "spectrum": const_spec, "N": N})
 
         # 2. Single-frequency sinusoid  (real: cos, imag: sin)
         N = 16
         k = 3  # frequency bin
-        n = torch.arange(N, device="cuda", dtype=dtype)
+        n = torch.arange(N, device=self.device, dtype=dtype)
         real = torch.cos(2.0 * torch.pi * k * n / N)
         imag = torch.sin(2.0 * torch.pi * k * n / N)
         sinusoid = torch.stack((real, imag), dim=1).contiguous().view(-1)
@@ -76,19 +79,19 @@ class Challenge(ChallengeBase):
 
         # 3. Random complex signal, power-of-two length
         N = 256
-        rnd = torch.empty(2 * N, device="cuda", dtype=dtype).uniform_(-1.0, 1.0)
+        rnd = torch.empty(2 * N, device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
         rnd_spec = torch.empty_like(rnd)
         cases.append({"signal": rnd, "spectrum": rnd_spec, "N": N})
 
         # 4. Random complex signal, non-power-of-two length
         N = 250
-        rnd_np2 = torch.empty(2 * N, device="cuda", dtype=dtype).uniform_(-1.0, 1.0)
+        rnd_np2 = torch.empty(2 * N, device=self.device, dtype=dtype).uniform_(-1.0, 1.0)
         rnd_np2_spec = torch.empty_like(rnd_np2)
         cases.append({"signal": rnd_np2, "spectrum": rnd_np2_spec, "N": N})
 
         # 5. Medium-size signal (performance sanity)
         N = 4096
-        med = torch.empty(2 * N, device="cuda", dtype=dtype).normal_(0.0, 0.5)
+        med = torch.empty(2 * N, device=self.device, dtype=dtype).normal_(0.0, 0.5)
         med_spec = torch.empty_like(med)
         cases.append({"signal": med, "spectrum": med_spec, "N": N})
 
@@ -97,6 +100,6 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         N = 262_144  # 256 K complex samples  (~2 MiB real/imag)
-        big_sig = torch.empty(2 * N, device="cuda", dtype=dtype).normal_(0.0, 1.0)
+        big_sig = torch.empty(2 * N, device=self.device, dtype=dtype).normal_(0.0, 1.0)
         big_spec = torch.empty_like(big_sig)
         return {"signal": big_sig, "spectrum": big_spec, "N": N}

@@ -1,0 +1,165 @@
+<p>
+  Implement decaying causal attention. Given query matrix <code>Q</code>, key matrix <code>K</code>,
+  and value matrix <code>V</code>, each of shape <code>seq_len &times; d_model</code>, and a scalar
+  decay factor <code>gamma</code> &isin; (0,&nbsp;1], compute the unnormalized causal attention output
+  where position <code>n</code> attends to all past positions <code>m &le; n</code> with weight
+  <code>gamma<sup>n&minus;m</sup></code>:
+</p>
+<p>
+  \[
+    \text{output}[n] = \sum_{m=0}^{n} \gamma^{n-m} \cdot \frac{Q[n] \cdot K[m]}{\sqrt{d_{\text{model}}}} \cdot V[m]
+  \]
+</p>
+<p>
+  Unlike standard softmax attention, there is no normalization — the weights decay geometrically from
+  the current position backward. This is the parallel form of the Retention mechanism (RetNet), used
+  as a recurrence-friendly alternative to attention in sequence models.
+</p>
+
+<svg width="680" height="215" viewBox="0 0 680 215" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;">
+  <rect width="680" height="215" fill="#222" rx="8"/>
+
+  <!-- Section title: decay mask -->
+  <text x="148" y="24" text-anchor="middle" fill="#ccc" font-size="12" font-family="monospace">Causal Decay Mask  D[n,m] = &#947;^(n&#8722;m)</text>
+
+  <!-- Column headers m=0..3 -->
+  <text x="80"  y="43" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">m=0</text>
+  <text x="125" y="43" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">m=1</text>
+  <text x="170" y="43" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">m=2</text>
+  <text x="215" y="43" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">m=3</text>
+
+  <!-- Row labels n=0..3 -->
+  <text x="42" y="72"  text-anchor="middle" fill="#888" font-size="10" font-family="monospace">n=0</text>
+  <text x="42" y="112" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">n=1</text>
+  <text x="42" y="152" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">n=2</text>
+  <text x="42" y="192" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">n=3</text>
+
+  <!-- Row 0 -->
+  <rect x="58" y="53" width="44" height="36" fill="#1a4a8a" stroke="#333" stroke-width="1"/>
+  <text x="80"  y="76" text-anchor="middle" fill="#4a9eff" font-size="11" font-family="monospace">1</text>
+  <rect x="103" y="53" width="44" height="36" fill="#161616" stroke="#333" stroke-width="1"/>
+  <rect x="148" y="53" width="44" height="36" fill="#161616" stroke="#333" stroke-width="1"/>
+  <rect x="193" y="53" width="44" height="36" fill="#161616" stroke="#333" stroke-width="1"/>
+
+  <!-- Row 1 -->
+  <rect x="58"  y="91" width="44" height="36" fill="#143a6a" stroke="#333" stroke-width="1"/>
+  <text x="80"  y="114" text-anchor="middle" fill="#3a8ee0" font-size="11" font-family="monospace">&#947;</text>
+  <rect x="103" y="91" width="44" height="36" fill="#1a4a8a" stroke="#333" stroke-width="1"/>
+  <text x="125" y="114" text-anchor="middle" fill="#4a9eff" font-size="11" font-family="monospace">1</text>
+  <rect x="148" y="91" width="44" height="36" fill="#161616" stroke="#333" stroke-width="1"/>
+  <rect x="193" y="91" width="44" height="36" fill="#161616" stroke="#333" stroke-width="1"/>
+
+  <!-- Row 2 -->
+  <rect x="58"  y="129" width="44" height="36" fill="#0e2a54" stroke="#333" stroke-width="1"/>
+  <text x="80"  y="152" text-anchor="middle" fill="#2a7ec0" font-size="11" font-family="monospace">&#947;&#178;</text>
+  <rect x="103" y="129" width="44" height="36" fill="#143a6a" stroke="#333" stroke-width="1"/>
+  <text x="125" y="152" text-anchor="middle" fill="#3a8ee0" font-size="11" font-family="monospace">&#947;</text>
+  <rect x="148" y="129" width="44" height="36" fill="#1a4a8a" stroke="#333" stroke-width="1"/>
+  <text x="170" y="152" text-anchor="middle" fill="#4a9eff" font-size="11" font-family="monospace">1</text>
+  <rect x="193" y="129" width="44" height="36" fill="#161616" stroke="#333" stroke-width="1"/>
+
+  <!-- Row 3 -->
+  <rect x="58"  y="167" width="44" height="36" fill="#081e3c" stroke="#333" stroke-width="1"/>
+  <text x="80"  y="190" text-anchor="middle" fill="#1a6ea0" font-size="11" font-family="monospace">&#947;&#179;</text>
+  <rect x="103" y="167" width="44" height="36" fill="#0e2a54" stroke="#333" stroke-width="1"/>
+  <text x="125" y="190" text-anchor="middle" fill="#2a7ec0" font-size="11" font-family="monospace">&#947;&#178;</text>
+  <rect x="148" y="167" width="44" height="36" fill="#143a6a" stroke="#333" stroke-width="1"/>
+  <text x="170" y="190" text-anchor="middle" fill="#3a8ee0" font-size="11" font-family="monospace">&#947;</text>
+  <rect x="193" y="167" width="44" height="36" fill="#1a4a8a" stroke="#333" stroke-width="1"/>
+  <text x="215" y="190" text-anchor="middle" fill="#4a9eff" font-size="11" font-family="monospace">1</text>
+
+  <!-- Divider -->
+  <line x1="265" y1="30" x2="265" y2="210" stroke="#444" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Right side: computation flow -->
+  <text x="472" y="24" text-anchor="middle" fill="#ccc" font-size="12" font-family="monospace">Computation</text>
+
+  <defs>
+    <marker id="arr2" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 Z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <!-- Step boxes -->
+  <rect x="280" y="48"  width="100" height="32" rx="4" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.2"/>
+  <text x="330" y="62"  text-anchor="middle" fill="#ccc" font-size="10" font-family="monospace">Q [S, D]</text>
+  <text x="330" y="74"  text-anchor="middle" fill="#888" font-size="9"  font-family="monospace">query</text>
+
+  <rect x="280" y="90"  width="100" height="32" rx="4" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.2"/>
+  <text x="330" y="104" text-anchor="middle" fill="#ccc" font-size="10" font-family="monospace">K [S, D]</text>
+  <text x="330" y="116" text-anchor="middle" fill="#888" font-size="9"  font-family="monospace">key</text>
+
+  <rect x="280" y="132" width="100" height="32" rx="4" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.2"/>
+  <text x="330" y="146" text-anchor="middle" fill="#ccc" font-size="10" font-family="monospace">V [S, D]</text>
+  <text x="330" y="158" text-anchor="middle" fill="#888" font-size="9"  font-family="monospace">value</text>
+
+  <!-- Arrow from Q and K to scores -->
+  <line x1="380" y1="64"  x2="412" y2="90"  stroke="#888" stroke-width="1.2" marker-end="url(#arr2)"/>
+  <line x1="380" y1="106" x2="412" y2="96"  stroke="#888" stroke-width="1.2" marker-end="url(#arr2)"/>
+
+  <rect x="414" y="78"  width="110" height="34" rx="4" fill="#1a2a3c" stroke="#7ec8a0" stroke-width="1.2"/>
+  <text x="469" y="92"  text-anchor="middle" fill="#7ec8a0" font-size="10" font-family="monospace">QK&#7488; / &#8730;D</text>
+  <text x="469" y="105" text-anchor="middle" fill="#888" font-size="9"  font-family="monospace">attn scores [S,S]</text>
+
+  <!-- Arrow: multiply by decay mask -->
+  <line x1="469" y1="112" x2="469" y2="128" stroke="#888" stroke-width="1.2" marker-end="url(#arr2)"/>
+  <text x="505" y="124" fill="#cc88ff" font-size="9" font-family="monospace">&#8857; decay mask</text>
+
+  <rect x="414" y="130" width="110" height="34" rx="4" fill="#2a1a3c" stroke="#cc88ff" stroke-width="1.2"/>
+  <text x="469" y="144" text-anchor="middle" fill="#cc88ff" font-size="10" font-family="monospace">weighted [S,S]</text>
+  <text x="469" y="157" text-anchor="middle" fill="#888" font-size="9"  font-family="monospace">lower triangular</text>
+
+  <!-- Arrow from V and weighted to output -->
+  <line x1="380" y1="148" x2="412" y2="148" stroke="#888" stroke-width="1.2" marker-end="url(#arr2)"/>
+  <line x1="524" y1="147" x2="546" y2="147" stroke="#888" stroke-width="1.2" marker-end="url(#arr2)"/>
+  <text x="535" y="140" fill="#888" font-size="9" font-family="monospace">@</text>
+
+  <rect x="548" y="131" width="110" height="34" rx="4" fill="#1a3a1c" stroke="#4aff88" stroke-width="1.2"/>
+  <text x="603" y="145" text-anchor="middle" fill="#4aff88" font-size="10" font-family="monospace">output [S, D]</text>
+  <text x="603" y="158" text-anchor="middle" fill="#888" font-size="9"  font-family="monospace">weighted @ V</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the <code>solve</code> function; do not change its signature.</li>
+  <li>Do not use external libraries beyond those provided.</li>
+  <li>Write the result into <code>output</code>.</li>
+</ul>
+
+<h2>Example</h2>
+<p>Example 1 — with <code>seq_len</code> = 2, <code>d_model</code> = 4, <code>gamma</code> = 0.5:</p>
+<p>
+\[
+Q = \begin{bmatrix} 1 & 1 & 0 & 0 \\ 1 & 1 & 0 & 0 \end{bmatrix}, \quad
+K = \begin{bmatrix} 1 & 0 & 0 & 0 \\ 0 & 1 & 0 & 0 \end{bmatrix}, \quad
+V = \begin{bmatrix} 4 & 8 & 12 & 16 \\ 4 & 8 & 12 & 16 \end{bmatrix}
+\]
+</p>
+<p>
+  Attention scores \(QK^\top / \sqrt{4}\):
+  \[
+    A = \begin{bmatrix} 0.5 & 0.5 \\ 0.5 & 0.5 \end{bmatrix}
+  \]
+  Causal decay mask \(D_{nm} = 0.5^{n-m}\) for \(n \ge m\), else \(0\):
+  \[
+    D = \begin{bmatrix} 1 & 0 \\ 0.5 & 1 \end{bmatrix}
+  \]
+  Weighted attention \(A \odot D\):
+  \[
+    \begin{bmatrix} 0.5 & 0 \\ 0.25 & 0.5 \end{bmatrix}
+  \]
+  Output \((A \odot D)\,V\):
+  \[
+    \text{output} = \begin{bmatrix} 2 & 4 & 6 & 8 \\ 3 & 6 & 9 & 12 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>seq_len</code> &le; 8,192</li>
+  <li>1 &le; <code>d_model</code> &le; 256</li>
+  <li>0 &lt; <code>gamma</code> &le; 1</li>
+  <li>All tensors are <code>float32</code> on GPU.</li>
+  <li>Performance is measured with <code>seq_len</code> = 4,096, <code>d_model</code> = 64</li>
+</ul>
