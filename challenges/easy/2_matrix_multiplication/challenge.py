@@ -2,14 +2,15 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandTensor
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Matrix Multiplication", atol=1e-04, rtol=1e-04, num_gpus=1, access_tier="free"
-        )
+    name = "Matrix Multiplication"
+    atol = 0.0001
+    rtol = 0.0001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self, A: torch.Tensor, B: torch.Tensor, C: torch.Tensor, M: int, N: int, K: int
@@ -21,6 +22,11 @@ class Challenge(ChallengeBase):
         assert A.device == B.device == C.device
 
         torch.matmul(A, B, out=C)
+
+    def reference_impl_jax(self, A, B, M, N, K):
+        import jax.numpy as jnp
+
+        return jnp.matmul(A, B)
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -35,9 +41,9 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         M, N, K = 2, 2, 2
-        A = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="cuda", dtype=dtype)
-        B = torch.tensor([[5.0, 6.0], [7.0, 8.0]], device="cuda", dtype=dtype)
-        C = torch.empty(M, K, device="cuda", dtype=dtype)
+        A = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device=self.device, dtype=dtype)
+        B = torch.tensor([[5.0, 6.0], [7.0, 8.0]], device=self.device, dtype=dtype)
+        C = torch.empty(M, K, device=self.device, dtype=dtype)
         return {
             "A": A,
             "B": B,
@@ -76,9 +82,9 @@ class Challenge(ChallengeBase):
         for _, m, n, k, a_vals, b_vals in test_specs:
             test_cases.append(
                 {
-                    "A": torch.tensor(a_vals, device="cuda", dtype=dtype),
-                    "B": torch.tensor(b_vals, device="cuda", dtype=dtype),
-                    "C": torch.empty(m, k, device="cuda", dtype=dtype),
+                    "A": torch.tensor(a_vals, device=self.device, dtype=dtype),
+                    "B": torch.tensor(b_vals, device=self.device, dtype=dtype),
+                    "C": torch.empty(m, k, device=self.device, dtype=dtype),
                     "M": m,
                     "N": n,
                     "K": k,
@@ -95,9 +101,9 @@ class Challenge(ChallengeBase):
         ]:
             test_cases.append(
                 {
-                    "A": torch.empty(m, n, device="cuda", dtype=dtype).uniform_(-10.0, 10.0),
-                    "B": torch.empty(n, k, device="cuda", dtype=dtype).uniform_(-10.0, 10.0),
-                    "C": torch.empty(m, k, device="cuda", dtype=dtype),
+                    "A": torch.empty(m, n, device=self.device, dtype=dtype).uniform_(-10.0, 10.0),
+                    "B": torch.empty(n, k, device=self.device, dtype=dtype).uniform_(-10.0, 10.0),
+                    "C": torch.empty(m, k, device=self.device, dtype=dtype),
                     "M": m,
                     "N": n,
                     "K": k,
@@ -113,9 +119,9 @@ class Challenge(ChallengeBase):
         ]:
             test_cases.append(
                 {
-                    "A": torch.empty(m, n, device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                    "B": torch.empty(n, k, device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-                    "C": torch.empty(m, k, device="cuda", dtype=dtype),
+                    "A": torch.empty(m, n, device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                    "B": torch.empty(n, k, device=self.device, dtype=dtype).uniform_(-1.0, 1.0),
+                    "C": torch.empty(m, k, device=self.device, dtype=dtype),
                     "M": m,
                     "N": n,
                     "K": k,
@@ -125,12 +131,11 @@ class Challenge(ChallengeBase):
         return test_cases
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        dtype = torch.float32
         M, N, K = 8192, 6144, 4096
         return {
-            "A": torch.empty(M, N, device="cuda", dtype=dtype).uniform_(-10.0, 10.0),
-            "B": torch.empty(N, K, device="cuda", dtype=dtype).uniform_(-10.0, 10.0),
-            "C": torch.empty(M, K, device="cuda", dtype=dtype),
+            "A": RandTensor((M, N), -10.0, 10.0),
+            "B": RandTensor((N, K), -10.0, 10.0),
+            "C": OutTensor((M, K)),
             "M": M,
             "N": N,
             "K": K,

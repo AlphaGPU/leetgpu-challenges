@@ -6,8 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(name="Prefix Sum", atol=1e-02, rtol=1e-02, num_gpus=1, access_tier="free")
+    name = "Prefix Sum"
+    atol = 0.01
+    rtol = 0.01
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, input: torch.Tensor, output: torch.Tensor, N: int):
         assert input.shape == (N,)
@@ -24,8 +27,8 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        input = torch.tensor([1.0, 2.0, 3.0, 4.0], device="cuda", dtype=dtype)
-        output = torch.empty(4, device="cuda", dtype=dtype)
+        input = torch.tensor([1.0, 2.0, 3.0, 4.0], device=self.device, dtype=dtype)
+        output = torch.empty(4, device=self.device, dtype=dtype)
         return {
             "input": input,
             "output": output,
@@ -38,24 +41,24 @@ class Challenge(ChallengeBase):
         # basic_example
         tests.append(
             {
-                "input": torch.tensor([1.0, 2.0, 3.0, 4.0], device="cuda", dtype=dtype),
-                "output": torch.empty(4, device="cuda", dtype=dtype),
+                "input": torch.tensor([1.0, 2.0, 3.0, 4.0], device=self.device, dtype=dtype),
+                "output": torch.empty(4, device=self.device, dtype=dtype),
                 "N": 4,
             }
         )
         # mixed_signs
         tests.append(
             {
-                "input": torch.tensor([5.0, -2.0, 3.0, 1.0, -4.0], device="cuda", dtype=dtype),
-                "output": torch.empty(5, device="cuda", dtype=dtype),
+                "input": torch.tensor([5.0, -2.0, 3.0, 1.0, -4.0], device=self.device, dtype=dtype),
+                "output": torch.empty(5, device=self.device, dtype=dtype),
                 "N": 5,
             }
         )
         # single_element
         tests.append(
             {
-                "input": torch.tensor([42.0], device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.tensor([42.0], device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 1,
             }
         )
@@ -63,25 +66,25 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "input": torch.tensor(
-                    [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], device="cuda", dtype=dtype
+                    [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], device=self.device, dtype=dtype
                 ),
-                "output": torch.empty(8, device="cuda", dtype=dtype),
+                "output": torch.empty(8, device=self.device, dtype=dtype),
                 "N": 8,
             }
         )
         # all_zeros
         tests.append(
             {
-                "input": torch.empty(1024, device="cuda", dtype=dtype).zero_(),
-                "output": torch.empty(1024, device="cuda", dtype=dtype),
+                "input": torch.empty(1024, device=self.device, dtype=dtype).zero_(),
+                "output": torch.empty(1024, device=self.device, dtype=dtype),
                 "N": 1024,
             }
         )
         # random_large
         tests.append(
             {
-                "input": torch.empty(2025, device="cuda", dtype=dtype).uniform_(-10.0, 10.0),
-                "output": torch.empty(2025, device="cuda", dtype=dtype),
+                "input": torch.empty(2025, device=self.device, dtype=dtype).uniform_(-10.0, 10.0),
+                "output": torch.empty(2025, device=self.device, dtype=dtype),
                 "N": 2025,
             }
         )
@@ -90,8 +93,8 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         N = 250000
-        input = torch.empty(N, device="cuda", dtype=dtype).uniform_(-100.0, 100.0)
-        output = torch.empty(N, device="cuda", dtype=dtype)
+        input = torch.empty(N, device=self.device, dtype=dtype).uniform_(-100.0, 100.0)
+        output = torch.empty(N, device=self.device, dtype=dtype)
         return {
             "input": input,
             "output": output,

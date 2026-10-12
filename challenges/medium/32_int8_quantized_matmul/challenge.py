@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="INT8 Quantized MatMul", atol=0, rtol=0, num_gpus=1, access_tier="free"
-        )
+    name = "INT8 Quantized MatMul"
+    atol = 0
+    rtol = 0
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -36,6 +37,21 @@ class Challenge(ChallengeBase):
         C_q = torch.clamp(C_q, -128, 127).to(torch.int8)
         C.view(M, N).copy_(C_q)
 
+    def reference_impl_jax(
+        self, A, B, M, N, K, scale_A, scale_B, scale_C, zero_point_A, zero_point_B, zero_point_C
+    ):
+        import jax.numpy as jnp
+
+        A = A.reshape(M, K).astype(jnp.int32)
+        B = B.reshape(K, N).astype(jnp.int32)
+        A_f = (A - zero_point_A).astype(jnp.float32)
+        B_f = (B - zero_point_B).astype(jnp.float32)
+        C_f = jnp.round(jnp.matmul(A_f, B_f)).astype(jnp.int32)
+        C_f = C_f * scale_A * scale_B / scale_C
+        C_q = jnp.round(C_f).astype(jnp.int32) + zero_point_C
+        C_q = jnp.clip(C_q, -128, 127).astype(jnp.int8)
+        return C_q
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "A": (ctypes.POINTER(ctypes.c_int8), "in"),
@@ -54,7 +70,7 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.int8
-        device = "cuda"
+        device = self.device
         A = torch.tensor([[1, 2], [3, 4]], dtype=dtype, device=device).flatten()
         B = torch.tensor([[5, 6], [7, 8]], dtype=dtype, device=device).flatten()
         C = torch.tensor([[0, 0], [0, 0]], dtype=dtype, device=device).flatten()
@@ -76,7 +92,7 @@ class Challenge(ChallengeBase):
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         dtype = torch.int8
-        device = "cuda"
+        device = self.device
         tests = []
 
         # 1. 4x4x4_zero_zp
@@ -188,7 +204,7 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.int8
-        device = "cuda"
+        device = self.device
         shape_A = (8192, 2048)
         shape_B = (2048, 4096)
         shape_C = (8192, 4096)

@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Reverse Array", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Reverse Array"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, input: torch.Tensor, N: int):
         assert input.shape == (N,)
@@ -26,7 +27,7 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        input_tensor = torch.tensor([1.0, 2.0, 3.0, 4.0], device="cuda", dtype=dtype)
+        input_tensor = torch.tensor([1.0, 2.0, 3.0, 4.0], device=self.device, dtype=dtype)
         return {
             "input": input_tensor,
             "N": 4,
@@ -39,12 +40,14 @@ class Challenge(ChallengeBase):
 
         # Fixed value test cases
         test_cases.append(
-            {"input": torch.tensor([1.0, 2.0, 3.0, 4.0], device="cuda", dtype=dtype), "N": 4}
+            {"input": torch.tensor([1.0, 2.0, 3.0, 4.0], device=self.device, dtype=dtype), "N": 4}
         )
 
-        test_cases.append({"input": torch.tensor([42.0], device="cuda", dtype=dtype), "N": 1})
+        test_cases.append({"input": torch.tensor([42.0], device=self.device, dtype=dtype), "N": 1})
 
-        test_cases.append({"input": torch.tensor([0.0] * 16, device="cuda", dtype=dtype), "N": 16})
+        test_cases.append(
+            {"input": torch.tensor([0.0] * 16, device=self.device, dtype=dtype), "N": 16}
+        )
 
         test_cases.append(
             {
@@ -81,7 +84,7 @@ class Challenge(ChallengeBase):
                         28.0,
                         29.0,
                     ],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype,
                 ),
                 "N": 30,
@@ -89,17 +92,20 @@ class Challenge(ChallengeBase):
         )
 
         test_cases.append(
-            {"input": torch.tensor([-1.0, -2.0, -3.0, -4.0], device="cuda", dtype=dtype), "N": 4}
+            {
+                "input": torch.tensor([-1.0, -2.0, -3.0, -4.0], device=self.device, dtype=dtype),
+                "N": 4,
+            }
         )
 
         test_cases.append(
-            {"input": torch.tensor([1.0, -2.0, 3.0, -4.0], device="cuda", dtype=dtype), "N": 4}
+            {"input": torch.tensor([1.0, -2.0, 3.0, -4.0], device=self.device, dtype=dtype), "N": 4}
         )
 
         test_cases.append(
             {
                 "input": torch.tensor(
-                    [0.000001, 0.0000001, 0.00000001, 0.000000001], device="cuda", dtype=dtype
+                    [0.000001, 0.0000001, 0.00000001, 0.000000001], device=self.device, dtype=dtype
                 ),
                 "N": 4,
             }
@@ -108,7 +114,9 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "input": torch.tensor(
-                    [1000000.0, 10000000.0, -1000000.0, -10000000.0], device="cuda", dtype=dtype
+                    [1000000.0, 10000000.0, -1000000.0, -10000000.0],
+                    device=self.device,
+                    dtype=dtype,
                 ),
                 "N": 4,
             }
@@ -116,15 +124,21 @@ class Challenge(ChallengeBase):
 
         # Random range test cases
         test_cases.append(
-            {"input": torch.empty(32, device="cuda", dtype=dtype).uniform_(0.0, 32.0), "N": 32}
+            {"input": torch.empty(32, device=self.device, dtype=dtype).uniform_(0.0, 32.0), "N": 32}
         )
 
         test_cases.append(
-            {"input": torch.empty(1000, device="cuda", dtype=dtype).uniform_(0.0, 7.0), "N": 1000}
+            {
+                "input": torch.empty(1000, device=self.device, dtype=dtype).uniform_(0.0, 7.0),
+                "N": 1000,
+            }
         )
 
         test_cases.append(
-            {"input": torch.empty(10000, device="cuda", dtype=dtype).uniform_(0.0, 1.0), "N": 10000}
+            {
+                "input": torch.empty(10000, device=self.device, dtype=dtype).uniform_(0.0, 1.0),
+                "N": 10000,
+            }
         )
 
         return test_cases
@@ -133,6 +147,6 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         N = 25000000
         return {
-            "input": torch.empty(N, device="cuda", dtype=dtype).uniform_(-1000.0, 1000.0),
+            "input": torch.empty(N, device=self.device, dtype=dtype).uniform_(-1000.0, 1000.0),
             "N": N,
         }

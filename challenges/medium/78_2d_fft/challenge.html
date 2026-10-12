@@ -1,0 +1,59 @@
+<p>
+  Compute the 2D Discrete Fourier Transform (2D DFT) of a complex-valued signal stored on the GPU.
+  Given a 2D complex input signal of shape <code>M &times; N</code>, compute its 2D DFT spectrum
+  using the row-column decomposition: apply a 1D DFT along each row, then a 1D DFT along each
+  column of the result. All values are 32-bit floating point.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>spectrum</code></li>
+  <li>
+    The input and output are stored as 1D arrays of interleaved real and imaginary parts in
+    row-major order: element <code>x[m, n]</code> has its real part at index
+    <code>2*(m*N + n)</code> and imaginary part at index <code>2*(m*N + n) + 1</code>
+  </li>
+</ul>
+
+<h2>Example</h2>
+<p>
+Input: <code>M</code> = 2, <code>N</code> = 2<br>
+Signal \(x[m, n]\) (real part):
+\[
+\begin{bmatrix}
+1.0 & 0.0 \\
+0.0 & 0.0
+\end{bmatrix}
+\]
+Signal \(x[m, n]\) (imaginary part):
+\[
+\begin{bmatrix}
+0.0 & 0.0 \\
+0.0 & 0.0
+\end{bmatrix}
+\]
+Output:<br>
+Spectrum \(X[k, l]\) (real part):
+\[
+\begin{bmatrix}
+1.0 & 1.0 \\
+1.0 & 1.0
+\end{bmatrix}
+\]
+Spectrum \(X[k, l]\) (imaginary part):
+\[
+\begin{bmatrix}
+0.0 & 0.0 \\
+0.0 & 0.0
+\end{bmatrix}
+\]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code>, <code>N</code> &le; 4096</li>
+  <li>Signal values are 32-bit floating point (real and imaginary parts)</li>
+  <li>Performance is measured with <code>M</code> = 2,048, <code>N</code> = 2,048</li>
+</ul>
