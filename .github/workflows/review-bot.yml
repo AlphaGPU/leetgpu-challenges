@@ -1,0 +1,104 @@
+name: PR review bot
+# Trigger is pull_request (NOT pull_request_target): the job that runs PR code
+# never has secrets or a write token. The review job checks out the BASE commit
+# only and never executes PR code; it reads the PR via the API. Fork PRs get no
+# secrets under pull_request, so the review job is skipped for them.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+concurrency:
+  group: review-bot-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  checks:
+    # Mirrors lint.yml + check-duplicated-index.yml. Runs untrusted PR code: no secrets here.
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      lint_python: ${{ steps.py.outcome }}
+      lint_cpp: ${{ steps.cpp.outcome }}
+      lint_mojo: ${{ steps.mojo_result.outputs.result }}
+      validate: ${{ steps.validate.outcome }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - id: py
+        continue-on-error: true
+        run: |
+          pip install black==24.1.1 flake8==7.0.0 isort==5.13.2
+          black --check challenges/ scripts/
+          isort --check-only challenges/ scripts/
+          flake8 challenges/ scripts/
+      - id: cpp
+        continue-on-error: true
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q clang-format
+          find challenges -name "*.cu" -o -name "*.cpp" -o -name "*.h" | xargs clang-format --dry-run --Werror
+      - id: validate
+        continue-on-error: true
+        run: python scripts/validate_challenges.py
+      - id: mojo_changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git diff --name-only "$BASE_SHA"...HEAD | grep -q '\.mojo$'; then echo "changed=true" >> "$GITHUB_OUTPUT"; else echo "changed=false" >> "$GITHUB_OUTPUT"; fi
+      - id: mojo
+        if: ${{ steps.mojo_changed.outputs.changed == 'true' }}
+        continue-on-error: true
+        run: |
+          pip install modular
+          find challenges -name "*.mojo" -type f -print0 | xargs -0 mojo format -q
+          git diff --exit-code -- '*.mojo'
+      - id: mojo_result
+        env:
+          CHANGED: ${{ steps.mojo_changed.outputs.changed }}
+          OUTCOME: ${{ steps.mojo.outcome }}
+        run: |
+          if [ "$CHANGED" = "false" ]; then echo "result=success" >> "$GITHUB_OUTPUT"; else echo "result=$OUTCOME" >> "$GITHUB_OUTPUT"; fi
+  review:
+    needs: checks
+    if: ${{ always() && !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HAS_APP: ${{ secrets.REVIEW_APP_ID != '' }}
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      # Run the review logic and config from the BASE branch so a PR cannot
+      # rewrite its own reviewer. PR code is never checked out here.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - id: app
+        if: ${{ env.HAS_APP == 'true' }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.REVIEW_APP_ID }}
+          private-key: ${{ secrets.REVIEW_APP_PRIVATE_KEY }}
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Decide and review
+        run: node .github/review-bot/review.js
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CHECK_LINT_PYTHON: ${{ needs.checks.outputs.lint_python || needs.checks.result }}
+          CHECK_LINT_CPP: ${{ needs.checks.outputs.lint_cpp || needs.checks.result }}
+          CHECK_LINT_MOJO: ${{ needs.checks.outputs.lint_mojo || needs.checks.result }}
+          CHECK_VALIDATE: ${{ needs.checks.outputs.validate || needs.checks.result }}
+          REVIEW_LLM_PROVIDER: ${{ vars.REVIEW_LLM_PROVIDER }}
+          REVIEW_LLM_MODEL: ${{ vars.REVIEW_LLM_MODEL }}
+          REVIEW_LLM_BASE_URL: ${{ vars.REVIEW_LLM_BASE_URL }}
+          REVIEW_LLM_API_KEY: ${{ secrets.REVIEW_LLM_API_KEY }}
