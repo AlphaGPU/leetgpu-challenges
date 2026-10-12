@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Integral Image",
-            atol=1e-02,
-            rtol=1e-02,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Integral Image"
+    atol = 1e-02
+    rtol = 1e-02
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, input: torch.Tensor, output: torch.Tensor, H: int, W: int):
         assert input.shape == (H, W)
