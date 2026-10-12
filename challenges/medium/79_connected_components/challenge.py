@@ -38,12 +38,16 @@ class Challenge(ChallengeBase):
             edge_src = torch.cat([src_long, dst_long])
             edge_dst = torch.cat([dst_long, src_long])
 
+            # Min-label hooking plus pointer jumping (comp = comp[comp]) so long paths
+            # converge in far fewer than N iterations. comp[v] always stays a vertex in
+            # v's component with comp[v] <= v, so the fixed point is the component minimum.
             for _ in range(N):
                 neighbor_labels = comp[edge_dst]
                 new_comp = comp.clone()
                 new_comp.scatter_reduce_(
                     0, edge_src, neighbor_labels, reduce="amin", include_self=True
                 )
+                new_comp = new_comp[new_comp.long()]
                 if torch.equal(new_comp, comp):
                     break
                 comp = new_comp
@@ -72,7 +76,7 @@ class Challenge(ChallengeBase):
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         tests = []
 
-        # Test 1: Single vertex, no edges
+        # Test 1: Single vertex with a self-loop (minimum N and M); expected [0]
         tests.append(
             {
                 "src": torch.zeros(1, dtype=torch.int32, device=self.device),
@@ -94,7 +98,7 @@ class Challenge(ChallengeBase):
             }
         )
 
-        # Test 3: Four isolated vertices (no edges; each is its own component)
+        # Test 3: Four vertices, only a self-loop on 0; expected [0, 1, 2, 3]
         tests.append(
             {
                 "src": torch.tensor([0], dtype=torch.int32, device=self.device),
@@ -199,6 +203,65 @@ class Challenge(ChallengeBase):
             {
                 "src": torch.tensor(src_list, dtype=torch.int32, device=self.device),
                 "dst": torch.tensor(dst_list, dtype=torch.int32, device=self.device),
+                "labels": torch.zeros(N, dtype=torch.int32, device=self.device),
+                "N": N,
+                "M": M,
+            }
+        )
+
+        # Test 11: Reversed path 255-254-...-0 with edges listed from the high end and stored
+        # as (higher, lower). Expected labels are all 0. Catches solutions that do a fixed
+        # number of sweeps or only propagate src -> dst (treating edges as directed).
+        N = 255
+        tests.append(
+            {
+                "src": torch.arange(N - 1, 0, -1, dtype=torch.int32, device=self.device),
+                "dst": torch.arange(N - 2, -1, -1, dtype=torch.int32, device=self.device),
+                "labels": torch.zeros(N, dtype=torch.int32, device=self.device),
+                "N": N,
+                "M": N - 1,
+            }
+        )
+
+        # Test 12: Self-loops, duplicate edges and untouched vertices, N=6.
+        # Edges: (2,2), (4,1), (1,4), (4,1), (5,5). Vertices 0 and 3 appear in no edge.
+        # Expected labels: [0, 1, 2, 3, 1, 5]. Catches solutions that leave vertices without
+        # edges uninitialized or mishandle self-loops/duplicates.
+        tests.append(
+            {
+                "src": torch.tensor([2, 4, 1, 4, 5], dtype=torch.int32, device=self.device),
+                "dst": torch.tensor([2, 1, 4, 1, 5], dtype=torch.int32, device=self.device),
+                "labels": torch.full((6,), -1, dtype=torch.int32, device=self.device),
+                "N": 6,
+                "M": 5,
+            }
+        )
+
+        # Test 13: Long path over a random permutation of 1024 vertex IDs (single component,
+        # expected labels all 0). Large diameter with scrambled IDs catches solutions that stop
+        # iterating before convergence or assume neighbouring vertices have adjacent IDs.
+        torch.manual_seed(7)
+        N = 1024
+        perm = torch.randperm(N, device=self.device).to(torch.int32)
+        tests.append(
+            {
+                "src": perm[:-1].clone(),
+                "dst": perm[1:].clone(),
+                "labels": torch.zeros(N, dtype=torch.int32, device=self.device),
+                "N": N,
+                "M": N - 1,
+            }
+        )
+
+        # Test 14: Realistic size with many components (N=10,000, M=6,000): random sparse
+        # graph below the percolation threshold, so many small components plus isolated
+        # vertices whose label must be their own ID.
+        torch.manual_seed(123)
+        N, M = 10_000, 6_000
+        tests.append(
+            {
+                "src": torch.randint(0, N, (M,), dtype=torch.int32, device=self.device),
+                "dst": torch.randint(0, N, (M,), dtype=torch.int32, device=self.device),
                 "labels": torch.zeros(N, dtype=torch.int32, device=self.device),
                 "N": N,
                 "M": M,
