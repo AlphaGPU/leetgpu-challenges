@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Matrix Power", atol=1e-04, rtol=1e-04, num_gpus=1, access_tier="free"
-        )
+    name = "Matrix Power"
+    atol = 0.0001
+    rtol = 0.0001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, input: torch.Tensor, output: torch.Tensor, N: int, P: int):
         """
@@ -37,8 +38,10 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         N = 2
         P = 3
-        input_data = torch.tensor([[1.0, 2.0], [3.0, 4.0]], device="cuda", dtype=dtype).flatten()
-        output_data = torch.zeros((2, 2), device="cuda", dtype=dtype).flatten()
+        input_data = torch.tensor(
+            [[1.0, 2.0], [3.0, 4.0]], device=self.device, dtype=dtype
+        ).flatten()
+        output_data = torch.zeros((2, 2), device=self.device, dtype=dtype).flatten()
 
         return {
             "input": input_data,
@@ -55,9 +58,9 @@ class Challenge(ChallengeBase):
         test_cases.append(
             {
                 "input": torch.tensor(
-                    [[1.0, 2.0], [3.0, 4.0]], device="cuda", dtype=dtype
+                    [[1.0, 2.0], [3.0, 4.0]], device=self.device, dtype=dtype
                 ).flatten(),
-                "output": torch.zeros((2, 2), device="cuda", dtype=dtype).flatten(),
+                "output": torch.zeros((2, 2), device=self.device, dtype=dtype).flatten(),
                 "N": 2,
                 "P": 3,
             }
@@ -66,8 +69,8 @@ class Challenge(ChallengeBase):
         # Test case 2: identity 3x3 power 5
         test_cases.append(
             {
-                "input": torch.eye(3, device="cuda", dtype=dtype).flatten(),
-                "output": torch.zeros((3, 3), device="cuda", dtype=dtype).flatten(),
+                "input": torch.eye(3, device=self.device, dtype=dtype).flatten(),
+                "output": torch.zeros((3, 3), device=self.device, dtype=dtype).flatten(),
                 "N": 3,
                 "P": 5,
             }
@@ -76,10 +79,10 @@ class Challenge(ChallengeBase):
         # Test case 3: random 5x5 power 2
         test_cases.append(
             {
-                "input": torch.empty((5, 5), device="cuda", dtype=dtype)
+                "input": torch.empty((5, 5), device=self.device, dtype=dtype)
                 .uniform_(-5.0, 5.0)
                 .flatten(),
-                "output": torch.zeros((5, 5), device="cuda", dtype=dtype).flatten(),
+                "output": torch.zeros((5, 5), device=self.device, dtype=dtype).flatten(),
                 "N": 5,
                 "P": 2,
             }
@@ -88,10 +91,10 @@ class Challenge(ChallengeBase):
         # Test case 4: random 16x16 power 3
         test_cases.append(
             {
-                "input": torch.empty((16, 16), device="cuda", dtype=dtype)
+                "input": torch.empty((16, 16), device=self.device, dtype=dtype)
                 .uniform_(-1.0, 1.0)
                 .flatten(),
-                "output": torch.zeros((16, 16), device="cuda", dtype=dtype).flatten(),
+                "output": torch.zeros((16, 16), device=self.device, dtype=dtype).flatten(),
                 "N": 16,
                 "P": 3,
             }
@@ -100,10 +103,10 @@ class Challenge(ChallengeBase):
         # Test case 5: random 8x8 power 4
         test_cases.append(
             {
-                "input": torch.empty((8, 8), device="cuda", dtype=dtype)
+                "input": torch.empty((8, 8), device=self.device, dtype=dtype)
                 .uniform_(-10.0, 10.0)
                 .flatten(),
-                "output": torch.zeros((8, 8), device="cuda", dtype=dtype).flatten(),
+                "output": torch.zeros((8, 8), device=self.device, dtype=dtype).flatten(),
                 "N": 8,
                 "P": 4,
             }
@@ -112,10 +115,10 @@ class Challenge(ChallengeBase):
         # Test case 6: random 10x10 power 1
         test_cases.append(
             {
-                "input": torch.empty((10, 10), device="cuda", dtype=dtype)
+                "input": torch.empty((10, 10), device=self.device, dtype=dtype)
                 .uniform_(-2.0, 2.0)
                 .flatten(),
-                "output": torch.zeros((10, 10), device="cuda", dtype=dtype).flatten(),
+                "output": torch.zeros((10, 10), device=self.device, dtype=dtype).flatten(),
                 "N": 10,
                 "P": 1,
             }
@@ -128,10 +131,10 @@ class Challenge(ChallengeBase):
         N = 512
         P = 3
         return {
-            "input": torch.empty((N, N), device="cuda", dtype=dtype)
+            "input": torch.empty((N, N), device=self.device, dtype=dtype)
             .uniform_(-10.0, 10.0)
             .flatten(),
-            "output": torch.zeros((N, N), device="cuda", dtype=dtype).flatten(),
+            "output": torch.zeros((N, N), device=self.device, dtype=dtype).flatten(),
             "N": N,
             "P": P,
         }

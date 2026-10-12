@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="3D Subarray Sum", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "3D Subarray Sum"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -52,9 +53,9 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.int32
         input = torch.tensor(
-            [[[1, 2, 3], [4, 5, 1]], [[1, 1, 1], [2, 2, 2]]], device="cuda", dtype=dtype
+            [[[1, 2, 3], [4, 5, 1]], [[1, 1, 1], [2, 2, 2]]], device=self.device, dtype=dtype
         )
-        output = torch.empty(1, device="cuda", dtype=dtype)
+        output = torch.empty(1, device=self.device, dtype=dtype)
         return {
             "input": input,
             "output": output,
@@ -76,8 +77,8 @@ class Challenge(ChallengeBase):
         # basic_example
         tests.append(
             {
-                "input": torch.tensor([[[5, 10], [5, 2], [2, 2]]], device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.tensor([[[5, 10], [5, 2], [2, 2]]], device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 1,
                 "M": 3,
                 "K": 2,
@@ -93,8 +94,8 @@ class Challenge(ChallengeBase):
         # all_same_value
         tests.append(
             {
-                "input": torch.tensor([[[2] * 16] * 20] * 30, device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.tensor([[[2] * 16] * 20] * 30, device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 30,
                 "M": 20,
                 "K": 16,
@@ -110,8 +111,8 @@ class Challenge(ChallengeBase):
         # increasing_sequence
         tests.append(
             {
-                "input": torch.randint(1, 11, (50, 50, 50), device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.randint(1, 11, (50, 50, 50), device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 50,
                 "M": 50,
                 "K": 50,
@@ -127,8 +128,8 @@ class Challenge(ChallengeBase):
         # medium_size
         tests.append(
             {
-                "input": torch.randint(1, 11, (77, 87, 57), device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.randint(1, 11, (77, 87, 57), device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 77,
                 "M": 87,
                 "K": 57,
@@ -144,8 +145,8 @@ class Challenge(ChallengeBase):
         # large_size
         tests.append(
             {
-                "input": torch.randint(1, 11, (100, 100, 100), device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.randint(1, 11, (100, 100, 100), device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 100,
                 "M": 100,
                 "K": 100,
@@ -162,8 +163,8 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.int32
-        input = torch.randint(1, 11, (500, 500, 500), device="cuda", dtype=dtype)
-        output = torch.empty(1, device="cuda", dtype=dtype)
+        input = torch.randint(1, 11, (500, 500, 500), device=self.device, dtype=dtype)
+        output = torch.empty(1, device=self.device, dtype=dtype)
         return {
             "input": input,
             "output": output,

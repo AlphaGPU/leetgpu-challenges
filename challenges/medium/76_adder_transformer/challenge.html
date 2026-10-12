@@ -1,0 +1,204 @@
+<p>
+Run batched autoregressive inference for a 10-parameter transformer that adds two 10-digit
+numbers. Given prompts of shape <code>[batch_size, 31]</code> (int32) and a 10-float weight
+buffer, write output logits of shape <code>[batch_size, 11, 10]</code> &mdash; one logit
+row per decode step over the 10-digit vocabulary (0&ndash;9). All tensors are float32 except
+the int32 prompts.
+</p>
+
+<p>
+The model comes from the
+<a href="https://gist.github.com/Lokimorty/d54e5c61997e00fb922b6692739a0f6c">AdderBoard</a>
+competition for the smallest autoregressive transformer that adds 10-digit numbers at
+&ge;99% accuracy. It encodes carry propagation in 10 learned parameters via RoPE geometry,
+tied embeddings, and SwiGLU gating.
+</p>
+
+<svg viewBox="0 0 720 540" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto; max-width:720px;"
+     font-family="monospace" font-size="13">
+  <rect width="720" height="540" rx="12" fill="#222"/>
+
+  <!-- Input -->
+  <rect x="270" y="20" width="180" height="36" rx="6" fill="#335" stroke="#4477bb"/>
+  <text x="360" y="43" text-anchor="middle" fill="#ccc">Token Prompt [B,31]</text>
+
+  <!-- Embedding -->
+  <rect x="250" y="80" width="220" height="36" rx="6" fill="#2a4a2a" stroke="#44aa66"/>
+  <text x="360" y="103" text-anchor="middle" fill="#ccc">Embed: [w0-w1*d&sup2;, -d]</text>
+  <line x1="360" y1="56" x2="360" y2="80" stroke="#666" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Unit RMSNorm 1 -->
+  <rect x="270" y="140" width="180" height="32" rx="6" fill="#333" stroke="#888"/>
+  <text x="360" y="161" text-anchor="middle" fill="#ccc">Unit RMSNorm</text>
+  <line x1="360" y1="116" x2="360" y2="140" stroke="#666" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Attention block -->
+  <rect x="200" y="195" width="320" height="105" rx="8" fill="none" stroke="#4477bb" stroke-dasharray="4"/>
+  <text x="210" y="213" fill="#4477bb" font-size="11">Self-Attention (1 head, dim=2)</text>
+
+  <rect x="215" y="220" width="90" height="28" rx="4" fill="#335" stroke="#4477bb"/>
+  <text x="260" y="239" text-anchor="middle" fill="#ccc" font-size="11">Q Proj [2p]</text>
+  <rect x="315" y="220" width="90" height="28" rx="4" fill="#335" stroke="#4477bb"/>
+  <text x="360" y="239" text-anchor="middle" fill="#ccc" font-size="11">K Proj [0p]</text>
+  <rect x="415" y="220" width="90" height="28" rx="4" fill="#335" stroke="#4477bb"/>
+  <text x="460" y="239" text-anchor="middle" fill="#ccc" font-size="11">V Proj [1p]</text>
+
+  <rect x="215" y="258" width="290" height="28" rx="4" fill="#335" stroke="#4477bb"/>
+  <text x="360" y="277" text-anchor="middle" fill="#ccc" font-size="11">QK Norm + RoPE(&omega;=2&pi;/19) + Causal Attn</text>
+
+  <line x1="360" y1="172" x2="360" y2="195" stroke="#666" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Residual 1 -->
+  <text x="555" y="265" fill="#888" font-size="11">+ residual</text>
+  <line x1="540" y1="98" x2="570" y2="98" stroke="#888" stroke-width="1" stroke-dasharray="3"/>
+  <line x1="570" y1="98" x2="570" y2="320" stroke="#888" stroke-width="1" stroke-dasharray="3"/>
+  <line x1="570" y1="320" x2="520" y2="320" stroke="#888" stroke-width="1" stroke-dasharray="3" marker-end="url(#arr)"/>
+
+  <!-- Add node 1 -->
+  <circle cx="500" cy="320" r="14" fill="#333" stroke="#888"/>
+  <text x="500" y="325" text-anchor="middle" fill="#ccc" font-size="16">+</text>
+  <line x1="360" y1="300" x2="360" y2="320" stroke="#666" stroke-width="1.5"/>
+  <line x1="360" y1="320" x2="486" y2="320" stroke="#666" stroke-width="1.5"/>
+
+  <!-- Unit RMSNorm 2 -->
+  <rect x="270" y="350" width="180" height="32" rx="6" fill="#333" stroke="#888"/>
+  <text x="360" y="371" text-anchor="middle" fill="#ccc">Unit RMSNorm</text>
+  <line x1="500" y1="334" x2="500" y2="342" stroke="#666" stroke-width="1.5"/>
+  <line x1="500" y1="342" x2="360" y2="342" stroke="#666" stroke-width="1.5"/>
+  <line x1="360" y1="342" x2="360" y2="350" stroke="#666" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- MLP block -->
+  <rect x="200" y="400" width="320" height="36" rx="6" fill="#2a4a2a" stroke="#44aa66"/>
+  <text x="360" y="423" text-anchor="middle" fill="#ccc" font-size="12">MLP: Gate + SwiGLU + Carry [3p]</text>
+  <line x1="360" y1="382" x2="360" y2="400" stroke="#666" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Final norm + output -->
+  <rect x="250" y="460" width="220" height="36" rx="6" fill="#333" stroke="#888"/>
+  <text x="360" y="483" text-anchor="middle" fill="#ccc">RMSNorm [2p] + Logits</text>
+  <line x1="360" y1="436" x2="360" y2="460" stroke="#666" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Param counts -->
+  <text x="30" y="520" fill="#666" font-size="11">Total: 10 parameters (2+2+1+2+1+2)</text>
+
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#666" stroke-width="1"/>
+    </marker>
+  </defs>
+</svg>
+
+<h2>Model Architecture</h2>
+
+<p>Single-layer pre-norm transformer. Hidden dim 2, 1 head, head dim 2, vocab 10 (digits
+0&ndash;9), tied input/output embeddings.</p>
+
+<p>Each step runs the full sequence <code>[batch_size, seq_len, 2]</code> through:</p>
+
+<p><strong>1. Token Embedding</strong> (2 parameters: <code>w0</code>, <code>w1</code>)</p>
+<p>$$e(d) = \begin{bmatrix} w_0 - w_1 \cdot d^2 \\ -d \end{bmatrix}$$</p>
+
+<p><strong>2. Unit RMSNorm</strong> (no parameters)</p>
+<p>$$\text{UnitRMSNorm}(x) = \frac{x}{\sqrt{\text{mean}(x^2) + \epsilon}}, \quad \epsilon = 10^{-6}$$</p>
+
+<p><strong>3. Self-Attention</strong> (3 parameters: <code>q0</code>, <code>q1</code>, <code>v0</code>)</p>
+<p>Projections applied to the normed hidden state <code>h</code> with shape <code>[*, 2]</code>:</p>
+<p>$$Q = \begin{bmatrix} h_0 \cdot q_0 \\ h_0 \cdot q_1 \end{bmatrix}, \quad
+K = \begin{bmatrix} h_0 \\ 0 \end{bmatrix}, \quad
+V = \begin{bmatrix} h_1 \cdot v_0 \\ 0 \end{bmatrix}$$</p>
+
+<p>After projection, Q and K are each normalized with Unit RMSNorm, then RoPE is applied
+with angular frequency <code>&omega; = 2&pi;/19</code>:</p>
+<p>$$\text{RoPE}(x, p) = \begin{bmatrix} x_0 \cos(p\omega) - x_1 \sin(p\omega) \\
+x_0 \sin(p\omega) + x_1 \cos(p\omega) \end{bmatrix}$$</p>
+
+<p>Scaled dot-product attention with causal mask uses scale factor:</p>
+<p>$$\text{scale} = \frac{1}{\sqrt{d_h}} \cdot S^2$$</p>
+<p>where \(d_h = 2\) is the head dimension and \(S^2\) is the QK-norm scale constant
+(see weight table below for exact value).</p>
+
+<p>The output projection maps <code>[attn_0, attn_1]</code> &rarr; <code>[0, attn_0]</code>
+(no parameters), followed by a residual connection.</p>
+
+<p><strong>4. MLP</strong> (3 parameters: <code>a</code>, <code>c</code>, <code>carry</code>)</p>
+<p>Applied to the unit-RMSNorm of the post-attention hidden state:</p>
+<p>$$g_0 = h_0 \cdot a + h_1 \cdot c, \quad g_1 = h_0 \cdot (a - c / 1000) + h_1 \cdot c$$</p>
+<p>$$\text{base} = h_0, \quad \text{up} = [\text{base}, \text{base}]$$</p>
+<p>$$\text{mix} = \text{SiLU}([g_0, g_1]) \odot \text{up}$$</p>
+<p>$$\text{MLP}(h) = \begin{bmatrix} 0 \\ \text{carry} \cdot (\text{mix}_1 - \text{mix}_0) \end{bmatrix}$$</p>
+<p>followed by a residual connection.</p>
+
+<p><strong>5. Final RMSNorm</strong> (2 parameters: <code>n0</code>, <code>n1</code>)</p>
+<p>Standard RMSNorm with learned weight:</p>
+<p>$$\text{out} = \frac{h}{\sqrt{\text{mean}(h^2) + \epsilon}} \odot [n_0, n_1]$$</p>
+
+<p><strong>6. Output Logits</strong> (tied with embedding)</p>
+<p>$$\text{logits} = \text{out} \cdot E^T \quad \text{where } E_{d} = e(d)$$</p>
+
+<h2>Autoregressive Decoding</h2>
+<p>Starting from the 31-token prompt, repeat 11 times:</p>
+<ol>
+  <li>Run the full forward pass on the current sequence</li>
+  <li>Extract logits at the last position &rarr; store in output</li>
+  <li>Append <code>argmax(logits)</code> as the next token</li>
+</ol>
+<p>The sequence grows from length 31 to 42 over the 11 decode steps.</p>
+
+<h2>Weight Layout</h2>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; color:#ccc; border-color:#555;">
+  <tr style="background:#333;"><th>Offset</th><th>Size</th><th>Name</th><th>Description</th></tr>
+  <tr><td>0</td><td>2</td><td>embed</td><td>Embedding: <code>e(d) = [w0 - w1*d&sup2;, -d]</code></td></tr>
+  <tr><td>2</td><td>2</td><td>q_proj</td><td>Q projection weights <code>[q0, q1]</code></td></tr>
+  <tr><td>4</td><td>1</td><td>v_proj</td><td>V projection weight <code>v0</code></td></tr>
+  <tr><td>5</td><td>2</td><td>gate</td><td>MLP gate weights <code>[a, c]</code></td></tr>
+  <tr><td>7</td><td>1</td><td>carry</td><td>MLP carry weight</td></tr>
+  <tr><td>8</td><td>2</td><td>norm</td><td>Final RMSNorm weight <code>[n0, n1]</code></td></tr>
+</table>
+
+<h2>Token Encoding</h2>
+<p>Each input pair <code>(a, b)</code> of 10-digit numbers is encoded as a 31-token sequence:</p>
+<pre>
+[0, a_rev_0, ..., a_rev_9, 0, 0, 0, 0, 0, 0, 0, 0, 0, b_rev_0, ..., b_rev_9, 0]
+</pre>
+<p>where <code>a_rev</code> and <code>b_rev</code> are the digits in least-significant-first order,
+zero-padded to 10 digits. The model then generates 11 output tokens (digits of the sum, also
+least-significant-first).</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement <code>solve(prompts, output, weights, batch_size)</code> with the exact signature shown (JAX exception: <code>solve(prompts, weights, batch_size)</code> returns the output tensor directly)</li>
+  <li>Do not use any external libraries beyond what the framework provides</li>
+  <li>The function must write logits into the <code>output</code> buffer (except JAX, which returns it)</li>
+  <li>Architecture constants are fixed: <code>vocab_size</code> = 10, <code>hidden_dim</code> = 2,
+      <code>head_dim</code> = 2, <code>num_heads</code> = 1, <code>prompt_len</code> = 31,
+      <code>decode_steps</code> = 11</li>
+  <li>RMSNorm epsilon = 10<sup>&minus;6</sup></li>
+  <li>RoPE angular frequency &omega; = 2&pi;/19</li>
+  <li>Attention scale = (1/&radic;2) &middot; <code>S</code>&sup2; where <code>S</code>&sup2; = ln(10) / (&radic;2 &middot; (cos(0.3&omega;) &minus; cos(0.7&omega;)))</li>
+  <li>SiLU activation: <code>silu(x) = x &middot; sigmoid(x)</code></li>
+</ul>
+
+<h2>Example</h2>
+<p>With <code>batch_size</code> = 2 and pairs (3, 5), (99, 1):</p>
+<pre>
+Input prompts (shape [2, 31]):
+  [0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  [0, 9, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+Output logits shape: [2, 11, 10]
+  (logits at each of 11 decode steps over 10 digit classes)
+
+Expected decoded tokens (via argmax):
+  Pair (3, 5):   sum = 8       &rarr; [8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  Pair (99, 1):  sum = 100     &rarr; [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li><code>batch_size</code>: 1 &le; <code>batch_size</code> &le; 100,000</li>
+  <li><code>prompts</code>: 32-bit integer tensor, values in [0, 9]</li>
+  <li><code>weights</code>: 32-bit float tensor with exactly 10 elements</li>
+  <li><code>output</code>: 32-bit float tensor of shape <code>[batch_size, 11, 10]</code></li>
+  <li>Input numbers are in range [0, 9,999,999,999] (10-digit unsigned integers)</li>
+  <li>Performance is measured with <code>batch_size</code> = 100,000</li>
+</ul>

@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="2D FFT",
-            atol=1e-02,
-            rtol=1e-02,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "2D FFT"
+    atol = 0.01
+    rtol = 0.01
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, signal: torch.Tensor, spectrum: torch.Tensor, M: int, N: int):
         assert signal.shape == (M * N * 2,)
@@ -39,8 +36,10 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         M, N = 2, 2
-        signal = torch.tensor([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], device="cuda", dtype=dtype)
-        spectrum = torch.empty(M * N * 2, device="cuda", dtype=dtype)
+        signal = torch.tensor(
+            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], device=self.device, dtype=dtype
+        )
+        spectrum = torch.empty(M * N * 2, device=self.device, dtype=dtype)
         return {"signal": signal, "spectrum": spectrum, "M": M, "N": N}
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
@@ -48,19 +47,19 @@ class Challenge(ChallengeBase):
         cases = []
 
         def make_case(M, N, low=-1.0, high=1.0):
-            signal = torch.empty(M * N * 2, device="cuda", dtype=dtype).uniform_(low, high)
-            spectrum = torch.empty(M * N * 2, device="cuda", dtype=dtype)
+            signal = torch.empty(M * N * 2, device=self.device, dtype=dtype).uniform_(low, high)
+            spectrum = torch.empty(M * N * 2, device=self.device, dtype=dtype)
             return {"signal": signal, "spectrum": spectrum, "M": M, "N": N}
 
         def make_zero_case(M, N):
-            signal = torch.zeros(M * N * 2, device="cuda", dtype=dtype)
-            spectrum = torch.empty(M * N * 2, device="cuda", dtype=dtype)
+            signal = torch.zeros(M * N * 2, device=self.device, dtype=dtype)
+            spectrum = torch.empty(M * N * 2, device=self.device, dtype=dtype)
             return {"signal": signal, "spectrum": spectrum, "M": M, "N": N}
 
         def make_impulse_case(M, N):
-            signal = torch.zeros(M * N * 2, device="cuda", dtype=dtype)
+            signal = torch.zeros(M * N * 2, device=self.device, dtype=dtype)
             signal[0] = 1.0
-            spectrum = torch.empty(M * N * 2, device="cuda", dtype=dtype)
+            spectrum = torch.empty(M * N * 2, device=self.device, dtype=dtype)
             return {"signal": signal, "spectrum": spectrum, "M": M, "N": N}
 
         # Edge cases: small sizes
@@ -88,6 +87,6 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         M, N = 2048, 2048
-        signal = torch.empty(M * N * 2, device="cuda", dtype=dtype).normal_(0.0, 1.0)
-        spectrum = torch.empty(M * N * 2, device="cuda", dtype=dtype)
+        signal = torch.empty(M * N * 2, device=self.device, dtype=dtype).normal_(0.0, 1.0)
+        spectrum = torch.empty(M * N * 2, device=self.device, dtype=dtype)
         return {"signal": signal, "spectrum": spectrum, "M": M, "N": N}

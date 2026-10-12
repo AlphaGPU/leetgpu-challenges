@@ -2,34 +2,62 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
 
+class RandTensor:
+    """Uniform random input in [low, high)."""
+
+    def __init__(self, shape, low=0.0, high=1.0, dtype="float32"):
+        self.shape = tuple(shape)
+        self.low = low
+        self.high = high
+        self.dtype = dtype
+
+
+class RandnTensor:
+    """Normal (Gaussian) random input."""
+
+    def __init__(self, shape, mean=0.0, std=1.0, dtype="float32"):
+        self.shape = tuple(shape)
+        self.mean = mean
+        self.std = std
+        self.dtype = dtype
+
+
+class RandIntTensor:
+    """Uniform integer random input in [low, high)."""
+
+    def __init__(self, shape, low, high, dtype="int32"):
+        self.shape = tuple(shape)
+        self.low = low
+        self.high = high
+        self.dtype = dtype
+
+
+class FullTensor:
+    """Constant-filled input (covers zeros / ones / full)."""
+
+    def __init__(self, shape, value=0.0, dtype="float32"):
+        self.shape = tuple(shape)
+        self.value = value
+        self.dtype = dtype
+
+
+class OutTensor:
+    """Output buffer (by shape): materialized empty where outputs are written in
+    place (torch), omitted where they're returned functionally (jax)."""
+
+    def __init__(self, shape, dtype="float32"):
+        self.shape = tuple(shape)
+        self.dtype = dtype
+
+
 class ChallengeBase(ABC):
-    # Challenges declare these as class attributes. They may also be passed to
-    # __init__ for backwards compatibility with older challenges.
     name: str
     atol: float
     rtol: float
-    num_gpus: int = 1
-    access_tier: str = "free"
+    num_gpus: int
+    access_tier: str
 
-    def __init__(
-        self,
-        name: Optional[str] = None,
-        atol: Optional[float] = None,
-        rtol: Optional[float] = None,
-        num_gpus: Optional[int] = None,
-        access_tier: Optional[str] = None,
-        device: str = "cuda",
-    ):
-        if name is not None:
-            self.name = name
-        if atol is not None:
-            self.atol = atol
-        if rtol is not None:
-            self.rtol = rtol
-        if num_gpus is not None:
-            self.num_gpus = num_gpus
-        if access_tier is not None:
-            self.access_tier = access_tier
+    def __init__(self, device: str = "cuda"):
         self.device = device
 
     @abstractmethod

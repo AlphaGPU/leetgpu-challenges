@@ -2,18 +2,15 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, FullTensor, OutTensor, RandnTensor
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="LoRA Linear",
-            atol=1e-04,
-            rtol=1e-04,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "LoRA Linear"
+    atol = 0.0001
+    rtol = 0.0001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -34,11 +31,6 @@ class Challenge(ChallengeBase):
         assert B.shape == (d_out, rank)
         assert output.shape == (batch, d_out)
         assert x.dtype == W.dtype == A.dtype == B.dtype == output.dtype == torch.float32
-        assert x.device.type == "cuda"
-        assert W.device.type == "cuda"
-        assert A.device.type == "cuda"
-        assert B.device.type == "cuda"
-        assert output.device.type == "cuda"
 
         # Base linear: output = x @ W^T
         base = torch.mm(x, W.t())
@@ -48,6 +40,17 @@ class Challenge(ChallengeBase):
         delta = torch.mm(lora_hidden, B.t())  # (batch, d_out)
 
         output.copy_(base + lora_scale * delta)
+
+    def reference_impl_jax(self, x, W, A, B, batch, d_in, d_out, rank, lora_scale):
+
+        # Base linear: output = x @ W^T
+        base = x @ W.T
+
+        # LoRA path: delta = lora_scale * (x @ A^T) @ B^T
+        lora_hidden = x @ A.T  # (batch, rank)
+        delta = lora_hidden @ B.T  # (batch, d_out)
+
+        return base + lora_scale * delta
 
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
@@ -65,7 +68,7 @@ class Challenge(ChallengeBase):
 
     def _make_test_case(self, batch, d_in, d_out, rank, lora_scale=0.5, zero_x=False):
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         if zero_x:
             x = torch.zeros(batch, d_in, device=device, dtype=dtype)
         else:
@@ -89,7 +92,7 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         x = torch.tensor([[1.0, 0.0, -1.0, 2.0], [0.0, 1.0, 1.0, -1.0]], device=device, dtype=dtype)
         W = torch.tensor(
             [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0]],
@@ -147,11 +150,11 @@ class Challenge(ChallengeBase):
         # Negative inputs
         tests.append(
             {
-                "x": torch.full((4, 32), -1.0, device="cuda", dtype=torch.float32),
-                "W": torch.randn(32, 32, device="cuda", dtype=torch.float32) * 0.02,
-                "A": torch.randn(8, 32, device="cuda", dtype=torch.float32) * 0.02,
-                "B": torch.randn(32, 8, device="cuda", dtype=torch.float32) * 0.02,
-                "output": torch.zeros(4, 32, device="cuda", dtype=torch.float32),
+                "x": torch.full((4, 32), -1.0, device=self.device, dtype=torch.float32),
+                "W": torch.randn(32, 32, device=self.device, dtype=torch.float32) * 0.02,
+                "A": torch.randn(8, 32, device=self.device, dtype=torch.float32) * 0.02,
+                "B": torch.randn(32, 8, device=self.device, dtype=torch.float32) * 0.02,
+                "output": torch.zeros(4, 32, device=self.device, dtype=torch.float32),
                 "batch": 4,
                 "d_in": 32,
                 "d_out": 32,
@@ -166,6 +169,17 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        torch.manual_seed(0)
         # LLaMA-style: d_in=d_out=4096, rank=64, batch=256
-        return self._make_test_case(256, 4096, 4096, 64, lora_scale=0.015625)
+        batch, d_in, d_out, rank, lora_scale = 256, 4096, 4096, 64, 0.015625
+        return {
+            "x": RandnTensor((batch, d_in)),
+            "W": RandnTensor((d_out, d_in), std=0.02),
+            "A": RandnTensor((rank, d_in), std=0.02),
+            "B": FullTensor((d_out, rank), 0.0),
+            "output": OutTensor((batch, d_out)),
+            "batch": batch,
+            "d_in": d_in,
+            "d_out": d_out,
+            "rank": rank,
+            "lora_scale": lora_scale,
+        }

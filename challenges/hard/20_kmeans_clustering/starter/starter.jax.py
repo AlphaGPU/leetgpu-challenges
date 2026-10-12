@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# data_x, data_y, initial_centroid_x, initial_centroid_y are tensors on the GPU
+# data_x, data_y, initial_centroid_x, initial_centroid_y are tensors on device
 @jax.jit
 def solve(
     data_x: jax.Array,
