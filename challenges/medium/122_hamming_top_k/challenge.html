@@ -1,0 +1,55 @@
+<p>
+    Implement a GPU program that finds the <code>k</code> nearest binary codes to a query under Hamming distance.
+    The <code>query</code> is a 256-bit code stored as 8 <code>int32</code> words. The array <code>codes</code>
+    holds <code>N</code> such codes, flattened: code <code>i</code> is <code>codes[8i .. 8i+7]</code>.
+    The distance from the query to code <code>i</code> is the number of bit positions at which they differ:
+    the sum over <code>w</code> = 0 to 7 of the popcount of <code>query[w] XOR codes[8i + w]</code>.
+    Every one of the 32 bits of every word counts, including the sign bit, so a distance is between 0 and 256.
+</p>
+<p>
+    Write to <code>output</code> the indices of the <code>k</code> codes with the smallest distance,
+    sorted by distance in ascending order. Codes with equal distance are ordered by lower index first.
+    Because of this tie rule the answer is unique, even when many codes share the cutoff distance.
+    This is the key-selection step of hash-based sparse attention and of binary-embedding nearest-neighbor search.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+    <li>External libraries are not permitted</li>
+    <li>The <code>solve</code> function signature must remain unchanged</li>
+    <li>The final result must be stored in array <code>output</code></li>
+    <li>The words are treated as raw 32-bit patterns; <code>int32</code> is only the storage type</li>
+</ul>
+
+<h2>Example 1:</h2>
+<pre>Input:  query = [1, 2, 3, 0, 0, 0, 0, 0]
+        codes = [1, 2, 3, 0, 0, 0, 0, 0,
+                 0, 2, 3, 0, 0, 0, 0, 0,
+                 7, 0, 3, 0, 0, 0, 0, 0,
+                 1, 3, 2, 0, 0, 0, 0, 0,
+                 1, 2, 2, 0, 0, 0, 0, 0]
+        N = 5
+        k = 2
+Distances: [0, 1, 3, 2, 1]
+Output: output = [0, 1]</pre>
+<p>Codes 1 and 4 tie at distance 1, and code 1 comes first because its index is lower.</p>
+
+<h2>Example 2:</h2>
+<pre>Input:  query = [0, 0, 0, 0, 0, 0, 0, 0]
+        codes = [1, 1, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0,
+                 -1, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 1, 1]
+        N = 4
+        k = 2
+Distances: [2, 0, 32, 2]
+Output: output = [1, 0]</pre>
+<p>Codes 0 and 3 tie at distance 2 at the cutoff, and only the one with the lower index is kept.</p>
+
+<h2>Constraints</h2>
+<ul>
+    <li>1 &le; <code>N</code> &le; 10,000,000</li>
+    <li>1 &le; <code>k</code> &le; min(<code>N</code>, 1,024)</li>
+    <li><code>codes</code> has 8 &times; <code>N</code> elements and <code>query</code> has 8 elements, all signed 32-bit integers; all 32 bits count, including the sign bit</li>
+    <li>Performance is measured with <code>N</code> = 4,000,000, <code>k</code> = 128</li>
+</ul>
