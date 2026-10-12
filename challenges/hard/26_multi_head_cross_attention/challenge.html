@@ -1,0 +1,154 @@
+<p>
+Implement multi-head cross-attention, the building block used in encoder-decoder transformers such
+as T5, BART, and Whisper, as well as the text-conditioning layers of diffusion models like Stable
+Diffusion. Given decoder queries <code>Q</code> of shape <code>(M, H, D)</code> and encoder keys
+<code>K</code> / values <code>V</code> of shape <code>(N, H, D)</code>, compute, for each head
+<code>h</code>, scaled dot-product attention where every one of the <code>M</code> queries attends
+to all <code>N</code> encoder positions:
+</p>
+<p>
+\[ \text{head}_h = \text{softmax}\!\left(\frac{Q_h K_h^{\top}}{\sqrt{D}}\right) V_h \]
+</p>
+<p>
+There is no causal mask &mdash; encoder positions are fully visible to every decoder query &mdash; and
+the query length <code>M</code> may differ from the key/value length <code>N</code>. All tensors
+use <code>float32</code>.
+</p>
+
+<svg width="700" height="270" viewBox="0 0 700 270" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <rect width="700" height="270" fill="#222" rx="10"/>
+  <text x="350" y="28" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">Multi-Head Cross-Attention: decoder queries attend to encoder keys/values</text>
+
+  <!-- Encoder KV column -->
+  <text x="110" y="60" fill="#aaa" font-family="monospace" font-size="12" text-anchor="middle">Encoder K, V</text>
+  <text x="110" y="76" fill="#888" font-family="monospace" font-size="11" text-anchor="middle">(N positions)</text>
+  <rect x="50" y="88" width="120" height="28" fill="#1d4ed8" rx="4"/>
+  <text x="110" y="106" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">K[0], V[0]</text>
+  <rect x="50" y="122" width="120" height="28" fill="#1d4ed8" rx="4"/>
+  <text x="110" y="140" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">K[1], V[1]</text>
+  <rect x="50" y="156" width="120" height="28" fill="#1d4ed8" rx="4"/>
+  <text x="110" y="174" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">...</text>
+  <rect x="50" y="190" width="120" height="28" fill="#1d4ed8" rx="4"/>
+  <text x="110" y="208" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">K[N-1], V[N-1]</text>
+
+  <!-- Decoder Q column -->
+  <text x="400" y="60" fill="#aaa" font-family="monospace" font-size="12" text-anchor="middle">Decoder Q</text>
+  <text x="400" y="76" fill="#888" font-family="monospace" font-size="11" text-anchor="middle">(M queries, may differ from N)</text>
+  <rect x="340" y="100" width="120" height="28" fill="#7c3aed" rx="4"/>
+  <text x="400" y="118" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">Q[0]</text>
+  <rect x="340" y="140" width="120" height="28" fill="#7c3aed" rx="4"/>
+  <text x="400" y="158" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">Q[1]</text>
+  <rect x="340" y="180" width="120" height="28" fill="#7c3aed" rx="4"/>
+  <text x="400" y="198" fill="#fff" font-family="monospace" font-size="11" text-anchor="middle">Q[M-1]</text>
+
+  <!-- Arrows: each query attends to every K/V -->
+  <line x1="170" y1="102" x2="340" y2="112" stroke="#60a5fa" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="170" y1="136" x2="340" y2="114" stroke="#60a5fa" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="170" y1="170" x2="340" y2="116" stroke="#60a5fa" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="170" y1="204" x2="340" y2="118" stroke="#60a5fa" stroke-width="1.2" marker-end="url(#arr)"/>
+
+  <line x1="170" y1="102" x2="340" y2="192" stroke="#c4b5fd" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="170" y1="136" x2="340" y2="194" stroke="#c4b5fd" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="170" y1="170" x2="340" y2="196" stroke="#c4b5fd" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="170" y1="204" x2="340" y2="198" stroke="#c4b5fd" stroke-width="1.2" marker-end="url(#arr)"/>
+
+  <!-- Formula panel -->
+  <text x="510" y="110" fill="#4ade80" font-family="monospace" font-size="12">for each head h:</text>
+  <text x="510" y="132" fill="#4ade80" font-family="monospace" font-size="12">S = Q_h K_h^T / sqrt(D)</text>
+  <text x="510" y="154" fill="#4ade80" font-family="monospace" font-size="12">A = softmax(S, dim=-1)</text>
+  <text x="510" y="176" fill="#4ade80" font-family="monospace" font-size="12">O_h = A V_h</text>
+  <text x="510" y="204" fill="#aaa" font-family="monospace" font-size="11">no causal mask</text>
+  <text x="510" y="222" fill="#aaa" font-family="monospace" font-size="11">M may differ from N</text>
+
+  <defs>
+    <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3 z" fill="#888"/>
+    </marker>
+  </defs>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the function <code>solve(Q, K, V, output, M, N, H, D)</code>.</li>
+  <li>Do not change the function signature or use external libraries beyond the standard GPU framework.</li>
+  <li>Write the result into the provided <code>output</code> buffer of shape <code>(M, H, D)</code>.</li>
+  <li>Use scaled dot-product attention with scale factor <code>1 / sqrt(D)</code> and a softmax over the key dimension.</li>
+  <li>No causal mask is applied &mdash; every query attends to all <code>N</code> encoder positions.</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  With <code>M</code> = 2, <code>N</code> = 3, <code>H</code> = 2, <code>D</code> = 2. Tensors are
+  laid out as <code>(position, head, dim)</code>. Per-head views:
+</p>
+<p>
+  \(Q_0\) (2&times;2):
+  \[
+  \begin{bmatrix}
+  1 & 0 \\
+  0 & 1
+  \end{bmatrix}
+  \qquad
+  Q_1\text{ (2}\times\text{2):}
+  \begin{bmatrix}
+  0 & 1 \\
+  1 & 0
+  \end{bmatrix}
+  \]
+  \(K_0\) (3&times;2):
+  \[
+  \begin{bmatrix}
+  1 & 0 \\
+  0 & 1 \\
+  1 & 1
+  \end{bmatrix}
+  \qquad
+  K_1\text{ (3}\times\text{2):}
+  \begin{bmatrix}
+  0 & 1 \\
+  1 & 0 \\
+  1 & 1
+  \end{bmatrix}
+  \]
+  \(V_0\) (3&times;2):
+  \[
+  \begin{bmatrix}
+  1 & 2 \\
+  3 & 4 \\
+  5 & 6
+  \end{bmatrix}
+  \qquad
+  V_1\text{ (3}\times\text{2):}
+  \begin{bmatrix}
+  7 & 8 \\
+  9 & 10 \\
+  11 & 12
+  \end{bmatrix}
+  \]
+</p>
+<p>
+  <strong>Output</strong> (values rounded to 4 decimals):
+  \[
+  \text{output}_0\text{ (head 0, 2}\times\text{2):}
+  \begin{bmatrix}
+  3.0000 & 4.0000 \\
+  3.4067 & 4.4067
+  \end{bmatrix}
+  \qquad
+  \text{output}_1\text{ (head 1, 2}\times\text{2):}
+  \begin{bmatrix}
+  9.0000 & 10.0000 \\
+  9.4067 & 10.4067
+  \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code> &le; 4,096</li>
+  <li>1 &le; <code>N</code> &le; 4,096</li>
+  <li>1 &le; <code>H</code> &le; 64</li>
+  <li>1 &le; <code>D</code> &le; 256</li>
+  <li>All tensor values are <code>float32</code></li>
+  <li>Performance is measured with <code>M</code> = 1,024, <code>N</code> = 2,048, <code>H</code> = 16, <code>D</code> = 128</li>
+</ul>

@@ -1,0 +1,151 @@
+<p>
+  Implement the SwiGLU MLP block — the feedforward network used in LLaMA, Mistral, Gemma, and most
+  modern large language models. Given an input matrix <code>x</code> of shape
+  <code>[M, d_model]</code> and three weight matrices <code>W_gate</code>, <code>W_up</code>
+  (each <code>[d_model, d_ffn]</code>), and <code>W_down</code> (<code>[d_ffn, d_model]</code>),
+  compute:
+  <code>output = (SiLU(x &times; W_gate) &odot; (x &times; W_up)) &times; W_down</code>,
+  where <code>SiLU(z) = z &times; sigmoid(z)</code> and <code>&odot;</code> denotes element-wise
+  multiplication. All tensors are <code>float32</code>.
+</p>
+
+<svg width="680" height="220" viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto; font-family:monospace;">
+  <rect width="680" height="220" fill="#222" rx="8"/>
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <!-- x box -->
+  <rect x="16" y="82" width="56" height="40" rx="4" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="44" y="106" fill="#ccc" font-size="12" text-anchor="middle">x</text>
+  <text x="44" y="136" fill="#666" font-size="8" text-anchor="middle">[M, d_model]</text>
+
+  <!-- Gate branch (top) -->
+  <line x1="72" y1="92" x2="108" y2="52" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="110" y="32" width="90" height="40" rx="4" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="155" y="56" fill="#ccc" font-size="10" text-anchor="middle">x &#xb7; W_gate</text>
+  <text x="155" y="22" fill="#5588cc" font-size="9" text-anchor="middle">gate projection</text>
+
+  <!-- Up branch (bottom) -->
+  <line x1="72" y1="112" x2="108" y2="152" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="110" y="132" width="90" height="40" rx="4" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="155" y="156" fill="#ccc" font-size="10" text-anchor="middle">x &#xb7; W_up</text>
+  <text x="155" y="184" fill="#5588cc" font-size="9" text-anchor="middle">up projection</text>
+
+  <!-- Shape labels after projections -->
+  <text x="155" y="82" fill="#666" font-size="8" text-anchor="middle">[M, d_ffn]</text>
+  <text x="155" y="130" fill="#666" font-size="8" text-anchor="middle">[M, d_ffn]</text>
+
+  <!-- Arrow gate → SiLU -->
+  <line x1="200" y1="52" x2="238" y2="52" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- SiLU box -->
+  <rect x="240" y="32" width="60" height="40" rx="4" fill="#1a5a3a" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="270" y="56" fill="#ccc" font-size="11" text-anchor="middle">SiLU</text>
+
+  <!-- Arrow SiLU → element-wise multiply (goes down) -->
+  <line x1="300" y1="52" x2="370" y2="90" stroke="#44aa66" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Arrow up branch → element-wise multiply (goes up) -->
+  <line x1="200" y1="152" x2="370" y2="114" stroke="#5588cc" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Element-wise multiply box -->
+  <rect x="372" y="82" width="50" height="40" rx="4" fill="#5a3a1a" stroke="#cc8844" stroke-width="1.5"/>
+  <text x="397" y="107" fill="#ccc" font-size="16" text-anchor="middle">&#x2299;</text>
+
+  <!-- Arrow ⊙ → W_down -->
+  <line x1="422" y1="102" x2="458" y2="102" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- W_down box -->
+  <rect x="460" y="82" width="86" height="40" rx="4" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <text x="503" y="106" fill="#ccc" font-size="10" text-anchor="middle">&#xb7; W_down</text>
+  <text x="503" y="76" fill="#666" font-size="8" text-anchor="middle">[M, d_ffn]</text>
+
+  <!-- Arrow W_down → output -->
+  <line x1="546" y1="102" x2="578" y2="102" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Output box -->
+  <rect x="580" y="82" width="80" height="40" rx="4" fill="#3a1a3a" stroke="#cc44cc" stroke-width="1.5"/>
+  <text x="620" y="106" fill="#ccc" font-size="11" text-anchor="middle">output</text>
+  <text x="620" y="136" fill="#666" font-size="8" text-anchor="middle">[M, d_model]</text>
+
+  <!-- SiLU formula -->
+  <text x="270" y="18" fill="#44aa66" font-size="9" text-anchor="middle">z &#xb7; sigmoid(z)</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the <code>solve</code> function with the signature unchanged.</li>
+  <li>Do not use external libraries beyond the framework provided.</li>
+  <li>Write the result into <code>output</code> in-place.</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>M</code> = 2, <code>d_model</code> = 2, <code>d_ffn</code> = 4
+</p>
+<p>
+  \(x\) (float32, \(2 \times 2\)):
+  \[
+  x = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix}
+  \]
+  \(W_\text{gate}\) and \(W_\text{up}\) (both \(2 \times 4\)):
+  \[
+  W_\text{gate} = W_\text{up} =
+  \begin{bmatrix}
+  1.0 & 0.0 & 0.0 & 0.0 \\
+  0.0 & 1.0 & 0.0 & 0.0
+  \end{bmatrix}
+  \]
+  \(W_\text{down}\) (\(4 \times 2\)):
+  \[
+  W_\text{down} =
+  \begin{bmatrix}
+  1.0 & 0.0 \\
+  0.0 & 1.0 \\
+  0.0 & 0.0 \\
+  0.0 & 0.0
+  \end{bmatrix}
+  \]
+</p>
+<p>
+  Intermediate steps:
+  \[
+  \text{gate} = x \cdot W_\text{gate} =
+  \begin{bmatrix} 1.0 & 0.0 & 0.0 & 0.0 \\ 0.0 & 1.0 & 0.0 & 0.0 \end{bmatrix}
+  \]
+  \[
+  \text{up} = x \cdot W_\text{up} =
+  \begin{bmatrix} 1.0 & 0.0 & 0.0 & 0.0 \\ 0.0 & 1.0 & 0.0 & 0.0 \end{bmatrix}
+  \]
+  \[
+  \text{SiLU}(1.0) = 1.0 \times \sigma(1.0) \approx 0.7311
+  \]
+  \[
+  \text{hidden} = \text{SiLU}(\text{gate}) \odot \text{up} =
+  \begin{bmatrix} 0.7311 & 0.0 & 0.0 & 0.0 \\ 0.0 & 0.7311 & 0.0 & 0.0 \end{bmatrix}
+  \]
+</p>
+<p>
+  Output:
+  \[
+  \text{output} = \text{hidden} \cdot W_\text{down} \approx
+  \begin{bmatrix} 0.7311 & 0.0 \\ 0.0 & 0.7311 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code> &le; 65,536</li>
+  <li>1 &le; <code>d_model</code> &le; 8,192</li>
+  <li>1 &le; <code>d_ffn</code> &le; 32,768</li>
+  <li>All tensors are <code>float32</code> on the GPU.</li>
+  <li>Input values are in the range [-10, 10].</li>
+  <li>
+    Performance is measured with <code>M</code> = 512, <code>d_model</code> = 4,096,
+    <code>d_ffn</code> = 14,336
+  </li>
+</ul>

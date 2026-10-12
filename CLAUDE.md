@@ -38,21 +38,23 @@ Must inherit from `ChallengeBase` and follow Black formatting (line length 100).
 
 ### Required Methods
 
-#### `__init__`
+#### Class attributes (no `__init__`)
 ```python
-super().__init__(
-    name="Challenge Display Name",
-    atol=1e-05,           # Absolute tolerance (float32 default)
-    rtol=1e-05,           # Relative tolerance (float32 default)
-    num_gpus=1,
-    access_tier="free"    # "free" or "premium"
-)
+class Challenge(ChallengeBase):
+    name = "Challenge Display Name"  # Used to generate URLs — URL-friendly characters only (no parentheses or special symbols)
+    atol = 1e-05           # Absolute tolerance (float32 default)
+    rtol = 1e-05           # Relative tolerance (float32 default)
+    num_gpus = 1
+    access_tier = "free"   # "free" or "premium"
 ```
+
+No `__init__` — `ChallengeBase` provides one that accepts `device` (default `"cuda"`). All tensor allocations in `generate_*_test` methods must use `device=self.device`, never hardcoded `device="cuda"`.
 
 #### `reference_impl(self, ...)`
 - Same parameters as user's `solve` function
-- Must include assertions on shape, dtype, and device (`cuda`)
+- Must include assertions on shape and dtype (no device assertions — the runner targets multiple accelerators)
 - Use PyTorch operations (not Python loops) for performance
+- **Must work on both CUDA and XLA (TPU) devices.** Stick to standard PyTorch ops that have XLA lowerings. No CUDA-only kernels (`flash_attn`, `sdp_kernel`, manual cuDNN flag flips), no `.is_cuda` / `.device.type == "cuda"` checks, no `torch.cuda.*` API.
 
 #### `get_solve_signature(self) -> Dict[str, tuple]`
 Maps parameter names to `(ctype, direction)` tuples.
@@ -73,7 +75,7 @@ Maps parameter names to `(ctype, direction)` tuples.
 One small, human-readable test case for display. Use literal tensor values.
 
 #### `generate_functional_test(self) -> List[Dict[str, Any]]`
-7-10 test cases with this coverage:
+Use 7-10 test cases as a baseline with this coverage; add cases when needed to cover distinct correctness failures:
 
 | Category | Sizes | Count |
 |----------|-------|-------|
@@ -83,6 +85,14 @@ One small, human-readable test case for display. Use literal tensor values.
 | Realistic | 1K-10K | 1-2 |
 
 Must also include: zero inputs, negative numbers, mixed values.
+
+Design additional coverage around the operation's semantics, not just input sizes:
+
+- Identify plausible incorrect implementations and include targeted, deterministic cases that distinguish them from the correct result. Explain in test comments which mistake each targeted case catches.
+- Cover applicable boundaries within the documented input domain: minimum dimensions, singleton axes, parameter endpoints, tile/block tails, and uneven or non-square dimensions that expose indexing errors.
+- Include operation-specific edge cases where applicable, such as repeated values and ties in selection, winners concentrated in one partition, mask boundaries in attention, or extreme valid values and cancellation in numerical operations. Specify tie and boundary behavior in the problem description.
+- Check at least one small case against independently calculated expected values so the reference implementation is also checked for correctness.
+- Choose and justify tolerances for the operation and input range; they must allow expected floating-point error without accepting incorrect selections, indexing, or missing terms.
 
 #### `generate_performance_test(self) -> Dict[str, Any]`
 One large test case. Size must fit 5x within 16GB (Tesla T4 VRAM).
@@ -105,9 +115,11 @@ HTML fragment with four required sections:
    - Be consistent within a single challenge
 4. **Constraints** — Size bounds, data types, value ranges, **and performance test size**
 
+
 **Formatting rules:**
 - `<code>` for variables/functions; `<pre>` for 1D examples, LaTeX `\begin{bmatrix}` for matrices
 - `&le;`, `&ge;`, `&times;` for math symbols
+- **LaTeX underscores**: Inside `\text{}`, use plain `_` (not `\_`). The backslash-escaped form renders literally as `\_` in MathJax/KaTeX.
 - **Performance test size bullet**: Must include a bullet documenting the exact parameters used in `generate_performance_test()`, formatted as:
   - `<li>Performance is measured with <code>param</code> = value</li>`
   - Use commas for numbers ≥ 1,000 (e.g., `25,000,000`)
@@ -123,6 +135,7 @@ Must compile/run without errors but not solve the problem. No comments except th
 - Easy problems: provide kernel scaffold with grid/block setup
 - Medium/Hard problems: empty `solve` function only
 - Match the exact style of existing starters in each framework
+- Mojo: use Mojo 1.1 style — `max.gpu` imports, `MutAnyOrigin`, single-arg `ctx.compile_function[kernel]()`
 
 **Reference files** (read these for exact format):
 - CUDA: `challenges/easy/1_vector_add/starter/starter.cu`
@@ -141,7 +154,7 @@ Each starter file must have exactly one comment describing the parameters, place
 | CUDA | `// <params> are device pointers` |
 | Mojo | `# <params> are device pointers` |
 | PyTorch, Triton, CuTe | `# <params> are tensors on the GPU` |
-| JAX | `# <params> are tensors on GPU` (+ `# return output tensor directly` inside body) |
+| JAX | `# <params> are tensors on device` (+ `# return output tensor directly` inside body) |
 
 **Rules:**
 - Easy challenges: include the parenthetical `(i.e. pointers to memory on the GPU)` for CUDA/Mojo (matches vector_add reference)
@@ -180,20 +193,26 @@ Verify every item before submitting. This is the single source of truth — work
 - [ ] First example matches `generate_example_test()` values
 - [ ] Examples use `<pre>` for 1D data, LaTeX `\begin{bmatrix}` for matrices — consistent, never mixed
 - [ ] Constraints includes `Performance is measured with <code>param</code> = value` bullet matching `generate_performance_test()`
+- [ ] If the concept is spatial/structural, includes an SVG visualization after the problem description (dark theme, `#222` background)
 
 ### challenge.py
 - [ ] `class Challenge` inherits `ChallengeBase`
-- [ ] `__init__` calls `super().__init__()` with name, atol, rtol, num_gpus, access_tier
-- [ ] `reference_impl` has assertions on shape, dtype, and device
-- [ ] All 6 methods present: `__init__`, `reference_impl`, `get_solve_signature`, `generate_example_test`, `generate_functional_test`, `generate_performance_test`
-- [ ] `generate_functional_test` returns 7-10 cases: edge cases (1-4 elements), powers-of-2, non-powers-of-2, realistic sizes, zeros, negatives
+- [ ] Five class attributes set: `name`, `atol`, `rtol`, `num_gpus`, `access_tier` (no `__init__`)
+- [ ] `reference_impl` has assertions on shape and dtype only (no device-specific checks)
+- [ ] `reference_impl` works on both CUDA and XLA — standard PyTorch ops only, no CUDA-only kernels or `torch.cuda.*` API
+- [ ] All tensor allocations use `device=self.device`, never hardcoded `"cuda"`
+- [ ] All 5 required methods present: `reference_impl`, `get_solve_signature`, `generate_example_test`, `generate_functional_test`, `generate_performance_test`
+- [ ] `generate_functional_test` covers the 7-10 case baseline: edge cases (1-4 elements), powers-of-2, non-powers-of-2, realistic sizes, zeros, negatives; additional cases cover distinct correctness failures as needed
+- [ ] Targeted deterministic tests catch plausible implementation mistakes and applicable semantic boundaries; test comments explain what each catches
+- [ ] At least one small case has independently calculated expected values checked against the reference implementation
+- [ ] Numerical tolerances are justified for the operation and input range and do not hide incorrect results
 - [ ] `generate_performance_test` fits 5x in 16GB VRAM (Tesla T4)
 
 ### Starter files
 - [ ] All 6 files present: `.cu`, `.pytorch.py`, `.triton.py`, `.jax.py`, `.cute.py`, `.mojo`
 - [ ] Exactly 1 parameter description comment per file, no other comments
 - [ ] CUDA/Mojo use "device pointers"; easy challenges include `(i.e. pointers to memory on the GPU)`, medium/hard omit it
-- [ ] Python frameworks use "tensors on the GPU"; JAX also has `# return output tensor directly`
+- [ ] PyTorch/Triton/CuTe use "tensors on the GPU"; JAX uses "tensors on device" and also has `# return output tensor directly`
 - [ ] Starters compile/run but do NOT produce correct output
 
 ### General

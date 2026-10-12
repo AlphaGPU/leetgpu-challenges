@@ -4,6 +4,69 @@
   where it fully overlaps with the input.
 </p>
 
+<svg width="420" height="210" viewBox="0 0 420 210" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;" font-family="monospace" font-size="13">
+  <!-- Background -->
+  <rect width="420" height="210" rx="8" fill="#222"/>
+
+  <!-- "input" label -->
+  <text x="16" y="38" fill="#999" font-size="11">input</text>
+
+  <!-- Input cells -->
+  <rect x="65"  y="20" width="50" height="32" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+  <rect x="120" y="20" width="50" height="32" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+  <rect x="175" y="20" width="50" height="32" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+  <rect x="230" y="20" width="50" height="32" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+  <rect x="285" y="20" width="50" height="32" rx="3" fill="#333" stroke="#555" stroke-width="1"/>
+  <!-- Input values -->
+  <text x="90"  y="41" text-anchor="middle" fill="#ccc">1</text>
+  <text x="145" y="41" text-anchor="middle" fill="#ccc">2</text>
+  <text x="200" y="41" text-anchor="middle" fill="#ccc">3</text>
+  <text x="255" y="41" text-anchor="middle" fill="#ccc">4</text>
+  <text x="310" y="41" text-anchor="middle" fill="#ccc">5</text>
+
+  <!-- Kernel highlight window over first 3 input cells -->
+  <rect x="63" y="18" width="164" height="36" rx="4" fill="none" stroke="#4477bb" stroke-width="2" stroke-dasharray="5,3"/>
+
+  <!-- "kernel" label -->
+  <text x="16" y="86" fill="#999" font-size="11">kernel</text>
+
+  <!-- Kernel cells (aligned under first 3 input cells) -->
+  <rect x="65"  y="68" width="50" height="32" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <rect x="120" y="68" width="50" height="32" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <rect x="175" y="68" width="50" height="32" rx="3" fill="#1e2d4d" stroke="#4477bb" stroke-width="1.5"/>
+  <!-- Kernel values -->
+  <text x="90"  y="89" text-anchor="middle" fill="#88bbff">1</text>
+  <text x="145" y="89" text-anchor="middle" fill="#88bbff">0</text>
+  <text x="200" y="89" text-anchor="middle" fill="#88bbff">-1</text>
+
+  <!-- Multiplication signs between pairs -->
+  <text x="90"  y="118" text-anchor="middle" fill="#777" font-size="11">1&#xd7;1</text>
+  <text x="145" y="118" text-anchor="middle" fill="#777" font-size="11">2&#xd7;0</text>
+  <text x="200" y="118" text-anchor="middle" fill="#777" font-size="11">3&#xd7;(-1)</text>
+
+  <!-- Computation line -->
+  <text x="145" y="140" text-anchor="middle" fill="#aaa" font-size="12">= 1 + 0 + (-3) = -2</text>
+
+  <!-- Arrow down to output -->
+  <line x1="145" y1="148" x2="145" y2="168" stroke="#4477bb" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#4477bb"/>
+    </marker>
+  </defs>
+
+  <!-- "output" label -->
+  <text x="16" y="187" fill="#999" font-size="11">output</text>
+
+  <!-- Output cell -->
+  <rect x="120" y="170" width="50" height="30" rx="3" fill="#1a3a1a" stroke="#44aa44" stroke-width="1.5"/>
+  <text x="145" y="190" text-anchor="middle" fill="#66dd66" font-weight="bold">-2</text>
+
+  <!-- Ellipsis for remaining output -->
+  <text x="195" y="190" fill="#666" font-size="14">&#x2026;</text>
+</svg>
+
 <p>
   The input consists of two arrays:
 <ul>

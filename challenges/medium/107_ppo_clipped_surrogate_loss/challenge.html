@@ -1,0 +1,102 @@
+<p>
+  Given precomputed advantages and log probabilities from the current and previous policies, compute
+  the scalar PPO clipped-surrogate loss. For each response token, PPO compares the current policy
+  with the policy that generated the data, limits how far that ratio can move from one, and averages
+  the resulting surrogate objective across the batch.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement <code>solve(advantages, log_pi, log_pi_old, output, clip_eps, B, S)</code> with the signature unchanged</li>
+  <li>Write the single scalar loss into <code>output[0]</code></li>
+  <li>Use only native features of the selected framework; external libraries are not permitted</li>
+  <li>All input tensors have shape <code>[B, S]</code> and the output has shape <code>[1]</code></li>
+  <li>All <code>S</code> positions are valid response tokens; padding and token masks are outside the scope of this challenge</li>
+  <li><code>advantages</code> and <code>log_pi_old</code> are fixed precomputed inputs; do not differentiate through them</li>
+</ul>
+
+<h2>Loss Calculation</h2>
+<p>
+  At position <code>[b, s]</code>, <code>log_pi</code> and <code>log_pi_old</code> are the log
+  probabilities assigned to the same response token by the current and previous policies. Let
+  <code>A</code> denote <code>advantages</code>, and let <code>epsilon</code> denote
+  <code>clip_eps</code>.
+</p>
+
+<p>First, compute the probability ratio between the current and previous policies:</p>
+
+\[
+r_{b,s} = \exp\!\left(\log\pi_{b,s} - \log\pi^{\mathrm{old}}_{b,s}\right)
+\]
+
+<p>Clamp that ratio to PPO's trust region:</p>
+
+\[
+\widehat{r}_{b,s} = \operatorname{clip}\!\left(r_{b,s}, 1 - \varepsilon, 1 + \varepsilon\right)
+\]
+
+<p>
+  The per-token surrogate takes the less optimistic of the unclipped and clipped values. This
+  <code>min</code> is intentional: it applies correctly to both positive and negative advantages.
+</p>
+
+\[
+L_{b,s}^{\mathrm{CLIP}}
+= \min\!\left(r_{b,s} A_{b,s},\; \widehat{r}_{b,s} A_{b,s}\right)
+\]
+
+<p>
+  PPO maximizes this surrogate objective. Because this challenge returns a loss for minimization,
+  negate its mean over every batch and sequence position:
+</p>
+
+\[
+\text{output}[0]
+= -\frac{1}{B S}\sum_{b=0}^{B-1}\sum_{s=0}^{S-1} L_{b,s}^{\mathrm{CLIP}}
+\]
+
+<h2>Examples</h2>
+<p>For <code>B</code> = 1, <code>S</code> = 4, and <code>clip_eps</code> = 0.2:</p>
+
+\[
+\begin{aligned}
+\text{advantages}
+&= \begin{bmatrix} 1.0 & -2.0 & 3.0 & -4.0 \end{bmatrix} \\[6pt]
+\text{log_pi}
+&= \begin{bmatrix} \log(1.3) & \log(0.7) & \log(1.1) & \log(0.8) \end{bmatrix} \\[6pt]
+\text{log_pi_old}
+&= \begin{bmatrix} 0.0 & 0.0 & 0.0 & 0.0 \end{bmatrix}
+\end{aligned}
+\]
+
+<p>The intermediate values are:</p>
+
+\[
+\begin{aligned}
+r
+&= \begin{bmatrix} 1.3 & 0.7 & 1.1 & 0.8 \end{bmatrix} \\[6pt]
+\widehat{r}
+&= \begin{bmatrix} 1.2 & 0.8 & 1.1 & 0.8 \end{bmatrix} \\[6pt]
+L^{\mathrm{CLIP}}
+&= \begin{bmatrix} 1.2 & -1.6 & 3.3 & -3.2 \end{bmatrix}
+\end{aligned}
+\]
+
+\[
+\text{output}[0] = -\operatorname{mean}\!\left(L^{\mathrm{CLIP}}\right) = 0.075
+\]
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 256</li>
+  <li>1 &le; <code>S</code> &le; 16,384</li>
+  <li>All tensors contain 32-bit floating point values</li>
+  <li><code>0 &le; clip_eps &lt; 1</code></li>
+  <li><code>log_pi - log_pi_old</code> lies in [-16, 16], so every exponential is finite in float32</li>
+  <li>Performance is measured with <code>B</code> = 256, <code>S</code> = 16,384</li>
+</ul>
+
+<h2>Reference</h2>
+<p>
+  <a href="https://arxiv.org/abs/1707.06347">Proximal Policy Optimization Algorithms, Schulman et al. (2017)</a>
+</p>
