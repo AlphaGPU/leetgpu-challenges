@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# Q, K_idx, qjl_signs, gamma, Pi, S_mat, codebook are tensors on GPU
+# Q, K_idx, qjl_signs, gamma, Pi, S_mat, codebook are tensors on device
 @jax.jit
 def solve(
     Q: jax.Array,

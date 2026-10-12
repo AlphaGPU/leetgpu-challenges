@@ -189,11 +189,11 @@ class Challenge(ChallengeBase):
         # Power-of-2: B=8, S=64, D=64, C=16
         tests.append(self._make_test_case(8, 64, 64, 16, seed=20))
 
-        # Power-of-2: B=16, S=128, D=128, C=16
-        tests.append(self._make_test_case(16, 128, 128, 16, seed=30))
+        # Power-of-2 with D at its upper bound: B=16, S=128, D=256, C=16
+        tests.append(self._make_test_case(16, 128, 256, 16, seed=30))
 
-        # Non-power-of-2: B=3, S=30, D=50, C=8
-        tests.append(self._make_test_case(3, 30, 50, 8, seed=40))
+        # Non-power-of-2 with C at its upper bound: B=3, S=30, D=50, C=256
+        tests.append(self._make_test_case(3, 30, 50, 256, seed=40))
 
         # Non-power-of-2: B=7, S=255, D=100, C=16
         tests.append(self._make_test_case(7, 255, 100, 16, seed=50))
