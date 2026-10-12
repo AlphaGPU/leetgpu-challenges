@@ -14,14 +14,14 @@ tokens (lower-triangular access). All tensors use <code>float32</code>.
   <text x="340" y="26" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">Attention mask (cache_len=4, new_len=4, total_len=8)</text>
 
   <!-- Column labels -->
-  <text x="200" y="55" fill="#60a5fa" font-family="monospace" font-size="11" text-anchor="middle">K cache (j=0..3)</text>
-  <text x="390" y="55" fill="#4ade80" font-family="monospace" font-size="11" text-anchor="middle">K new (j=4..7)</text>
+  <text x="140" y="55" fill="#60a5fa" font-family="monospace" font-size="11" text-anchor="middle">K cache (j=0..3)</text>
+  <text x="284" y="55" fill="#4ade80" font-family="monospace" font-size="11" text-anchor="middle">K new (j=4..7)</text>
 
   <!-- Row labels -->
-  <text x="60" y="100" fill="#ccc" font-family="monospace" font-size="11" text-anchor="end">Q[0]</text>
-  <text x="60" y="130" fill="#ccc" font-family="monospace" font-size="11" text-anchor="end">Q[1]</text>
-  <text x="60" y="160" fill="#ccc" font-family="monospace" font-size="11" text-anchor="end">Q[2]</text>
-  <text x="60" y="190" fill="#ccc" font-family="monospace" font-size="11" text-anchor="end">Q[3]</text>
+  <text x="60" y="102" fill="#ccc" font-family="monospace" font-size="11" text-anchor="end">Q[0]</text>
+  <text x="60" y="134" fill="#ccc" font-family="monospace" font-size="11" text-anchor="end">Q[1]</text>
+  <text x="60" y="166" fill="#ccc" font-family="monospace" font-size="11" text-anchor="end">Q[2]</text>
+  <text x="60" y="198" fill="#ccc" font-family="monospace" font-size="11" text-anchor="end">Q[3]</text>
 
   <!-- Cache block: all 4 queries attend to all 4 cache keys (full rectangle) -->
   <!-- Row 0 -->
@@ -159,7 +159,7 @@ tokens (lower-triangular access). All tensors use <code>float32</code>.
   -2 & -3 & -4 & -5
   \end{bmatrix}
   \]
-  \(\text{cache\_len} = 2\), \(\text{new\_len} = 2\).<br>
+  \(\text{cache_len} = 2\), \(\text{new_len} = 2\).<br>
   Query token 0 (absolute position 2) attends to \(K[\,:\,,\,0{:}3,\,:\,]\); token 1 attends to all four keys.
 </p>
 <p>
@@ -185,7 +185,7 @@ tokens (lower-triangular access). All tensors use <code>float32</code>.
   <li>1 &le; <code>num_heads</code> &le; 64</li>
   <li>0 &le; <code>cache_len</code> &le; 4,096</li>
   <li>1 &le; <code>new_len</code> &le; 1,024</li>
-  <li>8 &le; <code>head_dim</code> &le; 256; <code>head_dim</code> is a multiple of 8</li>
+  <li>1 &le; <code>head_dim</code> &le; 256</li>
   <li>All tensor values are <code>float32</code></li>
   <li>
     Performance is measured with <code>num_heads</code> = 32, <code>cache_len</code> = 1,024,

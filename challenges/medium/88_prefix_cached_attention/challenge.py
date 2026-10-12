@@ -7,14 +7,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Prefix-Cached Attention",
-            atol=1e-04,
-            rtol=1e-04,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Prefix-Cached Attention"
+    atol = 1e-04
+    rtol = 1e-04
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -33,10 +30,6 @@ class Challenge(ChallengeBase):
         assert V.shape == (num_heads, total_len, head_dim)
         assert output.shape == (num_heads, new_len, head_dim)
         assert Q.dtype == K.dtype == V.dtype == output.dtype == torch.float32
-        assert Q.device.type == "cuda"
-        assert K.device.type == "cuda"
-        assert V.device.type == "cuda"
-        assert output.device.type == "cuda"
 
         scale = 1.0 / math.sqrt(head_dim)
 
@@ -69,7 +62,7 @@ class Challenge(ChallengeBase):
     def _make_test_case(self, num_heads, cache_len, new_len, head_dim, zero_inputs=False):
         total_len = cache_len + new_len
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         if zero_inputs:
             Q = torch.zeros(num_heads, new_len, head_dim, device=device, dtype=dtype)
             K = torch.zeros(num_heads, total_len, head_dim, device=device, dtype=dtype)
@@ -95,7 +88,7 @@ class Challenge(ChallengeBase):
         cache_len = 2
         new_len = 2
         head_dim = 4
-        device = "cuda"
+        device = self.device
         dtype = torch.float32
 
         Q = torch.tensor(
