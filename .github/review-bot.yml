@@ -1,0 +1,40 @@
+# Review bot configuration. Restricted YAML: top-level keys with scalars or
+# lists of quoted/unquoted strings. Globs: ** = any path, * = any segment chars.
+#
+# Size rule: starters and challenge.html in a NEW challenge folder are boilerplate
+# and are not counted. Everything else (including new challenge.py files and any
+# edit to existing starters/html) counts toward max_changed_lines.
+max_changed_lines: 400
+max_new_challenges: 1
+max_diff_chars_for_llm: 80000
+human_reviewers:
+  - ishaan-arya
+  - shxjames
+human_label: needs-human-review
+# Any file matching these makes the PR NOT safe (needs a human).
+sensitive_paths:
+  - ".github/**"
+  - "scripts/**"
+  - "**/challenge_base.py"
+  - "**/run_challenge.py"
+  - "**/*runner*"
+  - "**/*grader*"
+  - "**/*checker*"
+  - "pyproject.toml"
+  - "**/requirements*"
+  - "**/package*.json"
+  - "**/*.lock"
+  - "setup.py"
+  - "setup.cfg"
+  - ".clang-format"
+  - ".flake8"
+  - ".pre-commit-config.yaml"
+  - ".gitignore"
+  - "CLAUDE.md"
+  - ".env*"
+  - "**/.env*"
+# Editing an EXISTING challenge's challenge.py (reference_impl = grader,
+# tolerances, tests) always needs a human. Enforced in lib.js.
+block_existing_challenge_py: true
+# Deleting any file is not safe.
+block_deletions: true
