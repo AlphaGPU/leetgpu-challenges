@@ -134,6 +134,7 @@ C = \begin{bmatrix} 1 & 2 & 1 \\ 3 & 4 & 3 \\ 11 & 11 & 6 \\ 15 & 15 & 8 \end{bm
   <li><code>group_offsets[0]</code> = 0, <code>group_offsets[G]</code> = <code>M_total</code>, and <code>group_offsets</code> is non-decreasing</li>
   <li>A group may be empty (<code>group_offsets[g+1]</code> = <code>group_offsets[g]</code>); in that case nothing is written for that group</li>
   <li><code>A</code>, <code>B</code>, and <code>C</code> are 32-bit floats; <code>group_offsets</code> is 32-bit integer</li>
+  <li>Values of <code>A</code> and <code>B</code> are in the range [-1, 1]</li>
   <li>All tensors are stored on the GPU</li>
   <li>Performance is measured with <code>G</code> = 8, <code>M_total</code> = 8,192, <code>K</code> = 1,024, <code>N</code> = 2,048</li>
 </ul>

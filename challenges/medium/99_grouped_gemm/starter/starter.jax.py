@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# A, B, group_offsets are tensors on GPU
+# A, B, group_offsets are tensors on device
 @jax.jit
 def solve(
     A: jax.Array,

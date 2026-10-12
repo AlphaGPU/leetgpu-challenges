@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Grouped GEMM",
-            atol=1e-04,
-            rtol=1e-04,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Grouped GEMM"
+    atol = 1e-04
+    rtol = 1e-04
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -26,18 +23,16 @@ class Challenge(ChallengeBase):
         K: int,
         N: int,
     ):
-        assert A.shape == (M_total, K)
-        assert B.shape == (G, K, N)
-        assert group_offsets.shape == (G + 1,)
-        assert C.shape == (M_total, N)
+        assert A.shape == (M_total, K), f"Expected A.shape=({M_total}, {K}), got {A.shape}"
+        assert B.shape == (G, K, N), f"Expected B.shape=({G}, {K}, {N}), got {B.shape}"
+        assert group_offsets.shape == (
+            G + 1,
+        ), f"Expected group_offsets.shape=({G + 1},), got {group_offsets.shape}"
+        assert C.shape == (M_total, N), f"Expected C.shape=({M_total}, {N}), got {C.shape}"
         assert A.dtype == torch.float32
         assert B.dtype == torch.float32
         assert C.dtype == torch.float32
         assert group_offsets.dtype == torch.int32
-        assert A.device.type == "cuda"
-        assert B.device.type == "cuda"
-        assert group_offsets.device.type == "cuda"
-        assert C.device.type == "cuda"
 
         offsets = group_offsets.tolist()
         for g in range(G):
@@ -71,23 +66,21 @@ class Challenge(ChallengeBase):
         G = len(group_sizes)
         M_total = sum(group_sizes)
         if zero_a:
-            A = torch.zeros((max(M_total, 1), K), device="cuda", dtype=torch.float32)
+            A = torch.zeros((M_total, K), device=self.device, dtype=torch.float32)
         elif all_negative:
-            A = -torch.empty((max(M_total, 1), K), device="cuda", dtype=torch.float32).uniform_(
+            A = -torch.empty((M_total, K), device=self.device, dtype=torch.float32).uniform_(
                 0.1, 1.0
             )
         else:
-            A = torch.empty((max(M_total, 1), K), device="cuda", dtype=torch.float32).uniform_(
+            A = torch.empty((M_total, K), device=self.device, dtype=torch.float32).uniform_(
                 -1.0, 1.0
             )
-        if M_total == 0:
-            A = A[:0]
-        B = torch.empty((G, K, N), device="cuda", dtype=torch.float32).uniform_(-1.0, 1.0)
+        B = torch.empty((G, K, N), device=self.device, dtype=torch.float32).uniform_(-1.0, 1.0)
         offsets = [0]
         for s in group_sizes:
             offsets.append(offsets[-1] + s)
-        group_offsets = torch.tensor(offsets, device="cuda", dtype=torch.int32)
-        C = torch.empty((M_total, N), device="cuda", dtype=torch.float32)
+        group_offsets = torch.tensor(offsets, device=self.device, dtype=torch.int32)
+        C = torch.empty((M_total, N), device=self.device, dtype=torch.float32)
         return {
             "A": A,
             "B": B,
@@ -104,7 +97,7 @@ class Challenge(ChallengeBase):
         # G=2, M_total=4, K=2, N=3
         A = torch.tensor(
             [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0]],
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
         B = torch.tensor(
@@ -112,11 +105,11 @@ class Challenge(ChallengeBase):
                 [[1.0, 0.0, 1.0], [0.0, 1.0, 0.0]],
                 [[1.0, 1.0, 0.0], [1.0, 1.0, 1.0]],
             ],
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
-        group_offsets = torch.tensor([0, 2, 4], device="cuda", dtype=torch.int32)
-        C = torch.empty((4, 3), device="cuda", dtype=dtype)
+        group_offsets = torch.tensor([0, 2, 4], device=self.device, dtype=torch.int32)
+        C = torch.empty((4, 3), device=self.device, dtype=dtype)
         return {
             "A": A,
             "B": B,
@@ -183,13 +176,13 @@ class Challenge(ChallengeBase):
         offsets = torch.zeros(G + 1, dtype=torch.int32)
         offsets[1:] = torch.cumsum(sizes, dim=0).to(torch.int32)
 
-        A = torch.empty((M_total, K), device="cuda", dtype=torch.float32).uniform_(-1.0, 1.0)
-        B = torch.empty((G, K, N), device="cuda", dtype=torch.float32).uniform_(-1.0, 1.0)
-        C = torch.empty((M_total, N), device="cuda", dtype=torch.float32)
+        A = torch.empty((M_total, K), device=self.device, dtype=torch.float32).uniform_(-1.0, 1.0)
+        B = torch.empty((G, K, N), device=self.device, dtype=torch.float32).uniform_(-1.0, 1.0)
+        C = torch.empty((M_total, N), device=self.device, dtype=torch.float32)
         return {
             "A": A,
             "B": B,
-            "group_offsets": offsets.cuda(),
+            "group_offsets": offsets.to(self.device),
             "C": C,
             "G": G,
             "M_total": M_total,
