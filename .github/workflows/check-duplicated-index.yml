@@ -2,8 +2,6 @@ name: Validate Challenge Structure
 
 on:
   pull_request:
-    paths:
-      - 'challenges/**'
 
 jobs:
   check-index:
