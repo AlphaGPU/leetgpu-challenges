@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Weight Dequantization", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Weight Dequantization"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self, X: torch.Tensor, S: torch.Tensor, Y: torch.Tensor, M: int, N: int, TILE_SIZE: int
@@ -41,11 +42,11 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         M, N = 256, 256
         TILE_SIZE = 128
-        X = torch.randn(M, N, device="cuda", dtype=torch.float32)
+        X = torch.randn(M, N, device=self.device, dtype=torch.float32)
         # S shape
         s_rows = (M + TILE_SIZE - 1) // TILE_SIZE
         s_cols = (N + TILE_SIZE - 1) // TILE_SIZE
-        S = torch.randn(s_rows, s_cols, device="cuda", dtype=torch.float32)
+        S = torch.randn(s_rows, s_cols, device=self.device, dtype=torch.float32)
         Y = torch.empty_like(X)
 
         return {
@@ -85,9 +86,9 @@ class Challenge(ChallengeBase):
             s_cols = (N + TILE_SIZE - 1) // TILE_SIZE
             tests.append(
                 {
-                    "X": torch.randn(M, N, device="cuda", dtype=torch.float32),
-                    "S": torch.randn(s_rows, s_cols, device="cuda", dtype=torch.float32),
-                    "Y": torch.zeros(M, N, device="cuda", dtype=torch.float32),
+                    "X": torch.randn(M, N, device=self.device, dtype=torch.float32),
+                    "S": torch.randn(s_rows, s_cols, device=self.device, dtype=torch.float32),
+                    "Y": torch.zeros(M, N, device=self.device, dtype=torch.float32),
                     "M": M,
                     "N": N,
                     "TILE_SIZE": TILE_SIZE,
@@ -100,9 +101,9 @@ class Challenge(ChallengeBase):
         s_cols = (N + TILE_SIZE - 1) // TILE_SIZE
         tests.append(
             {
-                "X": torch.zeros(M, N, device="cuda", dtype=torch.float32),
-                "S": torch.randn(s_rows, s_cols, device="cuda", dtype=torch.float32),
-                "Y": torch.zeros(M, N, device="cuda", dtype=torch.float32),
+                "X": torch.zeros(M, N, device=self.device, dtype=torch.float32),
+                "S": torch.randn(s_rows, s_cols, device=self.device, dtype=torch.float32),
+                "Y": torch.zeros(M, N, device=self.device, dtype=torch.float32),
                 "M": M,
                 "N": N,
                 "TILE_SIZE": TILE_SIZE,
@@ -115,9 +116,9 @@ class Challenge(ChallengeBase):
         s_cols = (N + TILE_SIZE - 1) // TILE_SIZE
         tests.append(
             {
-                "X": torch.randn(M, N, device="cuda", dtype=torch.float32).sub_(0.5),
-                "S": torch.randn(s_rows, s_cols, device="cuda", dtype=torch.float32).sub_(0.5),
-                "Y": torch.zeros(M, N, device="cuda", dtype=torch.float32),
+                "X": torch.randn(M, N, device=self.device, dtype=torch.float32).sub_(0.5),
+                "S": torch.randn(s_rows, s_cols, device=self.device, dtype=torch.float32).sub_(0.5),
+                "Y": torch.zeros(M, N, device=self.device, dtype=torch.float32),
                 "M": M,
                 "N": N,
                 "TILE_SIZE": TILE_SIZE,
@@ -129,10 +130,10 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         M, N = 8192, 8192
         TILE_SIZE = 128
-        X = torch.randn(M, N, device="cuda", dtype=torch.float32)
+        X = torch.randn(M, N, device=self.device, dtype=torch.float32)
         s_rows = (M + TILE_SIZE - 1) // TILE_SIZE
         s_cols = (N + TILE_SIZE - 1) // TILE_SIZE
-        S = torch.randn(s_rows, s_cols, device="cuda", dtype=torch.float32)
+        S = torch.randn(s_rows, s_cols, device=self.device, dtype=torch.float32)
         Y = torch.empty_like(X)
 
         return {

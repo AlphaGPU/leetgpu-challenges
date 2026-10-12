@@ -7,14 +7,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Gaussian Error Gated Linear Unit",
-            atol=1e-04,
-            rtol=1e-04,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Gaussian Error Gated Linear Unit"
+    atol = 0.0001
+    rtol = 0.0001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, input: torch.Tensor, output: torch.Tensor, N: int):
         assert N % 2 == 0
@@ -37,8 +34,8 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         N = 2
-        input = torch.tensor([1.0, 1.0], device="cuda", dtype=dtype)
-        output = torch.empty(N // 2, device="cuda", dtype=dtype)
+        input = torch.tensor([1.0, 1.0], device=self.device, dtype=dtype)
+        output = torch.empty(N // 2, device=self.device, dtype=dtype)
         return {
             "input": input,
             "output": output,
@@ -53,8 +50,8 @@ class Challenge(ChallengeBase):
         N = 4
         tests.append(
             {
-                "input": torch.tensor([2.0, -1.0, 1.0, 0.5], device="cuda", dtype=dtype),
-                "output": torch.empty(N // 2, device="cuda", dtype=dtype),
+                "input": torch.tensor([2.0, -1.0, 1.0, 0.5], device=self.device, dtype=dtype),
+                "output": torch.empty(N // 2, device=self.device, dtype=dtype),
                 "N": N,
             }
         )
@@ -63,8 +60,8 @@ class Challenge(ChallengeBase):
         N = 42
         tests.append(
             {
-                "input": torch.zeros(N, device="cuda", dtype=dtype),
-                "output": torch.empty(N // 2, device="cuda", dtype=dtype),
+                "input": torch.zeros(N, device=self.device, dtype=dtype),
+                "output": torch.empty(N // 2, device=self.device, dtype=dtype),
                 "N": N,
             }
         )
@@ -74,9 +71,9 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "input": torch.tensor(
-                    [-1.0, -2.0, -3.0, -4.0, -5.0, -6.0], device="cuda", dtype=dtype
+                    [-1.0, -2.0, -3.0, -4.0, -5.0, -6.0], device=self.device, dtype=dtype
                 ),
-                "output": torch.empty(N // 2, device="cuda", dtype=dtype),
+                "output": torch.empty(N // 2, device=self.device, dtype=dtype),
                 "N": N,
             }
         )
@@ -85,8 +82,8 @@ class Challenge(ChallengeBase):
         N = 4
         tests.append(
             {
-                "input": torch.tensor([-0.5, 0.0, -1.5, 1.0], device="cuda", dtype=dtype),
-                "output": torch.empty(N // 2, device="cuda", dtype=dtype),
+                "input": torch.tensor([-0.5, 0.0, -1.5, 1.0], device=self.device, dtype=dtype),
+                "output": torch.empty(N // 2, device=self.device, dtype=dtype),
                 "N": N,
             }
         )
@@ -95,8 +92,8 @@ class Challenge(ChallengeBase):
         N = 1024
         tests.append(
             {
-                "input": torch.empty(N, device="cuda", dtype=dtype).uniform_(-100.0, 100.0),
-                "output": torch.empty(N // 2, device="cuda", dtype=dtype),
+                "input": torch.empty(N, device=self.device, dtype=dtype).uniform_(-100.0, 100.0),
+                "output": torch.empty(N // 2, device=self.device, dtype=dtype),
                 "N": N,
             }
         )
@@ -105,8 +102,8 @@ class Challenge(ChallengeBase):
         N = 100000
         tests.append(
             {
-                "input": torch.empty(N, device="cuda", dtype=dtype).uniform_(-50.0, 50.0),
-                "output": torch.empty(N // 2, device="cuda", dtype=dtype),
+                "input": torch.empty(N, device=self.device, dtype=dtype).uniform_(-50.0, 50.0),
+                "output": torch.empty(N // 2, device=self.device, dtype=dtype),
                 "N": N,
             }
         )
@@ -117,7 +114,7 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         N = 1000000
         return {
-            "input": torch.empty(N, device="cuda", dtype=dtype).uniform_(-100.0, 100.0),
-            "output": torch.empty(N // 2, device="cuda", dtype=dtype),
+            "input": torch.empty(N, device=self.device, dtype=dtype).uniform_(-100.0, 100.0),
+            "output": torch.empty(N // 2, device=self.device, dtype=dtype),
             "N": N,
         }

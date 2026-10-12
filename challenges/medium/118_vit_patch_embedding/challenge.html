@@ -1,0 +1,183 @@
+<p>
+  Implement the patch embedding stem of a Vision Transformer — the layer that turns a batch of
+  images into a sequence of tokens for ViT, CLIP, SigLIP and DiT. Given a batch of
+  <code>B</code> images of shape <code>(C, H, W)</code>, split every image into non-overlapping
+  <code>P &times; P</code> patches, project each flattened patch to a <code>D</code>-dimensional
+  embedding with <code>patch_weight</code> and <code>patch_bias</code>, prepend the learned
+  <code>cls_token</code>, and add the learned positional embedding <code>pos_embed</code>. All
+  tensors are <code>float32</code>, and <code>H</code> and <code>W</code> are always divisible by
+  <code>P</code>.
+</p>
+
+<svg width="700" height="260" viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto; font-family:monospace;">
+  <rect width="700" height="260" fill="#222" rx="8"/>
+  <defs>
+    <marker id="pe_arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <!-- image with patch grid -->
+  <text x="86" y="34" fill="#5588cc" font-size="10" text-anchor="middle">image (C, H, W)</text>
+  <rect x="26" y="44" width="120" height="120" fill="#2a4a7f" stroke="#5588cc" stroke-width="1.5"/>
+  <line x1="66" y1="44" x2="66" y2="164" stroke="#5588cc" stroke-width="1"/>
+  <line x1="106" y1="44" x2="106" y2="164" stroke="#5588cc" stroke-width="1"/>
+  <line x1="26" y1="84" x2="146" y2="84" stroke="#5588cc" stroke-width="1"/>
+  <line x1="26" y1="124" x2="146" y2="124" stroke="#5588cc" stroke-width="1"/>
+  <text x="46" y="69" fill="#ccc" font-size="10" text-anchor="middle">0</text>
+  <text x="86" y="69" fill="#ccc" font-size="10" text-anchor="middle">1</text>
+  <text x="126" y="69" fill="#ccc" font-size="10" text-anchor="middle">2</text>
+  <text x="46" y="109" fill="#ccc" font-size="10" text-anchor="middle">3</text>
+  <text x="86" y="109" fill="#ccc" font-size="10" text-anchor="middle">4</text>
+  <text x="126" y="109" fill="#ccc" font-size="10" text-anchor="middle">5</text>
+  <text x="46" y="149" fill="#ccc" font-size="10" text-anchor="middle">6</text>
+  <text x="86" y="149" fill="#ccc" font-size="10" text-anchor="middle">7</text>
+  <text x="126" y="149" fill="#ccc" font-size="10" text-anchor="middle">8</text>
+  <text x="86" y="182" fill="#666" font-size="9" text-anchor="middle">row-major patch order</text>
+
+  <!-- arrow to flattened patches -->
+  <line x1="150" y1="104" x2="192" y2="104" stroke="#888" stroke-width="1.5" marker-end="url(#pe_arr)"/>
+  <text x="171" y="96" fill="#888" font-size="8" text-anchor="middle">flatten</text>
+
+  <!-- flattened patch matrix -->
+  <text x="256" y="34" fill="#cc8844" font-size="10" text-anchor="middle">patches</text>
+  <rect x="196" y="44" width="120" height="120" fill="#5a3a1a" stroke="#cc8844" stroke-width="1.5"/>
+  <line x1="196" y1="84" x2="316" y2="84" stroke="#cc8844" stroke-width="1"/>
+  <line x1="196" y1="124" x2="316" y2="124" stroke="#cc8844" stroke-width="1"/>
+  <text x="256" y="69" fill="#ccc" font-size="9" text-anchor="middle">patch 0</text>
+  <text x="256" y="109" fill="#ccc" font-size="9" text-anchor="middle">&#x22ee;</text>
+  <text x="256" y="149" fill="#ccc" font-size="9" text-anchor="middle">patch N-1</text>
+  <text x="256" y="182" fill="#666" font-size="9" text-anchor="middle">(N, C&#xb7;P&#xb7;P)</text>
+
+  <!-- arrow to projection -->
+  <line x1="320" y1="104" x2="362" y2="104" stroke="#888" stroke-width="1.5" marker-end="url(#pe_arr)"/>
+  <text x="341" y="96" fill="#888" font-size="8" text-anchor="middle">project</text>
+
+  <!-- projection box -->
+  <rect x="366" y="84" width="112" height="40" rx="4" fill="#1a5a3a" stroke="#44aa66" stroke-width="1.5"/>
+  <text x="422" y="108" fill="#ccc" font-size="10" text-anchor="middle">W&#x1d40; + bias</text>
+  <text x="422" y="140" fill="#666" font-size="9" text-anchor="middle">(C&#xb7;P&#xb7;P, D)</text>
+
+  <!-- arrow to tokens -->
+  <line x1="482" y1="104" x2="524" y2="104" stroke="#888" stroke-width="1.5" marker-end="url(#pe_arr)"/>
+
+  <!-- token sequence -->
+  <text x="602" y="34" fill="#cc44cc" font-size="10" text-anchor="middle">output (N+1, D)</text>
+  <rect x="528" y="44" width="148" height="30" rx="3" fill="#3a1a3a" stroke="#cc44cc" stroke-width="1.5"/>
+  <text x="602" y="64" fill="#ccc" font-size="10" text-anchor="middle">cls_token</text>
+  <rect x="528" y="78" width="148" height="30" rx="3" fill="#3a1a3a" stroke="#cc44cc" stroke-width="1.5"/>
+  <text x="602" y="98" fill="#ccc" font-size="10" text-anchor="middle">token 0</text>
+  <rect x="528" y="112" width="148" height="26" rx="3" fill="#3a1a3a" stroke="#cc44cc" stroke-width="1.5"/>
+  <text x="602" y="130" fill="#ccc" font-size="10" text-anchor="middle">&#x22ee;</text>
+  <rect x="528" y="142" width="148" height="30" rx="3" fill="#3a1a3a" stroke="#cc44cc" stroke-width="1.5"/>
+  <text x="602" y="162" fill="#ccc" font-size="10" text-anchor="middle">token N-1</text>
+  <text x="602" y="192" fill="#666" font-size="9" text-anchor="middle">+ pos_embed (row by row)</text>
+
+  <text x="350" y="228" fill="#888" font-size="10" text-anchor="middle">repeated independently for each of the B images in the batch</text>
+  <text x="350" y="246" fill="#666" font-size="9" text-anchor="middle">patch n covers rows [n / (W/P) &#xb7; P, ...) and columns [n mod (W/P) &#xb7; P, ...) of the image</text>
+</svg>
+
+<p>
+  With \(g_h = H/P\), \(g_w = W/P\) and \(N = g_h \cdot g_w\) patches per image, patch index
+  \(n = p_y \cdot g_w + p_x\) covers image rows \(p_y P \ldots p_y P + P - 1\) and columns
+  \(p_x P \ldots p_x P + P - 1\). The embedding of that patch is
+</p>
+
+\[
+\text{token}[b][n][d] = \text{patch_bias}[d] +
+\sum_{c=0}^{C-1} \sum_{i=0}^{P-1} \sum_{j=0}^{P-1}
+\text{images}[b][c][p_y P + i][p_x P + j] \cdot \text{patch_weight}[d][c][i][j]
+\]
+
+<p>and the output sequence for image \(b\) is the CLS token followed by the \(N\) patch tokens,
+with the positional embedding added to every row:</p>
+
+\[
+\begin{aligned}
+\text{output}[b][0][d] &= \text{cls_token}[d] + \text{pos_embed}[0][d] \\[4pt]
+\text{output}[b][n+1][d] &= \text{token}[b][n][d] + \text{pos_embed}[n+1][d]
+\end{aligned}
+\]
+
+<p>Note that the CLS token is <em>not</em> projected — it is a learned vector copied into row 0 of
+every sequence in the batch.</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the <code>solve</code> function with the signature unchanged.</li>
+  <li>Do not use external libraries beyond the framework provided.</li>
+  <li>Write the result into <code>output</code> in-place.</li>
+  <li>
+    All tensors are contiguous and row-major: <code>images</code> is
+    <code>(B, C, H, W)</code>, <code>patch_weight</code> is <code>(D, C, P, P)</code>,
+    <code>patch_bias</code> and <code>cls_token</code> are <code>(D,)</code>,
+    <code>pos_embed</code> is <code>(N+1, D)</code>, and <code>output</code> is
+    <code>(B, N+1, D)</code>.
+  </li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>B</code> = 1, <code>C</code> = 1, <code>H</code> = 4, <code>W</code> = 4,
+  <code>P</code> = 2, <code>D</code> = 2 (so \(g_h = g_w = 2\) and \(N = 4\))
+</p>
+<p>
+  \(\text{images}[0][0]\) (\(4 \times 4\)):
+  \[
+  \begin{bmatrix}
+  1 & 2 & 3 & 4 \\
+  5 & 6 & 7 & 8 \\
+  9 & 10 & 11 & 12 \\
+  13 & 14 & 15 & 16
+  \end{bmatrix}
+  \]
+  \(\text{patch_weight}\) (\(2\) filters of shape \(1 \times 2 \times 2\)) — filter 0 selects the
+  top-left pixel of a patch, filter 1 the bottom-right pixel:
+  \[
+  \text{patch_weight}[0][0] = \begin{bmatrix} 1 & 0 \\ 0 & 0 \end{bmatrix}, \quad
+  \text{patch_weight}[1][0] = \begin{bmatrix} 0 & 0 \\ 0 & 1 \end{bmatrix}
+  \]
+  \[
+  \text{patch_bias} = \begin{bmatrix} 0 & 0 \end{bmatrix}, \quad
+  \text{cls_token} = \begin{bmatrix} 0.5 & -0.5 \end{bmatrix}, \quad
+  \text{pos_embed} = \begin{bmatrix}
+  0 & 0 \\ 1 & -1 \\ 2 & -2 \\ 3 & -3 \\ 4 & -4
+  \end{bmatrix}
+  \]
+</p>
+<p>
+  The four patches are \(\begin{bmatrix} 1 & 2 \\ 5 & 6 \end{bmatrix}\),
+  \(\begin{bmatrix} 3 & 4 \\ 7 & 8 \end{bmatrix}\),
+  \(\begin{bmatrix} 9 & 10 \\ 13 & 14 \end{bmatrix}\) and
+  \(\begin{bmatrix} 11 & 12 \\ 15 & 16 \end{bmatrix}\), so the projected tokens are
+  \(\begin{bmatrix} 1 & 6 \end{bmatrix}\), \(\begin{bmatrix} 3 & 8 \end{bmatrix}\),
+  \(\begin{bmatrix} 9 & 14 \end{bmatrix}\) and \(\begin{bmatrix} 11 & 16 \end{bmatrix}\).
+</p>
+<p>
+  Output (\(5 \times 2\), after prepending the CLS token and adding <code>pos_embed</code>):
+  \[
+  \text{output}[0] = \begin{bmatrix}
+  0.5 & -0.5 \\
+  2 & 5 \\
+  5 & 6 \\
+  12 & 11 \\
+  15 & 12
+  \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 128</li>
+  <li>1 &le; <code>C</code> &le; 4</li>
+  <li>1 &le; <code>H</code>, <code>W</code> &le; 1,024, both divisible by <code>P</code></li>
+  <li>1 &le; <code>P</code> &le; 32</li>
+  <li>1 &le; <code>D</code> &le; 1,024</li>
+  <li>All tensors are <code>float32</code> on the GPU</li>
+  <li>Image values are in the range [-10, 10]</li>
+  <li>
+    Performance is measured with <code>B</code> = 64, <code>C</code> = 3, <code>H</code> = 224,
+    <code>W</code> = 224, <code>P</code> = 16, <code>D</code> = 768
+  </li>
+</ul>

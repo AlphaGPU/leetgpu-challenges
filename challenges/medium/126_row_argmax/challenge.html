@@ -1,0 +1,35 @@
+<p>
+  Implement row-wise argmax over a matrix of 32-bit floating point logits, the core of greedy
+  decoding in language models. Given <code>logits</code> of shape <code>B</code> &times;
+  <code>V</code> (batch size by vocabulary size), write to <code>output[b]</code> the column index of
+  the largest value in row <code>b</code>. If several columns share the maximum value, return the
+  smallest such index.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>output</code> as 32-bit integers</li>
+</ul>
+
+<h2>Example:</h2>
+<p>
+  Input (<code>B</code> = 2, <code>V</code> = 4):
+  \[
+  \text{logits} = \begin{bmatrix} 1.0 & 3.0 & 2.0 & -1.0 \\ -2.0 & -0.5 & -0.5 & -3.0 \end{bmatrix}
+  \]
+  Output:
+  \[
+  \text{output} = \begin{bmatrix} 1 & 1 \end{bmatrix}
+  \]
+  In the second row, columns 1 and 2 tie at -0.5, so the smaller index 1 is returned.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 1,024</li>
+  <li>1 &le; <code>V</code> &le; 262,144</li>
+  <li>Logits are finite 32-bit floating point numbers (no NaN)</li>
+  <li>Performance is measured with <code>B</code> = 256, <code>V</code> = 128,000</li>
+</ul>

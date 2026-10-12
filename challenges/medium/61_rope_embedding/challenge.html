@@ -19,6 +19,7 @@
     <li>External libraries are not permitted</li>
     <li>The <code>solve</code> function signature must remain unchanged</li>
     <li>The input tensors <code>Q</code>, <code>cos</code>, and <code>sin</code> have shape <code>(M, D)</code>, where <code>M</code> is the number of tokens and <code>D</code> is the head dimension</li>
+    <li><code>cos</code> and <code>sin</code> use half-split layout: values at dimensions <code>j</code> and <code>j + D/2</code> are identical for each row</li>
     <li><code>D</code> (head dimension) is guaranteed to be an even number</li>
     <li>The final result must be stored in the output variable with the same shape <code>(M, D)</code></li>
 </ul>

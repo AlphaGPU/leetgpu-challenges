@@ -3,18 +3,15 @@ import math
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandnTensor
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Grouped Query Attention",
-            atol=1e-04,
-            rtol=1e-04,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Grouped Query Attention"
+    atol = 0.0001
+    rtol = 0.0001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -32,10 +29,6 @@ class Challenge(ChallengeBase):
         assert V.shape == (num_kv_heads, seq_len, head_dim)
         assert output.shape == (num_q_heads, seq_len, head_dim)
         assert Q.dtype == K.dtype == V.dtype == output.dtype == torch.float32
-        assert Q.device.type == "cuda"
-        assert K.device.type == "cuda"
-        assert V.device.type == "cuda"
-        assert output.device.type == "cuda"
         assert num_q_heads % num_kv_heads == 0
 
         num_groups = num_q_heads // num_kv_heads
@@ -55,6 +48,23 @@ class Challenge(ChallengeBase):
         # Weighted sum of values: (num_q_heads, seq_len, head_dim)
         output.copy_(torch.bmm(attn_weights, V_expanded))
 
+    def reference_impl_jax(self, Q, K, V, num_q_heads, num_kv_heads, seq_len, head_dim):
+        import jax
+        import jax.numpy as jnp
+
+        num_groups = num_q_heads // num_kv_heads
+        scale = 1.0 / math.sqrt(head_dim)
+
+        K_expanded = jnp.repeat(K, num_groups, axis=0)
+        V_expanded = jnp.repeat(V, num_groups, axis=0)
+
+        scores = (
+            jnp.matmul(Q, jnp.transpose(K_expanded, (0, 2, 1)), precision=jax.lax.Precision.HIGHEST)
+            * scale
+        )
+        attn_weights = jax.nn.softmax(scores, axis=-1)
+        return jnp.matmul(attn_weights, V_expanded, precision=jax.lax.Precision.HIGHEST)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "Q": (ctypes.POINTER(ctypes.c_float), "in"),
@@ -69,7 +79,7 @@ class Challenge(ChallengeBase):
 
     def _make_test_case(self, num_q_heads, num_kv_heads, seq_len, head_dim, zero_inputs=False):
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         if zero_inputs:
             Q = torch.zeros(num_q_heads, seq_len, head_dim, device=device, dtype=dtype)
             K = torch.zeros(num_kv_heads, seq_len, head_dim, device=device, dtype=dtype)
@@ -93,7 +103,7 @@ class Challenge(ChallengeBase):
     def generate_example_test(self) -> Dict[str, Any]:
         torch.manual_seed(0)
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         num_q_heads = 4
         num_kv_heads = 2
         seq_len = 3
@@ -174,6 +184,15 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        torch.manual_seed(0)
         # LLaMA-3 8B style: 32 Q heads, 8 KV heads, head_dim=128
-        return self._make_test_case(32, 8, 1024, 128)
+        num_q_heads, num_kv_heads, seq_len, head_dim = 32, 8, 1024, 128
+        return {
+            "Q": RandnTensor((num_q_heads, seq_len, head_dim)),
+            "K": RandnTensor((num_kv_heads, seq_len, head_dim)),
+            "V": RandnTensor((num_kv_heads, seq_len, head_dim)),
+            "output": OutTensor((num_q_heads, seq_len, head_dim)),
+            "num_q_heads": num_q_heads,
+            "num_kv_heads": num_kv_heads,
+            "seq_len": seq_len,
+            "head_dim": head_dim,
+        }

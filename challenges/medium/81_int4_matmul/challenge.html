@@ -1,0 +1,97 @@
+<p>
+  Implement a weight-only INT4 quantized matrix multiplication (W4A16), a core kernel used in
+  modern LLM inference. Given a float16 activation matrix <code>x</code> of shape
+  <code>M &times; K</code> and a weight matrix stored in packed INT4 format, compute the output
+  matrix <code>y = x &times; W<sup>T</sup></code> of shape <code>M &times; N</code>, where
+  <code>W</code> is the dequantized float16 weight matrix of shape <code>N &times; K</code>.
+</p>
+
+<p>
+  <strong>Packing format:</strong> Each byte of <code>w_q</code> stores two INT4 weights. The
+  high nibble (bits 7&ndash;4) holds weight <code>w[n, 2i]</code> and the low nibble (bits
+  3&ndash;0) holds <code>w[n, 2i+1]</code>. INT4 values are stored unsigned in the range
+  [0,&nbsp;15] with an offset of 8, so the signed weight is <code>nibble&nbsp;&minus;&nbsp;8</code>,
+  giving values in [&minus;8,&nbsp;7].
+</p>
+
+<p>
+  <strong>Dequantization:</strong> Weights are dequantized group-wise. Each contiguous block of
+  <code>group_size</code> weights along the <code>K</code> dimension shares one float16 scale:
+</p>
+<pre>
+W[n, k] = (w_q_nibble[n, k] - 8) * scales[n, k // group_size]
+</pre>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>y</code></li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input (<code>M</code> = 2, <code>N</code> = 4, <code>K</code> = 4, <code>group_size</code> = 2):
+</p>
+<p>
+  Activations \(x\) (float16, \(2 \times 4\)):
+  \[
+  \begin{bmatrix}
+  1.0 & 0.0 & 1.0 & 0.0 \\
+  0.0 & 1.0 & 0.0 & 1.0
+  \end{bmatrix}
+  \]
+  Packed weights \(w\_q\) (uint8, \(4 \times 2\)) with signed INT4 values in brackets:
+  \[
+  \begin{bmatrix}
+  \texttt{0x99} & \texttt{0x99} \\
+  \texttt{0xAA} & \texttt{0xAA} \\
+  \texttt{0x77} & \texttt{0x77} \\
+  \texttt{0x88} & \texttt{0x88}
+  \end{bmatrix}
+  \;\Rightarrow\;
+  W_{\text{int4}} =
+  \begin{bmatrix}
+  1 & 1 & 1 & 1 \\
+  2 & 2 & 2 & 2 \\
+  -1 & -1 & -1 & -1 \\
+  0 & 0 & 0 & 0
+  \end{bmatrix}
+  \]
+  Scales (float16, \(4 \times 2\), all entries 0.5):
+  \[
+  \begin{bmatrix}
+  0.5 & 0.5 \\
+  0.5 & 0.5 \\
+  0.5 & 0.5 \\
+  0.5 & 0.5
+  \end{bmatrix}
+  \;\Rightarrow\;
+  W_{\text{dequant}} =
+  \begin{bmatrix}
+  0.5 & 0.5 & 0.5 & 0.5 \\
+  1.0 & 1.0 & 1.0 & 1.0 \\
+  -0.5 & -0.5 & -0.5 & -0.5 \\
+  0.0 & 0.0 & 0.0 & 0.0
+  \end{bmatrix}
+  \]
+  Output \(y = x \times W^T\) (float16, \(2 \times 4\)):
+  \[
+  \begin{bmatrix}
+  1.0 & 2.0 & -1.0 & 0.0 \\
+  1.0 & 2.0 & -1.0 & 0.0
+  \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code>, <code>N</code> &le; 8,192</li>
+  <li>1 &le; <code>K</code> &le; 8,192</li>
+  <li><code>K</code> is divisible by <code>2</code> and by <code>group_size</code></li>
+  <li><code>group_size</code> &isin; {2, 4, 8, 16, 32, 64, 128}</li>
+  <li>All tensors are stored in row-major order</li>
+  <li>Input dtype: <code>x</code> and <code>scales</code> are float16; <code>w_q</code> is uint8</li>
+  <li>Output dtype: <code>y</code> is float16</li>
+  <li>Performance is measured with <code>M</code> = 4,096, <code>N</code> = 4,096, <code>K</code> = 4,096, <code>group_size</code> = 128</li>
+</ul>

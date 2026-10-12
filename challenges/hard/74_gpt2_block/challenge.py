@@ -29,14 +29,11 @@ TOTAL_WEIGHTS = O_BPROJ + D
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="GPT-2 Transformer Block",
-            atol=1e-03,
-            rtol=1e-03,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "GPT-2 Transformer Block"
+    atol = 0.001
+    rtol = 0.001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -49,9 +46,6 @@ class Challenge(ChallengeBase):
         assert output.shape == (seq_len, D)
         assert weights.shape == (TOTAL_WEIGHTS,)
         assert x.dtype == output.dtype == weights.dtype
-        assert x.device.type == "cuda"
-        assert output.device.type == "cuda"
-        assert weights.device.type == "cuda"
 
         # unpack weights
         ln1_w = weights[O_LN1_W:O_LN1_B]
@@ -102,6 +96,64 @@ class Challenge(ChallengeBase):
         # residual connection 2
         output.copy_(hidden + proj)
 
+    def reference_impl_jax(self, x, weights, seq_len):
+        import jax
+        import jax.numpy as jnp
+
+        def layer_norm(z, w, b, eps=1e-5):
+            mean = jnp.mean(z, axis=-1, keepdims=True)
+            var = jnp.mean((z - mean) ** 2, axis=-1, keepdims=True)
+            return (z - mean) * jax.lax.rsqrt(var + eps) * w + b
+
+        # unpack weights
+        ln1_w = weights[O_LN1_W:O_LN1_B]
+        ln1_b = weights[O_LN1_B:O_WQKV]
+        W_qkv = weights[O_WQKV:O_BQKV].reshape(D, 3 * D)
+        b_qkv = weights[O_BQKV:O_WAPROJ]
+        W_attn = weights[O_WAPROJ:O_BAPROJ].reshape(D, D)
+        b_attn = weights[O_BAPROJ:O_LN2_W]
+        ln2_w = weights[O_LN2_W:O_LN2_B]
+        ln2_b = weights[O_LN2_B:O_WFC]
+        W_fc = weights[O_WFC:O_BFC].reshape(D, FFN)
+        b_fc = weights[O_BFC:O_WPROJ]
+        W_proj = weights[O_WPROJ:O_BPROJ].reshape(FFN, D)
+        b_proj = weights[O_BPROJ : O_BPROJ + D]
+
+        # layer norm 1
+        x_norm = layer_norm(x, ln1_w, ln1_b, eps=1e-5)
+
+        # qkv projection
+        qkv = x_norm @ W_qkv + b_qkv
+        q, k, v = jnp.split(qkv, 3, axis=-1)
+
+        # reshape for multi-head attention: (H, seq_len, DH)
+        q = q.reshape(seq_len, H, DH).transpose(1, 0, 2)
+        k = k.reshape(seq_len, H, DH).transpose(1, 0, 2)
+        v = v.reshape(seq_len, H, DH).transpose(1, 0, 2)
+
+        # scaled dot-product attention
+        scores = jnp.matmul(q, jnp.swapaxes(k, -2, -1)) / math.sqrt(DH)
+        attn_weights = jax.nn.softmax(scores, axis=-1)
+        attn_out = jnp.matmul(attn_weights, v)
+
+        # concat heads and project
+        attn_out = attn_out.transpose(1, 0, 2).reshape(seq_len, D)
+        attn_proj = attn_out @ W_attn + b_attn
+
+        # residual connection 1
+        hidden = x + attn_proj
+
+        # layer norm 2
+        h_norm = layer_norm(hidden, ln2_w, ln2_b, eps=1e-5)
+
+        # ffn: linear -> gelu (tanh approx) -> linear
+        fc = h_norm @ W_fc + b_fc
+        fc = jax.nn.gelu(fc, approximate=True)
+        proj = fc @ W_proj + b_proj
+
+        # residual connection 2
+        return hidden + proj
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "x": (ctypes.POINTER(ctypes.c_float), "in"),
@@ -143,7 +195,7 @@ class Challenge(ChallengeBase):
 
     def _make_test_case(self, seq_len, zero_x=False):
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
         weights = self._make_weights(device, dtype)
         if zero_x:
             x = torch.zeros(seq_len, D, device=device, dtype=dtype)
