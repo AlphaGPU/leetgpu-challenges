@@ -13,7 +13,6 @@ class Challenge(ChallengeBase):
     rtol = 1e-02
     num_gpus = 1
     access_tier = "free"
-        self.device = device
 
     def reference_impl(
         self,
