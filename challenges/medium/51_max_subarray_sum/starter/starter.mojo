@@ -1,9 +1,15 @@
-from gpu.host import DeviceContext
-from gpu.id import block_dim, block_idx, thread_idx
-from memory import UnsafePointer
-from math import ceildiv
+from max.gpu.host import DeviceContext
+from max.gpu import block_dim, block_idx, thread_idx
+from std.memory import UnsafePointer
+from std.math import ceildiv
+
 
 # input, output are device pointers (i.e. pointers to memory on the GPU)
 @export
-def solve(input: UnsafePointer[Int32], output: UnsafePointer[Int32], N: Int32, window_size: Int32):
+def solve(
+    input: UnsafePointer[Int32, MutAnyOrigin],
+    output: UnsafePointer[Int32, MutAnyOrigin],
+    N: Int32,
+    window_size: Int32,
+) raises:
     pass

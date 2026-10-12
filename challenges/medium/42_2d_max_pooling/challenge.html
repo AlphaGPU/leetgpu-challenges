@@ -3,6 +3,98 @@
   The program should take an input tensor and produce an output tensor by applying max pooling with specified kernel size, stride, and padding.
 </p>
 
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 180" style="display:block; margin:20px auto;" width="420" height="180" font-family="monospace">
+  <rect width="420" height="180" rx="8" fill="#222"/>
+  <defs>
+    <marker id="arrpool" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#ccc"/>
+    </marker>
+  </defs>
+
+  <!-- Input label -->
+  <text x="75" y="18" text-anchor="middle" fill="#ccc" font-size="11" font-weight="bold">Input (4x4)</text>
+
+  <!-- Input grid background -->
+  <rect x="15" y="24" width="120" height="120" rx="3" fill="#333" stroke="#555" stroke-width="0.5"/>
+
+  <!-- Region highlights (2x2 stride=2) with dashed borders -->
+  <!-- Top-left region (green) -->
+  <rect x="15" y="24" width="60" height="60" fill="#1e3d2d" opacity="0.5"/>
+  <rect x="15" y="24" width="60" height="60" fill="none" stroke="#44aa66" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <!-- Top-right region (blue) -->
+  <rect x="75" y="24" width="60" height="60" fill="#1e2d3d" opacity="0.5"/>
+  <rect x="75" y="24" width="60" height="60" fill="none" stroke="#4488cc" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <!-- Bottom-left region (amber) -->
+  <rect x="15" y="84" width="60" height="60" fill="#3d2d1e" opacity="0.5"/>
+  <rect x="15" y="84" width="60" height="60" fill="none" stroke="#cc8844" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <!-- Bottom-right region (purple) -->
+  <rect x="75" y="84" width="60" height="60" fill="#3d1e3d" opacity="0.5"/>
+  <rect x="75" y="84" width="60" height="60" fill="none" stroke="#aa44aa" stroke-width="1.5" stroke-dasharray="4,2"/>
+
+  <!-- Grid lines -->
+  <line x1="45" y1="24" x2="45" y2="144" stroke="#555" stroke-width="0.5"/>
+  <line x1="75" y1="24" x2="75" y2="144" stroke="#555" stroke-width="0.5"/>
+  <line x1="105" y1="24" x2="105" y2="144" stroke="#555" stroke-width="0.5"/>
+  <line x1="15" y1="54" x2="135" y2="54" stroke="#555" stroke-width="0.5"/>
+  <line x1="15" y1="84" x2="135" y2="84" stroke="#555" stroke-width="0.5"/>
+  <line x1="15" y1="114" x2="135" y2="114" stroke="#555" stroke-width="0.5"/>
+
+  <!-- Input values row 1: 1,3,2,4 -->
+  <text x="30" y="43" text-anchor="middle" fill="#999" font-size="12">1</text>
+  <text x="60" y="43" text-anchor="middle" fill="#999" font-size="12">3</text>
+  <text x="90" y="43" text-anchor="middle" fill="#999" font-size="12">2</text>
+  <text x="120" y="43" text-anchor="middle" fill="#999" font-size="12">4</text>
+  <!-- Row 2: 5,8,6,7 -->
+  <text x="30" y="73" text-anchor="middle" fill="#999" font-size="12">5</text>
+  <text x="60" y="73" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">8</text>
+  <text x="90" y="73" text-anchor="middle" fill="#999" font-size="12">6</text>
+  <text x="120" y="73" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">7</text>
+  <!-- Row 3: 9,2,4,3 -->
+  <text x="30" y="103" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">9</text>
+  <text x="60" y="103" text-anchor="middle" fill="#999" font-size="12">2</text>
+  <text x="90" y="103" text-anchor="middle" fill="#999" font-size="12">4</text>
+  <text x="120" y="103" text-anchor="middle" fill="#999" font-size="12">3</text>
+  <!-- Row 4: 1,6,5,8 -->
+  <text x="30" y="133" text-anchor="middle" fill="#999" font-size="12">1</text>
+  <text x="60" y="133" text-anchor="middle" fill="#999" font-size="12">6</text>
+  <text x="90" y="133" text-anchor="middle" fill="#999" font-size="12">5</text>
+  <text x="120" y="133" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">8</text>
+
+  <!-- Arrow with "max" label -->
+  <text x="172" y="76" text-anchor="middle" fill="#ccc" font-size="10" font-style="italic">max</text>
+  <line x1="150" y1="84" x2="195" y2="84" stroke="#ccc" stroke-width="1.5" marker-end="url(#arrpool)"/>
+
+  <!-- Output label -->
+  <text x="240" y="52" text-anchor="middle" fill="#ccc" font-size="11" font-weight="bold">Output (2x2)</text>
+
+  <!-- Output grid background -->
+  <rect x="210" y="60" width="60" height="60" rx="3" fill="#333" stroke="#555" stroke-width="0.5"/>
+
+  <!-- Output grid lines -->
+  <line x1="240" y1="60" x2="240" y2="120" stroke="#555" stroke-width="0.5"/>
+  <line x1="210" y1="90" x2="270" y2="90" stroke="#555" stroke-width="0.5"/>
+
+  <!-- Output region color coding -->
+  <rect x="210" y="60" width="30" height="30" fill="#1e3d2d" opacity="0.5"/>
+  <rect x="240" y="60" width="30" height="30" fill="#1e2d3d" opacity="0.5"/>
+  <rect x="210" y="90" width="30" height="30" fill="#3d2d1e" opacity="0.5"/>
+  <rect x="240" y="90" width="30" height="30" fill="#3d1e3d" opacity="0.5"/>
+
+  <!-- Output values: [[8,7],[9,8]] -->
+  <text x="225" y="80" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">8</text>
+  <text x="255" y="80" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">7</text>
+  <text x="225" y="110" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">9</text>
+  <text x="255" y="110" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">8</text>
+
+  <!-- Legend -->
+  <text x="300" y="70" fill="#ccc" font-size="9">kernel: 2x2</text>
+  <text x="300" y="84" fill="#ccc" font-size="9">stride: 2</text>
+  <text x="300" y="98" fill="#ccc" font-size="9">padding: 0</text>
+
+  <!-- Footer note -->
+  <text x="75" y="164" text-anchor="middle" fill="#666" font-size="9">dashed borders = pooling windows</text>
+</svg>
+
 <h2>Implementation Requirements</h2>
 <ul>
   <li>External libraries are not permitted</li>

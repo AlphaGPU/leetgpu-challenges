@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Logistic Regression", atol=1e-02, rtol=1e-02, num_gpus=1, access_tier="free"
-        )
+    name = "Logistic Regression"
+    atol = 0.01
+    rtol = 0.01
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self, X: torch.Tensor, y: torch.Tensor, beta: torch.Tensor, n_samples: int, n_features: int
@@ -84,11 +85,11 @@ class Challenge(ChallengeBase):
                 [-1.5, -2.5],
                 [-3.0, -3.0],
             ],
-            device="cuda",
+            device=self.device,
             dtype=dtype,
         )
-        y = torch.tensor([1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0], device="cuda", dtype=dtype)
-        beta = torch.zeros(2, device="cuda", dtype=dtype)
+        y = torch.tensor([1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0], device=self.device, dtype=dtype)
+        beta = torch.zeros(2, device=self.device, dtype=dtype)
         return {
             "X": X,
             "y": y,
@@ -112,11 +113,11 @@ class Challenge(ChallengeBase):
                         [0.7620000243186951],
                         [-0.11699999868869781],
                     ],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype,
                 ),
-                "y": torch.tensor([1.0, 1.0, 0.0, 0.0, 0.0], device="cuda", dtype=dtype),
-                "beta": torch.zeros(1, device="cuda", dtype=dtype),
+                "y": torch.tensor([1.0, 1.0, 0.0, 0.0, 0.0], device=self.device, dtype=dtype),
+                "beta": torch.zeros(1, device=self.device, dtype=dtype),
                 "n_samples": 5,
                 "n_features": 1,
             }
@@ -134,11 +135,11 @@ class Challenge(ChallengeBase):
                         [0.6309999823570251, -0.2199999988079071],
                         [-0.17299999296665192, 0.2280000001192093],
                     ],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype,
                 ),
-                "y": torch.tensor([0.0, 0.0, 1.0, 0.0, 0.0, 0.0], device="cuda", dtype=dtype),
-                "beta": torch.zeros(2, device="cuda", dtype=dtype),
+                "y": torch.tensor([0.0, 0.0, 1.0, 0.0, 0.0, 0.0], device=self.device, dtype=dtype),
+                "beta": torch.zeros(2, device=self.device, dtype=dtype),
                 "n_samples": 6,
                 "n_features": 2,
             }
@@ -153,11 +154,11 @@ class Challenge(ChallengeBase):
                         [-0.8019999861717224, -0.23399999737739563, -0.8579999804496765],
                         [0.9290000200271606, 0.04399999976158142, 0.4740000069141388],
                     ],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype,
                 ),
-                "y": torch.tensor([1.0, 0.0, 1.0], device="cuda", dtype=dtype),
-                "beta": torch.zeros(3, device="cuda", dtype=dtype),
+                "y": torch.tensor([1.0, 0.0, 1.0], device=self.device, dtype=dtype),
+                "beta": torch.zeros(3, device=self.device, dtype=dtype),
                 "n_samples": 3,
                 "n_features": 3,
             }
@@ -177,13 +178,13 @@ class Challenge(ChallengeBase):
                         [-0.061000000685453415, -0.7730000019073486, -0.30300000309944153],
                         [-0.6970000267028809, -0.3140000104904175, 0.16599999368190765],
                     ],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype,
                 ),
                 "y": torch.tensor(
-                    [1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0], device="cuda", dtype=dtype
+                    [1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0], device=self.device, dtype=dtype
                 ),
-                "beta": torch.zeros(3, device="cuda", dtype=dtype),
+                "beta": torch.zeros(3, device=self.device, dtype=dtype),
                 "n_samples": 8,
                 "n_features": 3,
             }
@@ -205,13 +206,15 @@ class Challenge(ChallengeBase):
                         [-0.01600000075995922, -0.7639999985694885, -0.06199999898672104],
                         [-0.13099999725818634, 0.49799999594688416, 0.1589999943971634],
                     ],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype,
                 ),
                 "y": torch.tensor(
-                    [1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0], device="cuda", dtype=dtype
+                    [1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0],
+                    device=self.device,
+                    dtype=dtype,
                 ),
-                "beta": torch.zeros(3, device="cuda", dtype=dtype),
+                "beta": torch.zeros(3, device=self.device, dtype=dtype),
                 "n_samples": 10,
                 "n_features": 3,
             }
@@ -221,7 +224,7 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        device = "cuda"
+        device = self.device
 
         X = torch.eye(8, device=device, dtype=dtype).repeat(2, 1)
         y = torch.tensor(

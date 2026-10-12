@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Subarray Sum", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Subarray Sum"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, input: torch.Tensor, output: torch.Tensor, N: int, S: int, E: int):
         # Validate input types and shapes
@@ -32,8 +33,8 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.int32
-        input = torch.tensor([1, 2, 1, 3, 4], device="cuda", dtype=dtype)
-        output = torch.empty(1, device="cuda", dtype=dtype)
+        input = torch.tensor([1, 2, 1, 3, 4], device=self.device, dtype=dtype)
+        output = torch.empty(1, device=self.device, dtype=dtype)
         return {
             "input": input,
             "output": output,
@@ -49,8 +50,8 @@ class Challenge(ChallengeBase):
         # basic_example
         tests.append(
             {
-                "input": torch.tensor([1, 2, 3, 4], device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.tensor([1, 2, 3, 4], device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 4,
                 "S": 0,
                 "E": 3,
@@ -60,8 +61,8 @@ class Challenge(ChallengeBase):
         # all_same_value
         tests.append(
             {
-                "input": torch.tensor([2] * 16, device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.tensor([2] * 16, device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 16,
                 "S": 0,
                 "E": 15,
@@ -71,8 +72,8 @@ class Challenge(ChallengeBase):
         # increasing_sequence
         tests.append(
             {
-                "input": torch.randint(1, 5, (32,), device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.randint(1, 5, (32,), device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 32,
                 "S": 0,
                 "E": 31,
@@ -82,8 +83,8 @@ class Challenge(ChallengeBase):
         # medium_size
         tests.append(
             {
-                "input": torch.randint(1, 10, (1000,), device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.randint(1, 10, (1000,), device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 1000,
                 "S": 0,
                 "E": 500,
@@ -93,8 +94,8 @@ class Challenge(ChallengeBase):
         # large_size
         tests.append(
             {
-                "input": torch.randint(1, 11, (100000,), device="cuda", dtype=dtype),
-                "output": torch.empty(1, device="cuda", dtype=dtype),
+                "input": torch.randint(1, 11, (100000,), device=self.device, dtype=dtype),
+                "output": torch.empty(1, device=self.device, dtype=dtype),
                 "N": 100000,
                 "S": 123,
                 "E": 98765,
@@ -105,8 +106,8 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.int32
-        input = torch.randint(1, 11, (100000000,), device="cuda", dtype=dtype)
-        output = torch.empty(1, device="cuda", dtype=dtype)
+        input = torch.randint(1, 11, (100000000,), device=self.device, dtype=dtype)
+        output = torch.empty(1, device=self.device, dtype=dtype)
         return {
             "input": input,
             "output": output,

@@ -2,14 +2,15 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandTensor
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Causal Self-Attention", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Causal Self-Attention"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -29,6 +30,18 @@ class Challenge(ChallengeBase):
         attn = torch.softmax(attn, dim=1)
         torch.matmul(attn, V, out=output)
 
+    def reference_impl_jax(self, Q, K, V, M, d):
+        import jax
+        import jax.numpy as jnp
+
+        scale = d**0.5
+        attn = jnp.matmul(Q, K.T) / scale
+
+        mask = jnp.triu(jnp.ones((M, M), dtype=bool), k=1)
+        attn = jnp.where(mask, -jnp.inf, attn)
+        attn = jax.nn.softmax(attn, axis=1)
+        return jnp.matmul(attn, V)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "Q": (ctypes.POINTER(ctypes.c_float), "in"),
@@ -41,10 +54,16 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        Q = torch.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device="cuda", dtype=dtype)
-        K = torch.tensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device="cuda", dtype=dtype)
-        V = torch.tensor([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]], device="cuda", dtype=dtype)
-        output = torch.empty(2, 4, device="cuda", dtype=dtype)
+        Q = torch.tensor(
+            [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device=self.device, dtype=dtype
+        )
+        K = torch.tensor(
+            [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device=self.device, dtype=dtype
+        )
+        V = torch.tensor(
+            [[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]], device=self.device, dtype=dtype
+        )
+        output = torch.empty(2, 4, device=self.device, dtype=dtype)
         return {"Q": Q, "K": K, "V": V, "output": output, "M": 2, "d": 4}
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
@@ -55,15 +74,15 @@ class Challenge(ChallengeBase):
         tests.append(
             {
                 "Q": torch.tensor(
-                    [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device="cuda", dtype=dtype
+                    [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device=self.device, dtype=dtype
                 ),
                 "K": torch.tensor(
-                    [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device="cuda", dtype=dtype
+                    [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]], device=self.device, dtype=dtype
                 ),
                 "V": torch.tensor(
-                    [[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]], device="cuda", dtype=dtype
+                    [[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]], device=self.device, dtype=dtype
                 ),
-                "output": torch.empty(2, 4, device="cuda", dtype=dtype),
+                "output": torch.empty(2, 4, device=self.device, dtype=dtype),
                 "M": 2,
                 "d": 4,
             }
@@ -72,10 +91,10 @@ class Challenge(ChallengeBase):
         # zero_matrices
         tests.append(
             {
-                "Q": torch.zeros((3, 5), device="cuda", dtype=dtype),
-                "K": torch.zeros((3, 5), device="cuda", dtype=dtype),
-                "V": torch.zeros((3, 5), device="cuda", dtype=dtype),
-                "output": torch.empty(3, 5, device="cuda", dtype=dtype),
+                "Q": torch.zeros((3, 5), device=self.device, dtype=dtype),
+                "K": torch.zeros((3, 5), device=self.device, dtype=dtype),
+                "V": torch.zeros((3, 5), device=self.device, dtype=dtype),
+                "output": torch.empty(3, 5, device=self.device, dtype=dtype),
                 "M": 3,
                 "d": 5,
             }
@@ -86,20 +105,20 @@ class Challenge(ChallengeBase):
             {
                 "Q": torch.tensor(
                     [[-1.0, 2.0, -3.0], [4.0, -5.0, 6.0], [-7.0, 8.0, -9.0], [10.0, -11.0, 12.0]],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype,
                 ),
                 "K": torch.tensor(
                     [[2.0, -1.0, 3.0], [-4.0, 5.0, -6.0], [7.0, -8.0, 9.0], [-10.0, 11.0, -12.0]],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype,
                 ),
                 "V": torch.tensor(
                     [[1.0, 0.5, -0.5], [-1.0, 2.0, 3.0], [4.0, -2.0, 1.0], [0.0, 1.0, -1.0]],
-                    device="cuda",
+                    device=self.device,
                     dtype=dtype,
                 ),
-                "output": torch.empty(4, 3, device="cuda", dtype=dtype),
+                "output": torch.empty(4, 3, device=self.device, dtype=dtype),
                 "M": 4,
                 "d": 3,
             }
@@ -108,10 +127,10 @@ class Challenge(ChallengeBase):
         # large_matrices
         tests.append(
             {
-                "Q": torch.empty((128, 32), device="cuda", dtype=dtype).uniform_(-0.1, 0.1),
-                "K": torch.empty((128, 32), device="cuda", dtype=dtype).uniform_(-0.1, 0.1),
-                "V": torch.empty((128, 32), device="cuda", dtype=dtype).uniform_(-0.1, 0.1),
-                "output": torch.empty(128, 32, device="cuda", dtype=dtype),
+                "Q": torch.empty((128, 32), device=self.device, dtype=dtype).uniform_(-0.1, 0.1),
+                "K": torch.empty((128, 32), device=self.device, dtype=dtype).uniform_(-0.1, 0.1),
+                "V": torch.empty((128, 32), device=self.device, dtype=dtype).uniform_(-0.1, 0.1),
+                "output": torch.empty(128, 32, device=self.device, dtype=dtype),
                 "M": 128,
                 "d": 32,
             }
@@ -120,10 +139,12 @@ class Challenge(ChallengeBase):
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        dtype = torch.float32
         M, d = 5000, 128
-        Q = torch.empty((M, d), device="cuda", dtype=dtype).uniform_(-100, 100)
-        K = torch.empty((M, d), device="cuda", dtype=dtype).uniform_(-100, 100)
-        V = torch.empty((M, d), device="cuda", dtype=dtype).uniform_(-100, 100)
-        output = torch.empty(M, d, device="cuda", dtype=dtype)
-        return {"Q": Q, "K": K, "V": V, "output": output, "M": M, "d": d}
+        return {
+            "Q": RandTensor((M, d), -1.0, 1.0),
+            "K": RandTensor((M, d), -1.0, 1.0),
+            "V": RandTensor((M, d), -1.0, 1.0),
+            "output": OutTensor((M, d)),
+            "M": M,
+            "d": d,
+        }

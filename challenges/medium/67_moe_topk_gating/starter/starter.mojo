@@ -1,8 +1,16 @@
-from gpu.host import DeviceContext
-from gpu.id import block_dim, block_idx, thread_idx
-from memory import UnsafePointer
-from math import ceildiv
+from max.gpu.host import DeviceContext
+from max.gpu import block_dim, block_idx, thread_idx
+from std.memory import UnsafePointer
+from std.math import ceildiv
+
 
 @export
-def solve(logits: UnsafePointer[Float32], topk_weights: UnsafePointer[Float32], topk_indices: UnsafePointer[Int32], M: Int32, E: Int32, k: Int32):
+def solve(
+    logits: UnsafePointer[Float32, MutAnyOrigin],
+    topk_weights: UnsafePointer[Float32, MutAnyOrigin],
+    topk_indices: UnsafePointer[Int32, MutAnyOrigin],
+    M: Int32,
+    E: Int32,
+    k: Int32,
+) raises:
     pass
