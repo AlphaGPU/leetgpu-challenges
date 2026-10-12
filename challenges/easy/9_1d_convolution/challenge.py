@@ -2,14 +2,15 @@ import ctypes
 from typing import Any, Dict, List
 
 import torch
-from core.challenge_base import ChallengeBase
+from core.challenge_base import ChallengeBase, OutTensor, RandTensor
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="1D Convolution", atol=1e-04, rtol=1e-04, num_gpus=1, access_tier="free"
-        )
+    name = "1D Convolution"
+    atol = 0.0001
+    rtol = 0.0001
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -32,6 +33,22 @@ class Challenge(ChallengeBase):
         # 'ij,j->i' means: for each window i, multiply with kernel j and sum over j
         output.copy_(torch.einsum("ij,j->i", windows, kernel))
 
+    def reference_impl_jax(self, input, kernel, input_size, kernel_size):
+        import jax
+
+        # Cross-correlation, valid padding, stride 1.
+        # Shapes: input (N=1, C=1, W), kernel (O=1, I=1, W).
+        lhs = input.reshape(1, 1, input_size)
+        rhs = kernel.reshape(1, 1, kernel_size)
+        result = jax.lax.conv_general_dilated(
+            lhs,
+            rhs,
+            window_strides=(1,),
+            padding="VALID",
+            precision=jax.lax.Precision.HIGHEST,
+        )
+        return result.reshape(-1)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "input": (ctypes.POINTER(ctypes.c_float), "in"),
@@ -43,9 +60,9 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        input_tensor = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device="cuda", dtype=dtype)
-        kernel_tensor = torch.tensor([1.0, 0.0, -1.0], device="cuda", dtype=dtype)
-        output_tensor = torch.empty(3, device="cuda", dtype=dtype)
+        input_tensor = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0], device=self.device, dtype=dtype)
+        kernel_tensor = torch.tensor([1.0, 0.0, -1.0], device=self.device, dtype=dtype)
+        output_tensor = torch.empty(3, device=self.device, dtype=dtype)
         return {
             "input": input_tensor,
             "kernel": kernel_tensor,
@@ -72,9 +89,9 @@ class Challenge(ChallengeBase):
             output_size = input_size - kernel_size + 1
             test_cases.append(
                 {
-                    "input": torch.tensor(input_vals, device="cuda", dtype=dtype),
-                    "kernel": torch.tensor(kernel_vals, device="cuda", dtype=dtype),
-                    "output": torch.empty(output_size, device="cuda", dtype=dtype),
+                    "input": torch.tensor(input_vals, device=self.device, dtype=dtype),
+                    "kernel": torch.tensor(kernel_vals, device=self.device, dtype=dtype),
+                    "output": torch.empty(output_size, device=self.device, dtype=dtype),
                     "input_size": input_size,
                     "kernel_size": kernel_size,
                 }
@@ -91,13 +108,13 @@ class Challenge(ChallengeBase):
             output_size = input_size - kernel_size + 1
             test_cases.append(
                 {
-                    "input": torch.empty(input_size, device="cuda", dtype=dtype).uniform_(
+                    "input": torch.empty(input_size, device=self.device, dtype=dtype).uniform_(
                         -10.0, 10.0
                     ),
-                    "kernel": torch.empty(kernel_size, device="cuda", dtype=dtype).uniform_(
+                    "kernel": torch.empty(kernel_size, device=self.device, dtype=dtype).uniform_(
                         -1.0, 1.0
                     ),
-                    "output": torch.empty(output_size, device="cuda", dtype=dtype),
+                    "output": torch.empty(output_size, device=self.device, dtype=dtype),
                     "input_size": input_size,
                     "kernel_size": kernel_size,
                 }
@@ -112,13 +129,13 @@ class Challenge(ChallengeBase):
             output_size = input_size - kernel_size + 1
             test_cases.append(
                 {
-                    "input": torch.empty(input_size, device="cuda", dtype=dtype).uniform_(
+                    "input": torch.empty(input_size, device=self.device, dtype=dtype).uniform_(
                         -1.0, 1.0
                     ),
-                    "kernel": torch.empty(kernel_size, device="cuda", dtype=dtype).uniform_(
+                    "kernel": torch.empty(kernel_size, device=self.device, dtype=dtype).uniform_(
                         -0.1, 0.1
                     ),
-                    "output": torch.empty(output_size, device="cuda", dtype=dtype),
+                    "output": torch.empty(output_size, device=self.device, dtype=dtype),
                     "input_size": input_size,
                     "kernel_size": kernel_size,
                 }
@@ -127,13 +144,12 @@ class Challenge(ChallengeBase):
         return test_cases
 
     def generate_performance_test(self) -> Dict[str, Any]:
-        dtype = torch.float32
         input_size, kernel_size = 1500000, 2047  # Large convolution for performance testing
         output_size = input_size - kernel_size + 1
         return {
-            "input": torch.empty(input_size, device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-            "kernel": torch.empty(kernel_size, device="cuda", dtype=dtype).uniform_(-1.0, 1.0),
-            "output": torch.empty(output_size, device="cuda", dtype=dtype),
+            "input": RandTensor((input_size,), -1.0, 1.0),
+            "kernel": RandTensor((kernel_size,), -1.0, 1.0),
+            "output": OutTensor((output_size,)),
             "input_size": input_size,
             "kernel_size": kernel_size,
         }

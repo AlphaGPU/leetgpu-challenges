@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 
 
-# x, w_q, scales are tensors on GPU
+# x, w_q, scales are tensors on device
 @jax.jit
 def solve(
     x: jax.Array,

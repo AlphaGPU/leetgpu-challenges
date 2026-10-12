@@ -1,0 +1,143 @@
+<p>
+  Given reward and value sequences with shape <code>[B, S]</code>, compute the Generalized Advantage
+  Estimate (GAE) for every batch element and timestep. GAE combines one-step temporal-difference
+  errors with a reverse discounted accumulation, creating a dependency that runs from the end of
+  each sequence toward the beginning.
+</p>
+
+<svg width="700" height="220" viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#7ec8a0"/>
+    </marker>
+  </defs>
+  <rect width="700" height="220" rx="8" fill="#222"/>
+  <text x="350" y="25" text-anchor="middle" fill="#ccc" font-family="monospace" font-size="14">Reverse GAE scan</text>
+  <text x="35" y="75" fill="#8ecae6" font-family="monospace" font-size="13">delta[t]</text>
+  <text x="35" y="155" fill="#f4a261" font-family="monospace" font-size="13">advantage[t]</text>
+  <g fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5">
+    <rect x="150" y="52" width="90" height="38" rx="5"/>
+    <rect x="275" y="52" width="90" height="38" rx="5"/>
+    <rect x="400" y="52" width="90" height="38" rx="5"/>
+    <rect x="525" y="52" width="90" height="38" rx="5"/>
+  </g>
+  <g fill="#4a9eff" font-family="monospace" font-size="13" text-anchor="middle">
+    <text x="195" y="76">delta[0]</text>
+    <text x="320" y="76">delta[1]</text>
+    <text x="445" y="76">delta[2]</text>
+    <text x="570" y="76">delta[3]</text>
+  </g>
+  <g fill="#4b2e22" stroke="#e76f51" stroke-width="1.5">
+    <rect x="150" y="132" width="90" height="38" rx="5"/>
+    <rect x="275" y="132" width="90" height="38" rx="5"/>
+    <rect x="400" y="132" width="90" height="38" rx="5"/>
+    <rect x="525" y="132" width="90" height="38" rx="5"/>
+  </g>
+  <g fill="#f4a261" font-family="monospace" font-size="13" text-anchor="middle">
+    <text x="195" y="156">A[0]</text>
+    <text x="320" y="156">A[1]</text>
+    <text x="445" y="156">A[2]</text>
+    <text x="570" y="156">A[3]</text>
+  </g>
+  <g stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#arrow)">
+    <line x1="195" y1="90" x2="195" y2="130"/>
+    <line x1="320" y1="90" x2="320" y2="130"/>
+    <line x1="445" y1="90" x2="445" y2="130"/>
+    <line x1="570" y1="90" x2="570" y2="130"/>
+    <line x1="525" y1="151" x2="490" y2="151"/>
+    <line x1="400" y1="151" x2="365" y2="151"/>
+    <line x1="275" y1="151" x2="240" y2="151"/>
+  </g>
+  <text x="508" y="143" text-anchor="middle" fill="#7ec8a0" font-family="monospace" font-size="10">carry</text>
+  <text x="383" y="143" text-anchor="middle" fill="#7ec8a0" font-family="monospace" font-size="10">carry</text>
+  <text x="258" y="143" text-anchor="middle" fill="#7ec8a0" font-family="monospace" font-size="10">carry</text>
+  <line x1="650" y1="151" x2="620" y2="151" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="650" y="143" text-anchor="middle" fill="#aaa" font-family="monospace" font-size="10">A[S]=0</text>
+  <text x="350" y="202" text-anchor="middle" fill="#aaa" font-family="monospace" font-size="12">A[t] = delta[t] + (gamma × lambda) × A[t+1]</text>
+</svg>
+
+<h2>How GAE Is Computed</h2>
+<p>
+  The calculation has two stages. First, compute the one-step temporal-difference error at every
+  position. The value after the final position is defined as zero:
+</p>
+
+\[
+ \widetilde{V}_{b,t+1} =
+\begin{cases}
+V_{b,t+1}, & t < S - 1 \\
+0, & t = S - 1
+\end{cases}
+\qquad
+\delta_{b,t} = r_{b,t} + \gamma \widetilde{V}_{b,t+1} - V_{b,t}
+\]
+
+<p>
+  Next, let <code>c = gamma &times; lambda</code>. The advantage at position <code>t</code> is the
+  current TD error plus the decayed advantage from the next position:
+</p>
+
+\[
+A_{b,S} = 0, \qquad A_{b,S-1} = \delta_{b,S-1}, \qquad
+A_{b,t} = \delta_{b,t} + c A_{b,t+1} \quad \text{for } t = S-2, S-3, \ldots, 0
+\]
+
+<p>
+  Therefore, implementations can compute all <code>delta</code> values in parallel, then perform a
+  reverse scan over the sequence using the recurrence above. For long sequences, the reverse scan
+  can be split into blocks: each block computes its local scan, then receives the decayed carry from
+  the block to its right.
+</p>
+
+<p>For the example below, <code>gamma</code> = 0.9 and <code>lambda</code> = 0.5, so
+<code>c</code> = 0.45:</p>
+
+\[
+\delta = \begin{bmatrix} 1.4 & 2.35 & 3.3 & 2.0 \end{bmatrix}
+\]
+\[
+A_3 = 2.0, \quad
+A_2 = 3.3 + 0.45(2.0) = 4.2, \quad
+A_1 = 2.35 + 0.45(4.2) = 4.24, \quad
+A_0 = 1.4 + 0.45(4.24) = 3.308
+\]
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement <code>solve(rewards, values, advantages, gamma, lam, B, S)</code> with the signature unchanged</li>
+  <li>Write the result into the preallocated <code>advantages</code> tensor</li>
+  <li>Use only native features of the selected framework; external libraries are not permitted</li>
+  <li>For the final timestep, use a bootstrap value of zero</li>
+  <li>Use float32 arithmetic for all tensors</li>
+  <li>Every sequence terminates at <code>S</code>; padding, per-token terminal flags, and masks are outside the scope of this challenge</li>
+</ul>
+
+<h2>Examples</h2>
+<p>For <code>B</code> = 1, <code>S</code> = 4, <code>gamma</code> = 0.9, and <code>lambda</code> = 0.5:</p>
+
+\[
+\text{rewards} = \begin{bmatrix} 1.0 & 2.0 & 3.0 & 4.0 \end{bmatrix}, \quad
+\text{values} = \begin{bmatrix} 0.5 & 1.0 & 1.5 & 2.0 \end{bmatrix}
+\]
+\[
+\text{advantages} = \begin{bmatrix} 3.308 & 4.240 & 4.200 & 2.000 \end{bmatrix}
+\]
+
+<p>The final timestep uses <code>next_value</code> = 0, so its temporal-difference error is
+<code>4.0 - 2.0 = 2.0</code>. Each earlier advantage includes the discounted contribution from later
+timesteps.</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 256</li>
+  <li>1 &le; <code>S</code> &le; 65,536</li>
+  <li><code>rewards</code>, <code>values</code>, and <code>advantages</code> have shape <code>[B, S]</code></li>
+  <li>All tensors contain 32-bit floating point values</li>
+  <li><code>gamma</code> and <code>lambda</code> are in the range [0, 1]</li>
+  <li>Performance is measured with <code>B</code> = 64, <code>S</code> = 4,096</li>
+</ul>
+
+<h2>Reference</h2>
+<p>
+  <a href="https://arxiv.org/abs/1506.02438">High-Dimensional Continuous Control Using Generalized Advantage Estimation, Schulman et al. (2015)</a>
+</p>

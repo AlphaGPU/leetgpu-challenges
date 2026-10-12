@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Parallel Merge",
-            atol=0.0,
-            rtol=0.0,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "Parallel Merge"
+    atol = 0.0
+    rtol = 0.0
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -29,7 +26,6 @@ class Challenge(ChallengeBase):
         assert A.dtype == torch.float32
         assert B.dtype == torch.float32
         assert C.dtype == torch.float32
-        assert A.device.type == "cuda"
 
         merged, _ = torch.sort(torch.cat([A, B]))
         C.copy_(merged)
@@ -45,17 +41,17 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        A = torch.tensor([1.0, 3.0, 5.0, 7.0], device="cuda", dtype=dtype)
-        B = torch.tensor([2.0, 4.0, 6.0, 8.0], device="cuda", dtype=dtype)
+        A = torch.tensor([1.0, 3.0, 5.0, 7.0], device=self.device, dtype=dtype)
+        B = torch.tensor([2.0, 4.0, 6.0, 8.0], device=self.device, dtype=dtype)
         M, N = 4, 4
-        C = torch.empty(M + N, device="cuda", dtype=dtype)
+        C = torch.empty(M + N, device=self.device, dtype=dtype)
         return {"A": A, "B": B, "C": C, "M": M, "N": N}
 
     def _make_test(self, M: int, N: int, lo: float = -10.0, hi: float = 10.0) -> Dict[str, Any]:
         dtype = torch.float32
-        A, _ = torch.sort(torch.empty(M, device="cuda", dtype=dtype).uniform_(lo, hi))
-        B, _ = torch.sort(torch.empty(N, device="cuda", dtype=dtype).uniform_(lo, hi))
-        C = torch.empty(M + N, device="cuda", dtype=dtype)
+        A, _ = torch.sort(torch.empty(M, device=self.device, dtype=dtype).uniform_(lo, hi))
+        B, _ = torch.sort(torch.empty(N, device=self.device, dtype=dtype).uniform_(lo, hi))
+        C = torch.empty(M + N, device=self.device, dtype=dtype)
         return {"A": A, "B": B, "C": C, "M": M, "N": N}
 
     def generate_functional_test(self) -> List[Dict[str, Any]]:
@@ -65,27 +61,27 @@ class Challenge(ChallengeBase):
         # Edge cases — tiny sizes
         tests.append(
             {
-                "A": torch.tensor([0.0], device="cuda", dtype=dtype),
-                "B": torch.tensor([1.0], device="cuda", dtype=dtype),
-                "C": torch.empty(2, device="cuda", dtype=dtype),
+                "A": torch.tensor([0.0], device=self.device, dtype=dtype),
+                "B": torch.tensor([1.0], device=self.device, dtype=dtype),
+                "C": torch.empty(2, device=self.device, dtype=dtype),
                 "M": 1,
                 "N": 1,
             }
         )
         tests.append(
             {
-                "A": torch.tensor([2.0], device="cuda", dtype=dtype),
-                "B": torch.tensor([-1.0, 1.0, 3.0], device="cuda", dtype=dtype),
-                "C": torch.empty(4, device="cuda", dtype=dtype),
+                "A": torch.tensor([2.0], device=self.device, dtype=dtype),
+                "B": torch.tensor([-1.0, 1.0, 3.0], device=self.device, dtype=dtype),
+                "C": torch.empty(4, device=self.device, dtype=dtype),
                 "M": 1,
                 "N": 3,
             }
         )
         tests.append(
             {
-                "A": torch.tensor([-1.0, 1.0, 3.0], device="cuda", dtype=dtype),
-                "B": torch.tensor([2.0], device="cuda", dtype=dtype),
-                "C": torch.empty(4, device="cuda", dtype=dtype),
+                "A": torch.tensor([-1.0, 1.0, 3.0], device=self.device, dtype=dtype),
+                "B": torch.tensor([2.0], device=self.device, dtype=dtype),
+                "C": torch.empty(4, device=self.device, dtype=dtype),
                 "M": 3,
                 "N": 1,
             }
@@ -93,9 +89,9 @@ class Challenge(ChallengeBase):
         # All zeros
         tests.append(
             {
-                "A": torch.zeros(2, device="cuda", dtype=dtype),
-                "B": torch.zeros(2, device="cuda", dtype=dtype),
-                "C": torch.empty(4, device="cuda", dtype=dtype),
+                "A": torch.zeros(2, device=self.device, dtype=dtype),
+                "B": torch.zeros(2, device=self.device, dtype=dtype),
+                "C": torch.empty(4, device=self.device, dtype=dtype),
                 "M": 2,
                 "N": 2,
             }
@@ -114,26 +110,30 @@ class Challenge(ChallengeBase):
         tests.append(self._make_test(255, 127))
 
         # A entirely less than B (no interleaving needed)
-        A_low, _ = torch.sort(torch.empty(256, device="cuda", dtype=dtype).uniform_(-20.0, -10.0))
-        B_high, _ = torch.sort(torch.empty(256, device="cuda", dtype=dtype).uniform_(10.0, 20.0))
+        A_low, _ = torch.sort(
+            torch.empty(256, device=self.device, dtype=dtype).uniform_(-20.0, -10.0)
+        )
+        B_high, _ = torch.sort(
+            torch.empty(256, device=self.device, dtype=dtype).uniform_(10.0, 20.0)
+        )
         tests.append(
             {
                 "A": A_low,
                 "B": B_high,
-                "C": torch.empty(512, device="cuda", dtype=dtype),
+                "C": torch.empty(512, device=self.device, dtype=dtype),
                 "M": 256,
                 "N": 256,
             }
         )
 
         # Many duplicate values
-        A_dup = torch.sort(torch.randint(0, 5, (128,), device="cuda").to(dtype=dtype)).values
-        B_dup = torch.sort(torch.randint(0, 5, (128,), device="cuda").to(dtype=dtype)).values
+        A_dup = torch.sort(torch.randint(0, 5, (128,), device=self.device).to(dtype=dtype)).values
+        B_dup = torch.sort(torch.randint(0, 5, (128,), device=self.device).to(dtype=dtype)).values
         tests.append(
             {
                 "A": A_dup,
                 "B": B_dup,
-                "C": torch.empty(256, device="cuda", dtype=dtype),
+                "C": torch.empty(256, device=self.device, dtype=dtype),
                 "M": 128,
                 "N": 128,
             }
@@ -148,7 +148,7 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         M = 25_000_000
         N = 25_000_000
-        A, _ = torch.sort(torch.empty(M, device="cuda", dtype=dtype).uniform_(-1.0, 1.0))
-        B, _ = torch.sort(torch.empty(N, device="cuda", dtype=dtype).uniform_(-1.0, 1.0))
-        C = torch.empty(M + N, device="cuda", dtype=dtype)
+        A, _ = torch.sort(torch.empty(M, device=self.device, dtype=dtype).uniform_(-1.0, 1.0))
+        B, _ = torch.sort(torch.empty(N, device=self.device, dtype=dtype).uniform_(-1.0, 1.0))
+        C = torch.empty(M + N, device=self.device, dtype=dtype)
         return {"A": A, "B": B, "C": C, "M": M, "N": N}

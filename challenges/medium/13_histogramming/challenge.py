@@ -6,10 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="Histogramming", atol=1e-05, rtol=1e-05, num_gpus=1, access_tier="free"
-        )
+    name = "Histogramming"
+    atol = 1e-05
+    rtol = 1e-05
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(self, input: torch.Tensor, histogram: torch.Tensor, N: int, num_bins: int):
         # Validate input types and shapes
@@ -35,8 +36,8 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.int32
-        input = torch.tensor([0, 1, 2, 1, 0], device="cuda", dtype=dtype)
-        histogram = torch.empty(3, device="cuda", dtype=dtype)
+        input = torch.tensor([0, 1, 2, 1, 0], device=self.device, dtype=dtype)
+        histogram = torch.empty(3, device=self.device, dtype=dtype)
         return {
             "input": input,
             "histogram": histogram,
@@ -51,8 +52,8 @@ class Challenge(ChallengeBase):
         # basic_example
         tests.append(
             {
-                "input": torch.tensor([0, 1, 2, 1, 0], device="cuda", dtype=dtype),
-                "histogram": torch.zeros(3, device="cuda", dtype=dtype),
+                "input": torch.tensor([0, 1, 2, 1, 0], device=self.device, dtype=dtype),
+                "histogram": torch.zeros(3, device=self.device, dtype=dtype),
                 "N": 5,
                 "num_bins": 3,
             }
@@ -61,8 +62,8 @@ class Challenge(ChallengeBase):
         # all_same_value
         tests.append(
             {
-                "input": torch.tensor([2] * 16, device="cuda", dtype=dtype),
-                "histogram": torch.zeros(5, device="cuda", dtype=dtype),
+                "input": torch.tensor([2] * 16, device=self.device, dtype=dtype),
+                "histogram": torch.zeros(5, device=self.device, dtype=dtype),
                 "N": 16,
                 "num_bins": 5,
             }
@@ -71,8 +72,8 @@ class Challenge(ChallengeBase):
         # increasing_sequence
         tests.append(
             {
-                "input": torch.randint(0, 4, (32,), device="cuda", dtype=dtype),
-                "histogram": torch.zeros(4, device="cuda", dtype=dtype),
+                "input": torch.randint(0, 4, (32,), device=self.device, dtype=dtype),
+                "histogram": torch.zeros(4, device=self.device, dtype=dtype),
                 "N": 32,
                 "num_bins": 4,
             }
@@ -81,8 +82,8 @@ class Challenge(ChallengeBase):
         # medium_size
         tests.append(
             {
-                "input": torch.randint(0, 10, (1000,), device="cuda", dtype=dtype),
-                "histogram": torch.zeros(10, device="cuda", dtype=dtype),
+                "input": torch.randint(0, 10, (1000,), device=self.device, dtype=dtype),
+                "histogram": torch.zeros(10, device=self.device, dtype=dtype),
                 "N": 1000,
                 "num_bins": 10,
             }
@@ -91,8 +92,8 @@ class Challenge(ChallengeBase):
         # large_multi_block
         tests.append(
             {
-                "input": torch.randint(0, 128, (10000,), device="cuda", dtype=dtype),
-                "histogram": torch.zeros(128, device="cuda", dtype=dtype),
+                "input": torch.randint(0, 128, (10000,), device=self.device, dtype=dtype),
+                "histogram": torch.zeros(128, device=self.device, dtype=dtype),
                 "N": 10000,
                 "num_bins": 128,
             }
@@ -102,8 +103,8 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.int32
-        input = torch.randint(0, 256, (50000000,), device="cuda", dtype=dtype)
-        histogram = torch.zeros(256, device="cuda", dtype=dtype)
+        input = torch.randint(0, 256, (50000000,), device=self.device, dtype=dtype)
+        histogram = torch.zeros(256, device=self.device, dtype=dtype)
         return {
             "input": input,
             "histogram": histogram,

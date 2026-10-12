@@ -6,14 +6,11 @@ from core.challenge_base import ChallengeBase
 
 
 class Challenge(ChallengeBase):
-    def __init__(self):
-        super().__init__(
-            name="INT4 Weight-Only Quantized MatMul",
-            atol=1e-02,
-            rtol=1e-02,
-            num_gpus=1,
-            access_tier="free",
-        )
+    name = "INT4 Weight-Only Quantized MatMul"
+    atol = 0.01
+    rtol = 0.01
+    num_gpus = 1
+    access_tier = "free"
 
     def reference_impl(
         self,
@@ -34,10 +31,6 @@ class Challenge(ChallengeBase):
         assert w_q.dtype == torch.uint8
         assert scales.dtype == torch.float16
         assert y.dtype == torch.float16
-        assert x.device.type == "cuda"
-        assert w_q.device.type == "cuda"
-        assert scales.device.type == "cuda"
-        assert y.device.type == "cuda"
 
         # Unpack INT4 weights from packed uint8 bytes.
         # w_q[n, i] stores two weights: w[n, 2*i] in the high nibble (bits 7:4)
@@ -59,6 +52,25 @@ class Challenge(ChallengeBase):
         # MatMul: x [M, K] @ w_dequant.T [K, N] = y [M, N]
         y.copy_((x.float() @ w_dequant.T).half())
 
+    def reference_impl_jax(self, x, w_q, scales, M, N, K, group_size):
+        import jax.numpy as jnp
+
+        # Unpack INT4 weights from packed uint8 bytes.
+        w_high = ((w_q >> 4) & 0xF).astype(jnp.int32) - 8  # [N, K//2]
+        w_low = (w_q & 0xF).astype(jnp.int32) - 8  # [N, K//2]
+
+        # Interleave high and low nibbles to reconstruct [N, K]
+        w_int = jnp.stack([w_high, w_low], axis=-1).reshape(N, K)  # [N, K]
+
+        # Apply group-wise scales: dequantize each group
+        n_groups = K // group_size
+        w_groups = w_int.reshape(N, n_groups, group_size).astype(jnp.float32)
+        scales_f = scales.astype(jnp.float32)[..., None]  # [N, n_groups, 1]
+        w_dequant = (w_groups * scales_f).reshape(N, K)  # [N, K]
+
+        # MatMul: x [M, K] @ w_dequant.T [K, N] = y [M, N]
+        return (x.astype(jnp.float32) @ w_dequant.T).astype(jnp.float16)
+
     def get_solve_signature(self) -> Dict[str, tuple]:
         return {
             "x": (ctypes.POINTER(ctypes.c_uint16), "in"),
@@ -72,7 +84,7 @@ class Challenge(ChallengeBase):
         }
 
     def _make_test_case(self, M: int, N: int, K: int, group_size: int, zero_x: bool = False):
-        device = "cuda"
+        device = self.device
         if zero_x:
             x = torch.zeros(M, K, device=device, dtype=torch.float16)
         else:
@@ -94,7 +106,7 @@ class Challenge(ChallengeBase):
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
-        device = "cuda"
+        device = self.device
         M, N, K, group_size = 2, 4, 4, 2
 
         x = torch.tensor(

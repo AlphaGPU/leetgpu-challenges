@@ -4,8 +4,8 @@ from std.memory import UnsafePointer
 # grid, result are device pointers
 @export
 def solve(
-    grid: UnsafePointer[Int32, MutExternalOrigin],
-    result: UnsafePointer[Int32, MutExternalOrigin],
+    grid: UnsafePointer[Int32, MutAnyOrigin],
+    result: UnsafePointer[Int32, MutAnyOrigin],
     rows: Int32,
     cols: Int32,
     start_row: Int32,
