@@ -1,0 +1,55 @@
+<p>
+  Implement a GPU program that applies the orthonormal Walsh&ndash;Hadamard transform to every row
+  of a batched input matrix. Given an input tensor of shape <code>B &times; N</code>, where
+  <code>N</code> is a power of two, compute the transform of each row independently and write the
+  result to the output tensor. This kernel appears in modern LLM inference pipelines (e.g.
+  QuaRot, QuIP#), where activations are rotated by a Hadamard matrix before low-bit
+  quantization to spread out outlier values.
+</p>
+
+<p>
+  For a single row \(x \in \mathbb{R}^N\) the transform is \(y = \frac{1}{\sqrt{N}} H_N x\),
+  where \(H_N\) is the Hadamard matrix defined recursively by
+  \(H_1 = [1]\) and
+  \[
+  H_{2n} = \begin{bmatrix} H_n & H_n \\ H_n & -H_n \end{bmatrix}.
+  \]
+  The fast Walsh&ndash;Hadamard transform computes \(y\) in \(O(N \log N)\) work using a
+  butterfly schedule: for each stage \(h \in \{1, 2, 4, \ldots, N/2\}\) and each pair of
+  positions \((j, j + h)\) within the row, replace \((x_j, x_{j+h})\) with \((x_j + x_{j+h},
+  x_j - x_{j+h})\). After all stages, divide the row by \(\sqrt{N}\) for the orthonormal
+  scaling.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the <code>output</code> tensor</li>
+  <li>The kernel must be entirely GPU-resident&mdash;no host-side fallback</li>
+  <li><code>N</code> is guaranteed to be a power of two</li>
+</ul>
+
+<h2>Example</h2>
+<pre>
+Input:  B = 1, N = 4
+        input = [1.0, 2.0, 3.0, 4.0]
+
+Output: output = [5.0, -1.0, -2.0, 0.0]
+</pre>
+
+<p>
+  Each transform stage operates in place on the current row:
+  stage \(h = 1\) maps \([1, 2, 3, 4] \to [3, -1, 7, -1]\); stage \(h = 2\) maps
+  \([3, -1, 7, -1] \to [10, -2, -4, 0]\). Dividing by \(\sqrt{4} = 2\) yields the final
+  output above.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 16,384</li>
+  <li>1 &le; <code>N</code> &le; 4,096 and <code>N</code> is a power of two</li>
+  <li>All values are 32-bit floating point numbers</li>
+  <li>Absolute error &le; 1e-4 and relative error &le; 1e-4</li>
+  <li>Performance is measured with <code>B</code> = 8,192, <code>N</code> = 4,096</li>
+</ul>
