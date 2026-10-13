@@ -1,0 +1,60 @@
+<p>
+  Implement the expert computation of a Mixture-of-Experts (MoE) feed-forward layer, as used in
+  Mixtral, DeepSeek and Qwen-MoE. Each of the <code>T</code> tokens in <code>x</code>
+  (<code>T &times; H</code>) has already been routed to <code>K</code> distinct experts: expert
+  indices are in <code>topk_ids</code> (<code>T &times; K</code>, 32-bit int) and combine weights in
+  <code>topk_weights</code> (<code>T &times; K</code>). Every expert <code>e</code> is a SwiGLU MLP
+  with weights <code>w_gate[e]</code>, <code>w_up[e]</code> (<code>H &times; I</code>) and
+  <code>w_down[e]</code> (<code>I &times; H</code>). Compute
+</p>
+<p>
+  \[
+  \text{output}_t = \sum_{k=0}^{K-1} \text{topk_weights}_{t,k}\,
+  \Big( \text{SiLU}(x_t W^{gate}_{e}) \odot (x_t W^{up}_{e}) \Big) W^{down}_{e},
+  \qquad e = \text{topk_ids}_{t,k}
+  \]
+</p>
+<p>
+  where \(\text{SiLU}(z) = z / (1 + e^{-z})\). All floating-point tensors are 32-bit. A fast
+  solution groups tokens by expert and fuses gate/up GEMMs, the SwiGLU activation, the down
+  projection and the weighted scatter-combine instead of running a dense layer per expert.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Do not change the function signature.</li>
+  <li>Do not use external libraries beyond what is available in the starter.</li>
+  <li>Write the result to <code>output</code>.</li>
+  <li>Use <code>topk_weights</code> exactly as given (they are not guaranteed to be normalized or
+      positive).</li>
+  <li>The <code>K</code> expert ids of a token are distinct; some experts may receive no tokens.</li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+  Input: <code>T</code> = 2, <code>H</code> = 2, <code>I</code> = 2, <code>E</code> = 2,
+  <code>K</code> = 1
+  \[
+  x = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}, \quad
+  \text{topk_ids} = \begin{bmatrix} 0 \\ 1 \end{bmatrix}, \quad
+  \text{topk_weights} = \begin{bmatrix} 1.0 \\ 0.5 \end{bmatrix}
+  \]
+  \[
+  W^{gate}_0 = W^{gate}_1 = W^{down}_0 = W^{down}_1 = W^{up}_0 = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}, \quad
+  W^{up}_1 = \begin{bmatrix} 2 & 0 \\ 0 & 2 \end{bmatrix}
+  \]
+  Output:
+  \[
+  \text{output} = \begin{bmatrix} 0.7311 & 0 \\ 0 & 0.7311 \end{bmatrix}
+  \]
+  Token 0: \(\text{SiLU}(1) \cdot 1 = 0.7311\). Token 1: \(0.5 \cdot \text{SiLU}(1) \cdot 2 = 0.7311\).
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>T</code> &le; 8,192</li>
+  <li>1 &le; <code>H</code>, <code>I</code> &le; 4,096</li>
+  <li>1 &le; <code>K</code> &le; <code>E</code> &le; 64</li>
+  <li>0 &le; <code>topk_ids[t][k]</code> &lt; <code>E</code>, distinct within a row</li>
+  <li>Performance is measured with <code>T</code> = 4,096, <code>H</code> = 1,024, <code>I</code> = 1,408, <code>E</code> = 16, <code>K</code> = 2</li>
+</ul>
