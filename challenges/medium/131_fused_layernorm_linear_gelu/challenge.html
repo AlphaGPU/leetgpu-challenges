@@ -1,0 +1,54 @@
+<p>
+  Implement the first half of a transformer MLP block as a single fused operation: layer
+  normalization of each row of <code>x</code> (<code>M &times; K</code>), followed by a linear
+  projection with <code>W</code> (<code>K &times; N</code>) and <code>bias</code>, followed by the
+  exact (erf-based) GELU activation. All tensors are 32-bit floats.
+</p>
+<p>
+  \[
+  \hat{x}_{i} = \frac{x_{i} - \mu_i}{\sqrt{\sigma_i^2 + \varepsilon}} \odot \gamma + \beta, \qquad
+  h_i = \hat{x}_i W + \text{bias}, \qquad
+  y_i = \tfrac{1}{2}\, h_i \Big(1 + \text{erf}\big(h_i / \sqrt{2}\big)\Big)
+  \]
+</p>
+<p>
+  where \(\mu_i\) and \(\sigma_i^2\) are the mean and (biased, divide-by-<code>K</code>) variance of
+  row <code>i</code>. A fast solution computes the row statistics once and applies the
+  normalization while loading <code>x</code> tiles into the GEMM, with bias and GELU in the
+  epilogue, so neither the normalized activations nor the pre-activation are written to memory.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Do not change the function signature.</li>
+  <li>Do not use external libraries beyond what is available in the starter.</li>
+  <li>Write the result to <code>y</code>.</li>
+  <li>Use the exact erf-based GELU, not the tanh approximation.</li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+  Input: <code>M</code> = 2, <code>K</code> = 2, <code>N</code> = 2, <code>eps</code> = 1e-5,
+  \(\gamma = [1, 1]\), \(\beta = [0, 0]\), \(\text{bias} = [0, 1]\)
+  \[
+  x = \begin{bmatrix} 1 & 3 \\ 2 & 2 \end{bmatrix}, \quad
+  W = \begin{bmatrix} 1 & -1 \\ 0 & 2 \end{bmatrix}
+  \]
+  Normalized rows are \([-1, 1]\) and \([0, 0]\), so
+  \[
+  h = \begin{bmatrix} -1 & 4 \\ 0 & 1 \end{bmatrix}
+  \]
+  Output:
+  \[
+  y = \begin{bmatrix} -0.1587 & 3.9999 \\ 0.0 & 0.8413 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code> &le; 8,192</li>
+  <li>1 &le; <code>K</code>, <code>N</code> &le; 8,192</li>
+  <li>0 &lt; <code>eps</code> &le; 1</li>
+  <li>Input values may carry a large common offset (e.g. around -1,000)</li>
+  <li>Performance is measured with <code>M</code> = 4,096, <code>K</code> = 4,096, <code>N</code> = 4,096</li>
+</ul>

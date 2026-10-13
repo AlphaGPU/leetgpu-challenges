@@ -1,0 +1,54 @@
+<p>
+  Compute the mean cross-entropy loss of a language-model output head <em>without</em>
+  materializing the full logits matrix. Given hidden states <code>X</code> of shape
+  <code>N &times; D</code>, an output projection <code>W</code> of shape <code>V &times; D</code>
+  (one row per vocabulary token) and integer class targets <code>targets</code> of length
+  <code>N</code>, compute
+</p>
+<p>
+  \[
+  z_{i,v} = \sum_{d} X_{i,d} W_{v,d}, \qquad
+  \text{loss} = \frac{1}{N} \sum_{i=0}^{N-1} \Big( \log \sum_{v=0}^{V-1} e^{z_{i,v}} - z_{i,\,\text{targets}_i} \Big)
+  \]
+</p>
+<p>
+  All tensors are 32-bit floats except <code>targets</code>, which is 32-bit integer. With a
+  realistic vocabulary the <code>N &times; V</code> logits matrix is far larger than the inputs,
+  so a fast solution fuses the matmul with an online (streaming) log-sum-exp over vocabulary
+  tiles &mdash; the trick behind Liger/Apple "cut cross-entropy" kernels.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Do not change the function signature.</li>
+  <li>Do not use external libraries beyond what is available in the starter.</li>
+  <li>Write the scalar mean loss to <code>loss[0]</code>.</li>
+  <li>The computation must be numerically stable for large logits (subtract the row maximum).</li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+  Input:
+  \[
+  X = \begin{bmatrix} 1 & 0 \\ 0 & 2 \end{bmatrix}, \quad
+  W = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1 \end{bmatrix}, \quad
+  \text{targets} = \begin{bmatrix} 0 & 2 \end{bmatrix}
+  \]
+  Logits:
+  \[
+  z = \begin{bmatrix} 1 & 0 & 1 \\ 0 & 2 & 2 \end{bmatrix}
+  \]
+  Row losses: \(\log(2e + 1) - 1 \approx 0.8620\) and \(\log(1 + 2e^2) - 2 \approx 0.7586\).
+  <br>
+  Output: <code>loss</code> = 0.8103
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 8,192</li>
+  <li>1 &le; <code>D</code> &le; 4,096</li>
+  <li>2 &le; <code>V</code> &le; 65,536</li>
+  <li>0 &le; <code>targets[i]</code> &lt; <code>V</code></li>
+  <li>Logit magnitudes may reach several hundred</li>
+  <li>Performance is measured with <code>N</code> = 4,096, <code>D</code> = 1,024, <code>V</code> = 32,768</li>
+</ul>
