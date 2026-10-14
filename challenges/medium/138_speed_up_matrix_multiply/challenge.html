@@ -1,0 +1,38 @@
+<p>
+  Multiply row-major matrices <code>A</code> (<code>M</code> &times; <code>K</code>) and <code>B</code> (<code>K</code> &times; <code>N</code>) and store the product in <code>C</code> (<code>M</code> &times; <code>N</code>). All values are 32-bit floating point numbers.
+</p>
+<p>
+  <strong>Your task: make it faster.</strong> The starter code is a deliberately slow but
+  <em>correct</em> CUDA kernel. Find the bottleneck, fix it, and reach at least a
+  <strong>2.5&times; speedup</strong> over the starter kernel on the performance test (measured on
+  the same GPU). Your solution must still pass every correctness test.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The result must be stored in <code>C</code></li>
+  <li>The target is 2.5&times; the runtime of the provided CUDA starter kernel on the performance test</li>
+</ul>
+
+<h2>Example:</h2>
+<p>
+  Input (<code>M</code> = 2, <code>N</code> = 3, <code>K</code> = 2):
+  \[
+  A = \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}, \quad
+  B = \begin{bmatrix} 5 & 6 & 7 \\ 8 & 9 & 10 \end{bmatrix}
+  \]
+  Output:
+  \[
+  C = \begin{bmatrix} 21 & 24 & 27 \\ 47 & 54 & 61 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code>, <code>N</code>, <code>K</code> &le; 4,096</li>
+  <li>Input values are in the range [-1, 1]</li>
+  <li>Target speedup: 2.5&times; over the starter kernel</li>
+  <li>Performance is measured with <code>M</code> = 4,096, <code>N</code> = 4,096, <code>K</code> = 4,096</li>
+</ul>

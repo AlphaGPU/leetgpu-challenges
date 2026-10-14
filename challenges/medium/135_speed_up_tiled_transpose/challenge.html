@@ -1,0 +1,37 @@
+<p>
+  Transpose a row-major matrix <code>input</code> of shape <code>rows</code> &times; <code>cols</code> into <code>output</code> of shape <code>cols</code> &times; <code>rows</code>, so that <code>output[j][i] = input[i][j]</code>. All values are 32-bit floating point numbers.
+</p>
+<p>
+  <strong>Your task: make it faster.</strong> The starter code is a deliberately slow but
+  <em>correct</em> CUDA kernel. Find the bottleneck, fix it, and reach at least a
+  <strong>1.5&times; speedup</strong> over the starter kernel on the performance test (measured on
+  the same GPU). Your solution must still pass every correctness test.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>External libraries are not permitted</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The result must be stored in <code>output</code> (row-major, <code>cols</code> &times; <code>rows</code>)</li>
+  <li>The target is 1.5&times; the runtime of the provided CUDA starter kernel on the performance test</li>
+</ul>
+
+<h2>Example:</h2>
+<p>
+  Input (<code>rows</code> = 2, <code>cols</code> = 3):
+  \[
+  \text{input} = \begin{bmatrix} 1 & 2 & 3 \\ 4 & 5 & 6 \end{bmatrix}
+  \]
+  Output:
+  \[
+  \text{output} = \begin{bmatrix} 1 & 4 \\ 2 & 5 \\ 3 & 6 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>rows</code>, <code>cols</code> &le; 8,192</li>
+  <li>Input values are in the range [-10, 10]</li>
+  <li>Target speedup: 1.5&times; over the starter kernel</li>
+  <li>Performance is measured with <code>rows</code> = 8,192, <code>cols</code> = 8,192</li>
+</ul>

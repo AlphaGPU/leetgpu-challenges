@@ -1,0 +1,291 @@
+{
+  "schema_version": 1,
+  "id": "kernel-interview",
+  "title": "Kernel Interview Track",
+  "status": "draft",
+  "enabled": false,
+  "entitlement": "interview_pass",
+  "pricing": {
+    "placeholder": true,
+    "note": "Price is Kunal's call; frontend/infra read from a flag, nothing in Stripe."
+  },
+  "description": "An ordered path that prepares you for GPU kernel interviews: fundamentals, 'why is this slow?' diagnosis rounds, and timed mocks.",
+  "modules": [
+    {
+      "id": "memory-coalescing",
+      "order": 1,
+      "title": "Memory coalescing",
+      "objective": "Map threads to addresses so each warp issues full 128-byte transactions; reason about bandwidth-bound kernels.",
+      "interview_tip": "Open with bytes moved vs. peak bandwidth: if you are far from peak in an elementwise kernel, check access patterns before anything else.",
+      "challenges": [
+        {
+          "id": 1,
+          "slug": "vector-addition",
+          "title": "Vector Addition",
+          "role": "core"
+        },
+        {
+          "id": 31,
+          "slug": "matrix-copy",
+          "title": "Matrix Copy",
+          "role": "core"
+        },
+        {
+          "id": 3,
+          "slug": "matrix-transpose",
+          "title": "Matrix Transpose",
+          "role": "core"
+        },
+        {
+          "id": 63,
+          "slug": "interleave-arrays",
+          "title": "Interleave Arrays",
+          "role": "core"
+        },
+        {
+          "id": 134,
+          "slug": "speed-up-column-scale",
+          "title": "Speed Up Column Scale",
+          "role": "slow_kernel",
+          "target_speedup": 4.0,
+          "bottleneck": "uncoalesced_loads"
+        }
+      ]
+    },
+    {
+      "id": "shared-memory-tiling",
+      "order": 2,
+      "title": "Shared memory and tiling",
+      "objective": "Stage reused data in shared memory, handle halos and tile tails, and avoid bank conflicts.",
+      "interview_tip": "Say the bank rule out loud (32 banks x 4 bytes) and show the +1 padding fix; interviewers look for that reflex.",
+      "challenges": [
+        {
+          "id": 9,
+          "slug": "1d-convolution",
+          "title": "1D Convolution",
+          "role": "core"
+        },
+        {
+          "id": 10,
+          "slug": "2d-convolution",
+          "title": "2D Convolution",
+          "role": "core"
+        },
+        {
+          "id": 28,
+          "slug": "gaussian-blur",
+          "title": "Gaussian Blur",
+          "role": "core"
+        },
+        {
+          "id": 69,
+          "slug": "2d-jacobi-stencil",
+          "title": "2D Jacobi Stencil",
+          "role": "core"
+        },
+        {
+          "id": 135,
+          "slug": "speed-up-tiled-transpose",
+          "title": "Speed Up Tiled Transpose",
+          "role": "slow_kernel",
+          "target_speedup": 1.5,
+          "bottleneck": "bank_conflicts"
+        }
+      ]
+    },
+    {
+      "id": "reductions-warp-primitives",
+      "order": 3,
+      "title": "Reductions and warp primitives",
+      "objective": "Write divergence-free tree reductions, use __shfl_down_sync, and choose between atomics and privatization.",
+      "interview_tip": "Walk through the reduction ladder (interleaved -> sequential -> first-add-during-load -> warp shuffle) and name what each step fixes.",
+      "challenges": [
+        {
+          "id": 4,
+          "slug": "reduction",
+          "title": "Reduction",
+          "role": "core"
+        },
+        {
+          "id": 17,
+          "slug": "dot-product",
+          "title": "Dot Product",
+          "role": "core"
+        },
+        {
+          "id": 5,
+          "slug": "softmax",
+          "title": "Softmax",
+          "role": "core"
+        },
+        {
+          "id": 16,
+          "slug": "prefix-sum",
+          "title": "Prefix Sum",
+          "role": "core"
+        },
+        {
+          "id": 13,
+          "slug": "histogramming",
+          "title": "Histogramming",
+          "role": "core"
+        },
+        {
+          "id": 125,
+          "slug": "scatter-add",
+          "title": "Scatter Add",
+          "role": "core"
+        },
+        {
+          "id": 136,
+          "slug": "speed-up-row-sum",
+          "title": "Speed Up Row Sum",
+          "role": "slow_kernel",
+          "target_speedup": 3.0,
+          "bottleneck": "warp_divergence"
+        },
+        {
+          "id": 139,
+          "slug": "speed-up-histogram",
+          "title": "Speed Up Histogram",
+          "role": "slow_kernel",
+          "target_speedup": 4.0,
+          "bottleneck": "atomic_contention"
+        }
+      ]
+    },
+    {
+      "id": "occupancy",
+      "order": 4,
+      "title": "Occupancy and latency hiding",
+      "objective": "Size blocks, registers and shared memory so enough warps are resident to hide memory latency.",
+      "interview_tip": "Do the occupancy arithmetic per SM (threads, registers, shared memory) before tuning; say which resource is the limiter.",
+      "challenges": [
+        {
+          "id": 50,
+          "slug": "rms-normalization",
+          "title": "RMS Normalization",
+          "role": "core"
+        },
+        {
+          "id": 113,
+          "slug": "layer-normalization",
+          "title": "Layer Normalization",
+          "role": "core"
+        },
+        {
+          "id": 83,
+          "slug": "fused-residual-add-and-rms-norm",
+          "title": "Fused Residual Add and RMS Norm",
+          "role": "core"
+        },
+        {
+          "id": 40,
+          "slug": "batch-normalization",
+          "title": "Batch Normalization",
+          "role": "core"
+        },
+        {
+          "id": 137,
+          "slug": "speed-up-segment-reverse",
+          "title": "Speed Up Segment Reverse",
+          "role": "slow_kernel",
+          "target_speedup": 4.0,
+          "bottleneck": "low_occupancy"
+        }
+      ]
+    },
+    {
+      "id": "matmul",
+      "order": 5,
+      "title": "Matrix multiplication",
+      "objective": "Go from naive to tiled to register-blocked GEMM and explain arithmetic intensity and the roofline.",
+      "interview_tip": "Quote arithmetic intensity for naive vs. tiled GEMM and state where you sit on the roofline; numbers beat adjectives.",
+      "challenges": [
+        {
+          "id": 2,
+          "slug": "matrix-multiplication",
+          "title": "Matrix Multiplication",
+          "role": "core"
+        },
+        {
+          "id": 22,
+          "slug": "general-matrix-multiplication-gemm",
+          "title": "General Matrix Multiplication (GEMM)",
+          "role": "core"
+        },
+        {
+          "id": 30,
+          "slug": "batched-matrix-multiplication",
+          "title": "Batched Matrix Multiplication",
+          "role": "core"
+        },
+        {
+          "id": 57,
+          "slug": "fp16-batched-matrix-multiplication",
+          "title": "FP16 Batched Matrix Multiplication",
+          "role": "core"
+        },
+        {
+          "id": 99,
+          "slug": "grouped-gemm",
+          "title": "Grouped GEMM",
+          "role": "core"
+        },
+        {
+          "id": 138,
+          "slug": "speed-up-matrix-multiply",
+          "title": "Speed Up Matrix Multiply",
+          "role": "slow_kernel",
+          "target_speedup": 2.5,
+          "bottleneck": "missing_tiling"
+        }
+      ]
+    },
+    {
+      "id": "attention-inference",
+      "order": 6,
+      "title": "Attention and inference kernels",
+      "objective": "Fuse softmax with matmuls (online softmax), handle masks, GQA, paged and split KV caches.",
+      "interview_tip": "Explain online softmax (running max and sum) and why FlashAttention is IO-bound-aware; most inference interviews end here.",
+      "challenges": [
+        {
+          "id": 6,
+          "slug": "softmax-attention",
+          "title": "Softmax Attention",
+          "role": "core"
+        },
+        {
+          "id": 53,
+          "slug": "causal-self-attention",
+          "title": "Causal Self-Attention",
+          "role": "core"
+        },
+        {
+          "id": 80,
+          "slug": "grouped-query-attention",
+          "title": "Grouped Query Attention",
+          "role": "core"
+        },
+        {
+          "id": 86,
+          "slug": "paged-kv-cache-attention",
+          "title": "Paged KV-Cache Attention",
+          "role": "core"
+        },
+        {
+          "id": 128,
+          "slug": "split-kv-attention-reduction",
+          "title": "Split-KV Attention Reduction",
+          "role": "core"
+        },
+        {
+          "id": 115,
+          "slug": "fused-qkv-projection-with-rope-and-kv-cache-update",
+          "title": "Fused QKV Projection with RoPE and KV Cache Update",
+          "role": "core"
+        }
+      ]
+    }
+  ]
+}
