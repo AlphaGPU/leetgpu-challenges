@@ -11,6 +11,7 @@ class Challenge(ChallengeBase):
     rtol = 1e-04
     num_gpus = 1
     access_tier = "premium"
+    listed = False
     track = "kernel-interview"
     problem_type = "slow_kernel"
     bottleneck = "warp_divergence"
