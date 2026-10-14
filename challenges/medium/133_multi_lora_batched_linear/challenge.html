@@ -1,0 +1,53 @@
+<p>
+  Implement the batched multi-adapter LoRA projection used by multi-tenant LLM servers
+  (Punica / S-LoRA, vLLM multi-LoRA). A batch of <code>T</code> tokens <code>x</code>
+  (<code>T &times; K</code>) shares one base weight <code>W</code> (<code>K &times; N</code>),
+  but each token may belong to a different fine-tuned adapter selected from a pool of
+  <code>L</code> low-rank adapters <code>A</code> (<code>L &times; K &times; R</code>) and
+  <code>B</code> (<code>L &times; R &times; N</code>). With <code>a = adapter_ids[t]</code>:
+</p>
+<p>
+  \[
+  y_t = x_t W + \begin{cases} \text{scale} \cdot (x_t A_a) B_a & a \ge 0 \\ 0 & a = -1 \end{cases}
+  \]
+</p>
+<p>
+  Tokens are <em>not</em> grouped by adapter. All tensors are 32-bit floats except
+  <code>adapter_ids</code>, which is 32-bit integer.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Do not change the function signature.</li>
+  <li>Do not use external libraries beyond what is available in the starter.</li>
+  <li>Write the result to <code>y</code> (shape <code>T &times; N</code>).</li>
+  <li>Tokens with <code>adapter_ids[t]</code> = -1 use only the base weight.</li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+  Input: <code>T</code> = 3, <code>K</code> = 2, <code>N</code> = 2, <code>R</code> = 1,
+  <code>L</code> = 2, <code>scale</code> = 0.5, <code>adapter_ids</code> = [0, 1, -1]
+  \[
+  x = \begin{bmatrix} 1 & 2 \\ 3 & 4 \\ 1 & 1 \end{bmatrix}, \quad
+  W = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}, \quad
+  A_0 = \begin{bmatrix} 1 \\ 0 \end{bmatrix}, \quad
+  A_1 = \begin{bmatrix} 0 \\ 1 \end{bmatrix}, \quad
+  B_0 = \begin{bmatrix} 1 & 1 \end{bmatrix}, \quad
+  B_1 = \begin{bmatrix} 1 & -1 \end{bmatrix}
+  \]
+  Output:
+  \[
+  y = \begin{bmatrix} 1.5 & 2.5 \\ 5.0 & 2.0 \\ 1.0 & 1.0 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>T</code> &le; 4,096</li>
+  <li>1 &le; <code>K</code>, <code>N</code> &le; 8,192</li>
+  <li>1 &le; <code>R</code> &le; 64</li>
+  <li>1 &le; <code>L</code> &le; 64</li>
+  <li>-1 &le; <code>adapter_ids[t]</code> &lt; <code>L</code></li>
+  <li>Performance is measured with <code>T</code> = 1,024, <code>K</code> = 4,096, <code>N</code> = 4,096, <code>R</code> = 16, <code>L</code> = 8</li>
+</ul>
