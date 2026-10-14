@@ -1,0 +1,68 @@
+<p>
+  Implement the verification attention step of tree-based speculative decoding (Medusa, EAGLE,
+  SpecInfer). A draft model proposes a <em>tree</em> of <code>T</code> candidate tokens that
+  continue a context of <code>P</code> tokens whose keys and values are already in
+  <code>K_cache</code> and <code>V_cache</code> (shape <code>P &times; H &times; D</code>). The
+  target model scores every tree node in a single forward pass: node <code>i</code> (query
+  <code>Q[i]</code>, key <code>K_tree[i]</code>, value <code>V_tree[i]</code>) attends to all
+  <code>P</code> context tokens plus every node on its own root-to-node path, and to nothing else.
+</p>
+<p>
+  The tree is given by <code>parents</code>: <code>parents[i]</code> is the index of node
+  <code>i</code>'s parent, with <code>parents[i] &lt; i</code>, or <code>-1</code> if node
+  <code>i</code> directly follows the context. Let \(\mathcal{A}(i)\) be node <code>i</code>
+  together with all of its ancestors. For each head <code>h</code>:
+</p>
+<p>
+  \[
+  s_{i,j} = \frac{Q_{i,h} \cdot K_{j,h}}{\sqrt{D}}, \qquad
+  \text{output}_{i,h} = \sum_{j \in \text{ctx} \,\cup\, \mathcal{A}(i)}
+  \frac{e^{s_{i,j}}}{\sum_{j' \in \text{ctx} \,\cup\, \mathcal{A}(i)} e^{s_{i,j'}}} \, V_{j,h}
+  \]
+</p>
+<p>
+  where context keys/values come from the caches and tree keys/values from
+  <code>K_tree</code>/<code>V_tree</code>. All tensors are 32-bit floats except
+  <code>parents</code>, which is 32-bit integer.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Do not change the function signature.</li>
+  <li>Do not use external libraries beyond what is available in the starter.</li>
+  <li>Write the result to <code>output</code> (shape <code>T &times; H &times; D</code>).</li>
+  <li>The softmax must be numerically stable for large scores.</li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+  Input: <code>P</code> = 1, <code>T</code> = 3, <code>H</code> = 1, <code>D</code> = 2,
+  <code>parents</code> = [-1, 0, 0] (node 0 follows the context; nodes 1 and 2 are siblings
+  under node 0)
+  \[
+  Q = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1 \end{bmatrix}, \quad
+  K_{\text{cache}} = \begin{bmatrix} 1 & 0 \end{bmatrix}, \quad
+  V_{\text{cache}} = \begin{bmatrix} 1 & 2 \end{bmatrix}
+  \]
+  \[
+  K_{\text{tree}} = \begin{bmatrix} 0 & 1 \\ 1 & 1 \\ 0 & 0 \end{bmatrix}, \quad
+  V_{\text{tree}} = \begin{bmatrix} 3 & 0 \\ 0 & 3 \\ 2 & 2 \end{bmatrix}
+  \]
+  Node 0 attends to {context, 0}; node 1 to {context, 0, 1}; node 2 to {context, 0, 2}.
+  <br>
+  Output:
+  \[
+  \begin{bmatrix} 1.6605 & 1.3395 \\ 1.4011 & 1.5989 \\ 2.0000 & 1.1978 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>P</code> &le; 16,384</li>
+  <li>1 &le; <code>T</code> &le; 128</li>
+  <li>1 &le; <code>H</code> &le; 64</li>
+  <li>1 &le; <code>D</code> &le; 256</li>
+  <li>-1 &le; <code>parents[i]</code> &lt; <code>i</code></li>
+  <li>Input values are in [-6, 6]</li>
+  <li>Performance is measured with <code>P</code> = 8,192, <code>T</code> = 64, <code>H</code> = 32, <code>D</code> = 128</li>
+</ul>
