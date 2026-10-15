@@ -1,0 +1,54 @@
+<p>
+  Implement <strong>flash decoding attention</strong>: the long-context decode step of LLM
+  inference (Flash-Decoding, Split-KV, Parallel Attention). A small batch of
+  <code>T</code> queries (typically 1, the token being generated) attends to a KV cache of
+  length <code>S</code> that is often tens of thousands of tokens. For each head
+  <code>h</code>:
+</p>
+<p>
+  \[
+  s_{t,s} = \frac{Q_{t,h} \cdot K_{s,h}}{\sqrt{D}}, \qquad
+  \text{output}_{t,h} = \sum_{s=0}^{S-1}
+  \frac{e^{s_{t,s}}}{\sum_{s'=0}^{S-1} e^{s_{t,s'}}} \, V_{s,h}
+  \]
+</p>
+<p>
+  <code>Q</code> has shape <code>T &times; H &times; D</code>, <code>K</code> and
+  <code>V</code> have shape <code>S &times; H &times; D</code>, and <code>output</code> has
+  shape <code>T &times; H &times; D</code>. All tensors are 32-bit floats. Unlike prefilling,
+  <code>T &ll; S</code>, so a fast solution splits the KV cache across thread blocks, runs an
+  online softmax per split and combines the partial outputs (flash decoding) rather than
+  materializing a full <code>T &times; S</code> attention matrix.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Do not change the function signature.</li>
+  <li>Do not use external libraries beyond what is available in the starter.</li>
+  <li>Write the result to <code>output</code>.</li>
+  <li>The softmax must be numerically stable for large scores.</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>T</code> = 2, <code>S</code> = 3, <code>H</code> = 1, <code>D</code> = 2
+  \[
+  Q = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}, \quad
+  K = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1 \end{bmatrix}, \quad
+  V = \begin{bmatrix} 1 & 2 \\ 3 & 4 \\ 5 & 6 \end{bmatrix}
+  \]
+  Output (rounded):
+  \[
+  \begin{bmatrix} 3.0000 & 4.0000 \\ 3.4067 & 4.4067 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>T</code> &le; 16</li>
+  <li>1 &le; <code>S</code> &le; 131,072</li>
+  <li>1 &le; <code>H</code> &le; 64</li>
+  <li>1 &le; <code>D</code> &le; 256</li>
+  <li>Input values are in [-6, 6]</li>
+  <li>Performance is measured with <code>T</code> = 1, <code>S</code> = 65,536, <code>H</code> = 32, <code>D</code> = 128</li>
+</ul>

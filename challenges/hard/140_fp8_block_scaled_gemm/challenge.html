@@ -1,0 +1,55 @@
+<p>
+  Implement an <strong>FP8 block-scaled GEMM</strong>, the low-precision matrix multiply used in
+  DeepSeek-V3, NVIDIA Transformer Engine and DeepGEMM for LLM inference on Hopper and Blackwell.
+  Activations and weights are stored as OCP <strong>E4M3</strong> float8 values with a shared
+  <strong>float32</strong> scale per contiguous block of <code>128</code> elements along the
+  reduction dimension. Given quantized activations <code>x_q</code> of shape
+  <code>M &times; K</code>, quantized weights <code>w_q</code> of shape <code>N &times; K</code>
+  and their block scales, compute <code>y = x &times; w<sup>T</sup></code> of shape
+  <code>M &times; N</code> in float16.
+</p>
+
+<p>
+  <strong>E4M3 encoding:</strong> each byte of <code>x_q</code> / <code>w_q</code> is an IEEE-like
+  8-bit float with 1 sign bit, 4 exponent bits and 3 mantissa bits (PyTorch
+  <code>float8_e4m3fn</code> / CUDA <code>__nv_fp8_e4m3</code>). Decode each byte to a real value,
+  then multiply by its block scale:
+</p>
+<pre>
+x[m, k] = e4m3_decode(x_q[m, k]) * x_scales[m, k // 128]
+w[n, k] = e4m3_decode(w_q[n, k]) * w_scales[n, k // 128]
+y[m, n] = sum_k x[m, k] * w[n, k]
+</pre>
+<p>
+  <code>x_scales</code> has shape <code>M &times; (K/128)</code> and <code>w_scales</code> has
+  shape <code>N &times; (K/128)</code>, both float32. <code>K</code> is always divisible by 128.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Do not change the function signature.</li>
+  <li>Do not use external libraries beyond what is available in the starter.</li>
+  <li>Write the result to <code>y</code> as float16.</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input (<code>M</code> = 2, <code>N</code> = 2, <code>K</code> = 128, all block scales = 1):
+  every entry of <code>x_q</code> row 0 is E4M3 <code>1.0</code> (<code>0x38</code>), row 1 is
+  E4M3 <code>0.5</code> (<code>0x30</code>); every entry of <code>w_q</code> row 0 is E4M3
+  <code>2.0</code> (<code>0x40</code>), row 1 is E4M3 <code>-1.0</code> (<code>0xB8</code>).
+</p>
+<p>
+  Output (float16):
+  \[
+  y = \begin{bmatrix} 256 & -128 \\ 128 & -64 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code>, <code>N</code> &le; 16,384</li>
+  <li>128 &le; <code>K</code> &le; 16,384 and <code>K</code> is divisible by 128</li>
+  <li>E4M3 payloads are finite (no NaN); block scales are positive float32 in [0.01, 4]</li>
+  <li>Performance is measured with <code>M</code> = 2,048, <code>N</code> = 4,096, <code>K</code> = 4,096</li>
+</ul>
