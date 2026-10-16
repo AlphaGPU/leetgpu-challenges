@@ -1,0 +1,104 @@
+<p>
+  Implement the fused pre-norm residual block entry used in GPT-2, BERT, and most LayerNorm
+  transformers: add the sublayer output <code>x</code> to the residual stream
+  <code>residual</code>, apply Layer Normalization with learned <code>gamma</code> and
+  <code>beta</code>, and in the same pass write out everything the next layer and the backward pass
+  need. All inputs are float32; <code>x</code> and <code>residual</code> have shape
+  <code>(N, C)</code> (one row per token), <code>gamma</code> and <code>beta</code> have shape
+  <code>(C,)</code>. You must produce four outputs: the normalized output <code>y</code>
+  <code>(N, C)</code>, the updated residual stream <code>residual_out</code> <code>(N, C)</code>,
+  and the per-row <code>mean</code> and reciprocal standard deviation <code>rstd</code>, each of
+  shape <code>(N,)</code>.
+</p>
+
+<svg width="640" height="200" viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="ah" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#999"/>
+    </marker>
+  </defs>
+  <rect width="640" height="200" fill="#222" rx="8"/>
+  <rect x="20" y="40" width="100" height="36" fill="#1a3a5c" stroke="#3a6a9c" rx="4"/>
+  <text x="70" y="63" fill="#ddd" font-family="monospace" font-size="13" text-anchor="middle">x</text>
+  <rect x="20" y="110" width="100" height="36" fill="#1a3a5c" stroke="#3a6a9c" rx="4"/>
+  <text x="70" y="133" fill="#ddd" font-family="monospace" font-size="13" text-anchor="middle">residual</text>
+  <circle cx="175" cy="93" r="16" fill="#333" stroke="#999"/>
+  <text x="175" y="98" fill="#ddd" font-family="monospace" font-size="16" text-anchor="middle">+</text>
+  <line x1="120" y1="58" x2="162" y2="84" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="120" y1="128" x2="162" y2="102" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+  <line x1="191" y1="93" x2="250" y2="93" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="220" y="84" fill="#aaa" font-family="monospace" font-size="11" text-anchor="middle">h</text>
+  <rect x="252" y="70" width="160" height="46" fill="#2d5a27" rx="4"/>
+  <text x="332" y="90" fill="#ddd" font-family="monospace" font-size="12" text-anchor="middle">row stats over C</text>
+  <text x="332" y="106" fill="#ddd" font-family="monospace" font-size="12" text-anchor="middle">&#956;, rstd</text>
+  <line x1="412" y1="93" x2="470" y2="93" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+  <rect x="472" y="20" width="150" height="34" fill="#7a4a1a" rx="4"/>
+  <text x="547" y="42" fill="#ddd" font-family="monospace" font-size="12" text-anchor="middle">residual_out = h</text>
+  <rect x="472" y="76" width="150" height="34" fill="#7a4a1a" rx="4"/>
+  <text x="547" y="98" fill="#ddd" font-family="monospace" font-size="12" text-anchor="middle">y</text>
+  <rect x="472" y="132" width="150" height="34" fill="#7a4a1a" rx="4"/>
+  <text x="547" y="154" fill="#ddd" font-family="monospace" font-size="12" text-anchor="middle">mean, rstd</text>
+  <text x="320" y="190" fill="#999" font-family="monospace" font-size="11" text-anchor="middle">one read of x and residual, four outputs</text>
+</svg>
+
+<p>
+  With \(\varepsilon\) = <code>eps</code>, for each row \(i\) and column \(j\):
+</p>
+<p>
+  \[
+  \begin{align}
+  h_{i,j} &= x_{i,j} + \text{residual}_{i,j} \\
+  \mu_i &= \frac{1}{C}\sum_{k=0}^{C-1} h_{i,k}, \qquad
+  r_i = \frac{1}{\sqrt{\frac{1}{C}\sum_{k=0}^{C-1} \left(h_{i,k} - \mu_i\right)^2 + \varepsilon}} \\
+  y_{i,j} &= \left(h_{i,j} - \mu_i\right) r_i \, \gamma_j + \beta_j
+  \end{align}
+  \]
+</p>
+<p>
+  Store \(h\) in <code>residual_out</code>, \(\mu\) in <code>mean</code>, and \(r\) in
+  <code>rstd</code>. The variance is the biased (population) variance. Rows may have a large mean
+  relative to their spread, so compute the variance in a numerically stable way.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The results must be stored in <code>y</code>, <code>residual_out</code>, <code>mean</code>,
+      and <code>rstd</code></li>
+  <li>The outputs are not zero-initialized; every element must be written</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input (<code>N</code> = 2, <code>C</code> = 4, <code>eps</code> = 1e-5):
+  \[
+  x = \begin{bmatrix} 1.0 & 2.0 & 3.0 & 4.0 \\ 0.0 & 0.0 & 2.0 & 2.0 \end{bmatrix}, \quad
+  \text{residual} = \begin{bmatrix} 1.0 & 0.0 & -1.0 & 0.0 \\ 1.0 & 1.0 & -1.0 & -1.0 \end{bmatrix}
+  \]
+  \[
+  \gamma = \begin{bmatrix} 1.0 & 2.0 & 1.0 & 0.5 \end{bmatrix}, \quad
+  \beta = \begin{bmatrix} 0.0 & 0.0 & 1.0 & 0.0 \end{bmatrix}
+  \]
+  Output:
+  \[
+  y = \begin{bmatrix} -0.5773 & -1.1547 & 0.4227 & 0.8660 \\ 0.0000 & 0.0000 & 1.0000 & 0.0000 \end{bmatrix}, \quad
+  \text{residual\_out} = \begin{bmatrix} 2.0 & 2.0 & 2.0 & 4.0 \\ 1.0 & 1.0 & 1.0 & 1.0 \end{bmatrix}
+  \]
+  \[
+  \text{mean} = \begin{bmatrix} 2.5 & 1.0 \end{bmatrix}, \quad
+  \text{rstd} = \begin{bmatrix} 1.1547 & 316.2278 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 65,536</li>
+  <li>1 &le; <code>C</code> &le; 16,384</li>
+  <li>All tensors are float32</li>
+  <li>Values of <code>x</code> and <code>residual</code> are in [&minus;1,000, 1,000]; values of
+      <code>gamma</code> are in [&minus;2, 2] and <code>beta</code> in [&minus;0.5, 0.5]</li>
+  <li>1e-6 &le; <code>eps</code> &le; 1.0</li>
+  <li>Performance is measured with <code>N</code> = 16,384, <code>C</code> = 4,096</li>
+</ul>
