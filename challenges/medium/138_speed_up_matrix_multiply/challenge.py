@@ -15,7 +15,7 @@ class Challenge(ChallengeBase):
     track = "kernel-interview"
     problem_type = "slow_kernel"
     bottleneck = "missing_tiling"
-    target_speedup = 2.5
+    target_speedup = 1.3
     baseline_language = "cuda"
     hints = [
         "Each element of A and B is re-read from global memory by many threads.",

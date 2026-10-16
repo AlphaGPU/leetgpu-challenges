@@ -47,7 +47,7 @@
           "slug": "speed-up-column-scale",
           "title": "Speed Up Column Scale",
           "role": "slow_kernel",
-          "target_speedup": 4.0,
+          "target_speedup": 4.7,
           "bottleneck": "uncoalesced_loads"
         }
       ]
@@ -88,7 +88,7 @@
           "slug": "speed-up-tiled-transpose",
           "title": "Speed Up Tiled Transpose",
           "role": "slow_kernel",
-          "target_speedup": 1.5,
+          "target_speedup": 2.0,
           "bottleneck": "bank_conflicts"
         }
       ]
@@ -141,7 +141,7 @@
           "slug": "speed-up-row-sum",
           "title": "Speed Up Row Sum",
           "role": "slow_kernel",
-          "target_speedup": 3.0,
+          "target_speedup": 3.8,
           "bottleneck": "warp_divergence"
         },
         {
@@ -149,7 +149,7 @@
           "slug": "speed-up-histogram",
           "title": "Speed Up Histogram",
           "role": "slow_kernel",
-          "target_speedup": 4.0,
+          "target_speedup": 6.0,
           "bottleneck": "atomic_contention"
         }
       ]
@@ -190,7 +190,7 @@
           "slug": "speed-up-segment-reverse",
           "title": "Speed Up Segment Reverse",
           "role": "slow_kernel",
-          "target_speedup": 4.0,
+          "target_speedup": 5.6,
           "bottleneck": "low_occupancy"
         }
       ]
@@ -237,7 +237,7 @@
           "slug": "speed-up-matrix-multiply",
           "title": "Speed Up Matrix Multiply",
           "role": "slow_kernel",
-          "target_speedup": 2.5,
+          "target_speedup": 1.3,
           "bottleneck": "missing_tiling"
         }
       ]

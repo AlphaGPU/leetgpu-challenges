@@ -15,7 +15,7 @@ class Challenge(ChallengeBase):
     track = "kernel-interview"
     problem_type = "slow_kernel"
     bottleneck = "uncoalesced_loads"
-    target_speedup = 4.0
+    target_speedup = 4.7
     baseline_language = "cuda"
     hints = [
         "Look at which memory addresses 32 neighbouring threads of a warp touch.",

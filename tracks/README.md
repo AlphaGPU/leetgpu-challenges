@@ -51,16 +51,16 @@ The current challenge format has NO field for track membership, speedup targets,
 1. **Speedup grading:** on submit, time the user's solution AND the baseline `starter.cu` on the same GPU, the performance test, and the same run (or a cached baseline per GPU type). Then compute `speedup = baseline_ms / user_ms`. Pass = all functional tests correct AND `speedup ≥ target_speedup`. Use the median of several runs to absorb timing variance. Correctness alone is NOT a pass.
 2. **Non-CUDA languages:** the other 5 starters are empty (repo convention). Either restrict these problems to CUDA in track mode, or grade other languages against the same CUDA baseline time.
 3. **Hidden/unlisted:** nothing exists today. Merging to `main` auto-deploys every changed `challenges/**` directory into the public list (`deploy-challenges.yml`). Before merge, add a `listed=False` (or track-only) field to the payload and the public list query, or move these out of `challenges/`.
-4. **Calibration:** targets were picked from typical T4 behaviour and are NOT yet measured. Run baseline vs. reference-optimized on T4 and adjust before launch.
+4. **Calibration:** targets are calibrated from Infra's measured T4 run (Oct 16 2026): ~0.8× the demo solution's measured speedup; 139 capped at 6.0× (measured 18.27×) as a product call.
 5. **Profiler feedback:** compare the ncu metrics to `bottleneck` (e.g. gld_efficiency, shared bank conflicts, branch efficiency, achieved occupancy, dram throughput vs. FLOPs, atomic throughput).
 
 ## 4. The 6 slow-kernel challenges (all `medium`, `premium`)
 
 | id | slug | bottleneck | target | perf test |
 |---|---|---|---|---|
-| 134 | speed-up-column-scale | uncoalesced_loads | 4.0× | M=N=8192 |
-| 135 | speed-up-tiled-transpose | bank_conflicts | 1.5× | 8192×8192 |
-| 136 | speed-up-row-sum | warp_divergence | 3.0× | M=16384, N=4096 |
-| 137 | speed-up-segment-reverse | low_occupancy | 4.0× | N=67,108,864, S=8192 |
-| 138 | speed-up-matrix-multiply | missing_tiling | 2.5× | M=N=K=4096 |
-| 139 | speed-up-histogram | atomic_contention | 4.0× | N=50M, 32 bins |
+| 134 | speed-up-column-scale | uncoalesced_loads | 4.7× | M=N=8192 |
+| 135 | speed-up-tiled-transpose | bank_conflicts | 2.0× | 8192×8192 |
+| 136 | speed-up-row-sum | warp_divergence | 3.8× | M=16384, N=4096 |
+| 137 | speed-up-segment-reverse | low_occupancy | 5.6× | N=67,108,864, S=8192 |
+| 138 | speed-up-matrix-multiply | missing_tiling | 1.3× | M=N=K=4096 |
+| 139 | speed-up-histogram | atomic_contention | 6.0× | N=50M, 32 bins |

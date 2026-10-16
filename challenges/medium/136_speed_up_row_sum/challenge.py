@@ -15,7 +15,7 @@ class Challenge(ChallengeBase):
     track = "kernel-interview"
     problem_type = "slow_kernel"
     bottleneck = "warp_divergence"
-    target_speedup = 3.0
+    target_speedup = 3.8
     baseline_language = "cuda"
     hints = [
         "In the tree loop, how many threads of each warp do useful work at step s?",

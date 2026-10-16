@@ -15,7 +15,7 @@ class Challenge(ChallengeBase):
     track = "kernel-interview"
     problem_type = "slow_kernel"
     bottleneck = "low_occupancy"
-    target_speedup = 4.0
+    target_speedup = 5.6
     baseline_language = "cuda"
     hints = [
         "How many warps fit on one SM with 32-thread blocks using up to 32 KB of shared memory?",

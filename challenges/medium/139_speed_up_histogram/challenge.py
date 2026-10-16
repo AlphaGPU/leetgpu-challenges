@@ -15,7 +15,7 @@ class Challenge(ChallengeBase):
     track = "kernel-interview"
     problem_type = "slow_kernel"
     bottleneck = "atomic_contention"
-    target_speedup = 4.0
+    target_speedup = 6.0
     baseline_language = "cuda"
     hints = [
         "With only a few bins, millions of threads serialize on the same global addresses.",

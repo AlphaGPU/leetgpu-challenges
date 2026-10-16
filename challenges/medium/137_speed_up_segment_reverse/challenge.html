@@ -4,7 +4,7 @@
 <p>
   <strong>Your task: make it faster.</strong> The starter code is a deliberately slow but
   <em>correct</em> CUDA kernel. Find the bottleneck, fix it, and reach at least a
-  <strong>4&times; speedup</strong> over the starter kernel on the performance test (measured on
+  <strong>5.6&times; speedup</strong> over the starter kernel on the performance test (measured on
   the same GPU). Your solution must still pass every correctness test.
 </p>
 
@@ -13,7 +13,7 @@
   <li>External libraries are not permitted</li>
   <li>The <code>solve</code> function signature must remain unchanged</li>
   <li>The result must be stored in <code>output</code> (length <code>N</code>)</li>
-  <li>The target is 4&times; the runtime of the provided CUDA starter kernel on the performance test</li>
+  <li>The target is 5.6&times; the runtime of the provided CUDA starter kernel on the performance test</li>
 </ul>
 
 <h2>Example:</h2>
@@ -27,6 +27,6 @@ Output: output = [3.0, 2.0, 1.0, 6.0, 5.0, 4.0]
   <li>1 &le; <code>S</code> &le; 8,192</li>
   <li><code>N</code> is a multiple of <code>S</code>, 1 &le; <code>N</code> &le; 100,000,000</li>
   <li>Input values are in the range [-10, 10]</li>
-  <li>Target speedup: 4&times; over the starter kernel</li>
+  <li>Target speedup: 5.6&times; over the starter kernel</li>
   <li>Performance is measured with <code>N</code> = 67,108,864, <code>S</code> = 8,192</li>
 </ul>

@@ -15,7 +15,7 @@ class Challenge(ChallengeBase):
     track = "kernel-interview"
     problem_type = "slow_kernel"
     bottleneck = "bank_conflicts"
-    target_speedup = 1.5
+    target_speedup = 2.0
     baseline_language = "cuda"
     hints = [
         "Both global loads and stores are already coalesced; the slowdown is inside shared memory.",
