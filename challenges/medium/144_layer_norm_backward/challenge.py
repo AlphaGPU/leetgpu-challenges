@@ -120,38 +120,39 @@ class Challenge(ChallengeBase):
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         tests = []
 
-        # Hand-computed reference example
+        # Hand-computed example (values verified independently in challenge.html)
         tests.append(self.generate_example_test())
 
-        # Single element edge case (N=1, C=1)
+        # N=1, C=1: xhat is 0 and dx must be exactly 0; catches off-by-one in 1-wide reductions
         tests.append(self._make(1, 1, seed=1))
 
-        # Single row edge case (N=1, C=3)
+        # Single row, C smaller than a warp: catches reductions that assume full warps/blocks
         tests.append(self._make(1, 3, seed=2))
 
-        # Uniform row with zero variance
+        # Zero-variance rows (rstd = 1/sqrt(eps)): catches recomputing rstd without eps
         u = self._make(3, 4, seed=3)
         u["x"].fill_(2.5)
         u["mean"].fill_(2.5)
         u["rstd"].fill_(316.2277)
         tests.append(u)
 
-        # Zero upstream gradient
+        # Zero upstream gradient: all outputs must be 0 (sentinel-filled outputs get overwritten)
         zg = self._make(5, 16, seed=4)
         zg["dy"].zero_()
         tests.append(zg)
 
-        # Negative gamma with correlated dy
+        # Negative gamma + correlated dy: catches using dy instead of dy*gamma in dx, and
+        # dropping the xhat * mean(g*xhat) projection term (large when dy correlates with x)
         tests.append(self._make(16, 64, seed=5, gamma_range=(-2.0, -0.5), correlated=True))
 
-        # Large-magnitude inputs (|x| ~ 50)
+        # Large-magnitude inputs (|x| ~ 50): catches using raw x instead of normalized xhat
         tests.append(self._make(32, 128, seed=6, x_scale=50.0, gamma_range=(-1.0, 1.0)))
 
-        # Non-power-of-two non-square shapes
+        # Non-power-of-two, non-square shapes: catches swapped N/C and tile-tail indexing bugs
         tests.append(self._make(100, 30, seed=7, correlated=True))
         tests.append(self._make(255, 1000, seed=8, gamma_range=(-1.5, 1.5)))
 
-        # Ragged row chunking (odd N)
+        # Large odd N: catches dgamma/dbeta column reductions that drop the last row chunk
         tests.append(self._make(4099, 256, seed=9, correlated=True))
 
         # Realistic hidden dimension (C=2048)
