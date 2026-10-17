@@ -1,0 +1,100 @@
+<p>
+  Implement the backward pass of Layer Normalization, the foundational normalization layer used in
+  GPT-2, BERT, ViT, and standard transformer architectures. The forward pass normalized each row
+  (token) of the float32 input <code>x</code> of shape <code>(N, C)</code> using per-row
+  <code>mean</code> and reciprocal standard deviation <code>rstd</code>, and applied per-feature
+  learned scale <code>gamma</code> and shift <code>beta</code>. Given <code>x</code>,
+  <code>gamma</code>, <code>mean</code>, <code>rstd</code>, and the upstream gradient <code>dy</code>
+  of shape <code>(N, C)</code>, compute the input gradient <code>dx</code> of shape
+  <code>(N, C)</code> and the parameter gradients <code>dgamma</code> and <code>dbeta</code>, each of
+  shape <code>(C,)</code>.
+</p>
+
+<svg width="640" height="230" viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="ah" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#999"/>
+    </marker>
+  </defs>
+  <rect width="640" height="230" fill="#222" rx="8"/>
+
+  <text x="140" y="24" fill="#ccc" font-family="monospace" font-size="13" text-anchor="middle">x, dy  (N &#215; C), mean, rstd (N)</text>
+  <rect x="40" y="36" width="200" height="140" fill="#1a3a5c" stroke="#3a6a9c" rx="3"/>
+  <line x1="40" y1="64" x2="240" y2="64" stroke="#3a6a9c"/>
+  <line x1="40" y1="92" x2="240" y2="92" stroke="#3a6a9c"/>
+  <line x1="40" y1="120" x2="240" y2="120" stroke="#3a6a9c"/>
+  <line x1="40" y1="148" x2="240" y2="148" stroke="#3a6a9c"/>
+  <rect x="40" y="64" width="200" height="28" fill="#2d5a27" opacity="0.8"/>
+  <text x="140" y="83" fill="#ddd" font-family="monospace" font-size="12" text-anchor="middle">row i</text>
+  <rect x="160" y="36" width="24" height="140" fill="#7a4a1a" opacity="0.7"/>
+  <text x="172" y="194" fill="#e3b07e" font-family="monospace" font-size="12" text-anchor="middle">col j</text>
+
+  <line x1="240" y1="78" x2="360" y2="78" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="300" y="70" fill="#aaa" font-family="monospace" font-size="11" text-anchor="middle">reduce over C</text>
+  <rect x="362" y="58" width="250" height="40" fill="#2d5a27" rx="4"/>
+  <text x="487" y="76" fill="#ddd" font-family="monospace" font-size="12" text-anchor="middle">mean_j(g), mean_j(g&#183;x&#770;)</text>
+  <text x="487" y="91" fill="#ddd" font-family="monospace" font-size="12" text-anchor="middle">&#8594; dx[i, :]</text>
+
+  <line x1="184" y1="176" x2="360" y2="176" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="290" y="168" fill="#aaa" font-family="monospace" font-size="11" text-anchor="middle">reduce over N</text>
+  <rect x="362" y="146" width="250" height="52" fill="#7a4a1a" rx="4"/>
+  <text x="487" y="166" fill="#ddd" font-family="monospace" font-size="12" text-anchor="middle">dgamma[j] = &#931;_i dy&#183;x&#770;</text>
+  <text x="487" y="186" fill="#ddd" font-family="monospace" font-size="12" text-anchor="middle">dbeta[j] = &#931;_i dy</text>
+  <text x="320" y="218" fill="#999" font-family="monospace" font-size="11" text-anchor="middle">dx needs row reductions; dgamma and dbeta reduce down columns</text>
+</svg>
+
+<p>
+  For each row \(i\) and column \(j\), with normalized value \(\hat{x}_{i,j} = (x_{i,j} - \mu_i) r_i\)
+  and scaled upstream gradient \(g_{i,j} = dy_{i,j} \gamma_j\):
+</p>
+<p>
+  \[
+  \begin{align}
+  dx_{i,j} &= r_i \left( g_{i,j} - \frac{1}{C}\sum_{k=0}^{C-1} g_{i,k} - \hat{x}_{i,j} \cdot \frac{1}{C}\sum_{k=0}^{C-1} g_{i,k} \hat{x}_{i,k} \right) \\
+  d\gamma_j &= \sum_{i=0}^{N-1} dy_{i,j} \hat{x}_{i,j} \\
+  d\beta_j &= \sum_{i=0}^{N-1} dy_{i,j}
+  \end{align}
+  \]
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The results must be stored in <code>dx</code>, <code>dgamma</code>, and <code>dbeta</code></li>
+  <li><code>dx</code>, <code>dgamma</code>, and <code>dbeta</code> are not zero-initialized; every element must be written</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input (<code>N</code> = 2, <code>C</code> = 4):
+  \[
+  x = \begin{bmatrix} 1.0 & 2.0 & 3.0 & 4.0 \\ -1.0 & 0.0 & 0.0 & 1.0 \end{bmatrix}, \quad
+  \gamma = \begin{bmatrix} 1.0 & 1.0 & 1.0 & 1.0 \end{bmatrix}
+  \]
+  \[
+  \text{mean} = \begin{bmatrix} 2.5 & 0.0 \end{bmatrix}, \quad
+  \text{rstd} = \begin{bmatrix} 0.8944 & 1.4142 \end{bmatrix}
+  \]
+  \[
+  dy = \begin{bmatrix} 1.0 & 1.0 & 1.0 & 1.0 \\ 1.0 & 0.0 & 0.0 & 1.0 \end{bmatrix}
+  \]
+  Output:
+  \[
+  dx = \begin{bmatrix} 0.0000 & 0.0000 & 0.0000 & 0.0000 \\ 0.7071 & -0.7071 & -0.7071 & 0.7071 \end{bmatrix}
+  \]
+  \[
+  d\gamma = \begin{bmatrix} -2.7559 & -0.4472 & 0.4472 & 2.7559 \end{bmatrix}, \quad
+  d\beta = \begin{bmatrix} 2.0000 & 1.0000 & 1.0000 & 2.0000 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 65,536</li>
+  <li>1 &le; <code>C</code> &le; 16,384</li>
+  <li>All tensors are float32</li>
+  <li>Values of <code>x</code> are in [&minus;250, 250]; values of <code>dy</code> are in [&minus;10, 10]; values of <code>gamma</code> are in [&minus;2, 2]</li>
+  <li>Performance is measured with <code>N</code> = 16,384, <code>C</code> = 4,096</li>
+</ul>
