@@ -1,0 +1,121 @@
+<p>
+  Implement the attention step of a <strong>chunked-prefill</strong> LLM serving batch over a
+  <strong>paged KV cache</strong> with grouped-query attention (GQA). Each sequence in the batch
+  contributes a chunk of its newest <code>q_len</code> query tokens: a decode step (<code>q_len</code> = 1),
+  a fresh prompt, or the next chunk of a long prompt. The keys and values for all
+  <code>context_lens[s]</code> tokens of sequence <code>s</code> (including the chunk itself, already
+  appended) live in fixed-size blocks scattered through a shared cache pool and are located through
+  <code>block_table</code>. Every query token attends causally to its own sequence's cache. All tensors
+  are <code>float32</code> except the index tensors, which are <code>int32</code>.
+</p>
+
+<svg width="620" height="250" viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto; font-family:monospace;">
+  <rect width="620" height="250" fill="#222" rx="8"/>
+  <text x="16" y="22" fill="#ccc" font-size="11" font-weight="bold">One sequence: context_len = 8, q_len = 3 (chunk = last 3 tokens)</text>
+
+  <text x="16" y="50" fill="#888" font-size="10">KV positions</text>
+  <g font-size="10" text-anchor="middle">
+    <rect x="120" y="36" width="36" height="22" rx="3" fill="#2a3a4a" stroke="#4a8abf"/><text x="138" y="51" fill="#4a8abf">0</text>
+    <rect x="158" y="36" width="36" height="22" rx="3" fill="#2a3a4a" stroke="#4a8abf"/><text x="176" y="51" fill="#4a8abf">1</text>
+    <rect x="196" y="36" width="36" height="22" rx="3" fill="#2a3a4a" stroke="#4a8abf"/><text x="214" y="51" fill="#4a8abf">2</text>
+    <rect x="234" y="36" width="36" height="22" rx="3" fill="#2a3a4a" stroke="#4a8abf"/><text x="252" y="51" fill="#4a8abf">3</text>
+    <rect x="272" y="36" width="36" height="22" rx="3" fill="#2a3a4a" stroke="#4a8abf"/><text x="290" y="51" fill="#4a8abf">4</text>
+    <rect x="310" y="36" width="36" height="22" rx="3" fill="#2a4a38" stroke="#52b788"/><text x="328" y="51" fill="#52b788">5</text>
+    <rect x="348" y="36" width="36" height="22" rx="3" fill="#2a4a38" stroke="#52b788"/><text x="366" y="51" fill="#52b788">6</text>
+    <rect x="386" y="36" width="36" height="22" rx="3" fill="#2a4a38" stroke="#52b788"/><text x="404" y="51" fill="#52b788">7</text>
+  </g>
+  <text x="440" y="51" fill="#888" font-size="9">blue: earlier context, green: this chunk</text>
+
+  <text x="16" y="88" fill="#888" font-size="10">query 0 (pos 5)</text>
+  <text x="16" y="114" fill="#888" font-size="10">query 1 (pos 6)</text>
+  <text x="16" y="140" fill="#888" font-size="10">query 2 (pos 7)</text>
+  <g>
+    <rect x="120" y="74" width="226" height="20" fill="#ffcc66" opacity="0.35"/>
+    <rect x="348" y="74" width="74" height="20" fill="#333"/>
+    <rect x="120" y="100" width="264" height="20" fill="#ffcc66" opacity="0.35"/>
+    <rect x="386" y="100" width="36" height="20" fill="#333"/>
+    <rect x="120" y="126" width="302" height="20" fill="#ffcc66" opacity="0.35"/>
+  </g>
+  <text x="440" y="114" fill="#888" font-size="9">yellow: attended, grey: masked</text>
+
+  <text x="16" y="180" fill="#ffcc66" font-size="10">Query i of the chunk sits at position context_len - q_len + i and sees keys 0..that position.</text>
+  <text x="16" y="202" fill="#ffcc66" font-size="10">Key at position t: K_cache[block_table[s, t / block_size], t % block_size, kv_head]</text>
+  <text x="16" y="224" fill="#ffcc66" font-size="10">GQA: query head h reads kv_head = h / (num_q_heads / num_kv_heads)</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<p>
+  Implement <code>solve(Q, K_cache, V_cache, block_table, context_lens, cu_seqlens_q, output, num_seqs,
+  total_q, num_q_heads, num_kv_heads, head_dim, block_size, max_blocks_per_seq)</code>:
+</p>
+<ul>
+  <li><code>Q</code>: shape <code>(total_q, num_q_heads, head_dim)</code>, the query chunks of all sequences packed back to back</li>
+  <li><code>K_cache</code>, <code>V_cache</code>: shape <code>(num_blocks, block_size, num_kv_heads, head_dim)</code>, the shared paged cache pool</li>
+  <li><code>block_table</code>: shape <code>(num_seqs, max_blocks_per_seq)</code>; <code>block_table[s, j]</code> is the physical block holding logical block <code>j</code> of sequence <code>s</code></li>
+  <li><code>context_lens</code>: shape <code>(num_seqs,)</code>, the number of cached tokens of each sequence, including its chunk</li>
+  <li><code>cu_seqlens_q</code>: shape <code>(num_seqs + 1,)</code>, with <code>cu_seqlens_q[0]</code> = 0; rows <code>cu_seqlens_q[s]</code> to <code>cu_seqlens_q[s + 1] - 1</code> of <code>Q</code> and <code>output</code> belong to sequence <code>s</code>, so <code>q_len[s] = cu_seqlens_q[s + 1] - cu_seqlens_q[s]</code></li>
+  <li><code>output</code>: shape <code>(total_q, num_q_heads, head_dim)</code></li>
+</ul>
+<p>
+  For sequence \(s\) with \(L = \text{context_lens}[s]\) and \(n = \text{q_len}[s]\), query token \(i\)
+  (row \(\text{cu_seqlens_q}[s] + i\)) has position \(p_i = L - n + i\). For query head \(h\), with
+  \(g = h \,/\, (\text{num_q_heads} / \text{num_kv_heads})\) (integer division):
+  \[
+  \text{scores}[t] = \frac{Q[i, h] \cdot K_{s}[t, g]}{\sqrt{\text{head_dim}}}, \quad 0 \le t \le p_i
+  \]
+  \[
+  \text{output}[i, h] = \sum_{t=0}^{p_i} \text{softmax}(\text{scores})[t] \, V_{s}[t, g]
+  \]
+  where \(K_s[t]\) is <code>K_cache[block_table[s, t / block_size], t % block_size]</code> (and likewise for
+  \(V_s\)). Keys after \(p_i\) are masked out.
+</p>
+<ul>
+  <li>Use only native features of the framework you choose (no external libraries); keep the function signature unchanged</li>
+  <li>Write the result into <code>output</code>; every row of <code>output</code> must be written</li>
+  <li>Compute scores and accumulate in <code>float32</code> or better; reduced-precision (TF32/FP16) products of <code>Q</code> and <code>K</code> exceed the tolerance</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>num_seqs</code> = 1, <code>total_q</code> = 2, <code>num_q_heads</code> = 2,
+  <code>num_kv_heads</code> = 1, <code>head_dim</code> = 2, <code>block_size</code> = 2,
+  <code>max_blocks_per_seq</code> = 2, <code>context_lens</code> = [3], <code>cu_seqlens_q</code> = [0, 2],
+  <code>block_table</code> = [[2, 0]]
+</p>
+<p>
+  The chunk is the last 2 of 3 tokens, so query 0 is at position 1 and query 1 is at position 2. Logical
+  block 0 (positions 0, 1) is physical block 2 and logical block 1 (position 2) is physical block 0. Physical
+  block 1 and slot 1 of block 0 are unused and hold 9s. Both query heads share KV head 0:
+  \[
+  K_s = \begin{bmatrix} 1 & 0 \\ 1 & 0 \\ 0 & 1 \end{bmatrix}, \quad
+  V_s = \begin{bmatrix} 3 & 0 \\ 0 & 3 \\ 3 & 3 \end{bmatrix}
+  \]
+  \[
+  Q[0] = \begin{bmatrix} 0 & 0 \\ 2 & 0 \end{bmatrix}, \quad
+  Q[1] = \begin{bmatrix} 0 & 0 \\ 2 & 0 \end{bmatrix} \quad \text{(rows are heads 0 and 1)}
+  \]
+</p>
+<p>
+  Query 0 sees keys 0 and 1 only. Head 0 has scores \([0, 0]\); head 1 has scores
+  \([\sqrt{2}, \sqrt{2}]\). Both average \(V_0, V_1\) uniformly to \([1.5, 1.5]\). Query 1 sees keys 0 to 2.
+  Head 0 gives the uniform mean \([2, 2]\). Head 1 has scores \([\sqrt{2}, \sqrt{2}, 0]\) and weights
+  \([0.4458, 0.4458, 0.1084]\), giving \([1.6626, 1.6626]\):
+  \[
+  \text{output}[0] = \begin{bmatrix} 1.5 & 1.5 \\ 1.5 & 1.5 \end{bmatrix}, \quad
+  \text{output}[1] = \begin{bmatrix} 2.0 & 2.0 \\ 1.6626 & 1.6626 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>num_seqs</code> &le; 64</li>
+  <li>1 &le; <code>q_len[s]</code> &le; <code>context_lens[s]</code> &le; 8,192 for every sequence; <code>total_q</code> = <code>cu_seqlens_q[num_seqs]</code> &le; 8,192</li>
+  <li>1 &le; <code>num_kv_heads</code> &le; <code>num_q_heads</code> &le; 64, and <code>num_q_heads</code> is a multiple of <code>num_kv_heads</code></li>
+  <li>2 &le; <code>head_dim</code> &le; 256, <code>head_dim</code> is even</li>
+  <li>1 &le; <code>block_size</code> &le; 64, <code>block_size</code> is a power of 2</li>
+  <li><code>max_blocks_per_seq</code> = <code>ceil(max(context_lens) / block_size)</code>; entries <code>block_table[s, j]</code> with <code>j &ge; ceil(context_lens[s] / block_size)</code> are padding and must be ignored, and slots past <code>context_lens[s]</code> in a sequence's last block hold unrelated data</li>
+  <li>Physical blocks are scattered arbitrarily through the pool, and the pool holds blocks that belong to no sequence</li>
+  <li>Inputs are drawn from a standard normal distribution; <code>Q</code> may be scaled so that scores reach about &plusmn;100</li>
+  <li>Performance is measured with <code>num_seqs</code> = 32 (4 prefill chunks with <code>q_len</code> = 512 and <code>context_lens</code> = 512, 1,536, 2,560, 4,096, plus 28 decode sequences with <code>q_len</code> = 1 and <code>context_lens</code> = 1,024 to 4,480 in steps of 128), <code>total_q</code> = 2,076, <code>num_q_heads</code> = 32, <code>num_kv_heads</code> = 8, <code>head_dim</code> = 128, <code>block_size</code> = 16</li>
+</ul>
