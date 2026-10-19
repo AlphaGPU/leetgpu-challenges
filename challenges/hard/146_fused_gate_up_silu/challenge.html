@@ -1,0 +1,101 @@
+<p>
+  Implement the fused <strong>gate-up projection with SiLU</strong> used in every LLaMA / Mistral
+  SwiGLU MLP block. A packed weight <code>W_gate_up</code> of shape <code>[H, 2I]</code> produces
+  both the gate and up projections in one matrix multiply; the gate half is passed through
+  SiLU and multiplied element-wise by the up half. Production CuTe / CUTLASS kernels fuse the
+  SiLU-and-mul into the GEMM epilogue so the <code>2I</code>-wide intermediate never lands in
+  HBM. All tensors are <code>float32</code>.
+</p>
+
+<svg width="640" height="220" viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto; font-family:monospace;">
+  <rect width="640" height="220" fill="#222" rx="8"/>
+  <text x="16" y="24" fill="#ccc" font-size="12" font-weight="bold">x[M,H] × W_gate_up[H,2I] → silu(gate) * up</text>
+
+  <rect x="20" y="50" width="70" height="90" rx="4" fill="#2a3a4a" stroke="#4a8abf"/>
+  <text x="55" y="100" fill="#4a8abf" font-size="11" text-anchor="middle">x</text>
+  <text x="55" y="116" fill="#888" font-size="9" text-anchor="middle">M×H</text>
+
+  <text x="105" y="100" fill="#ccc" font-size="18">×</text>
+
+  <rect x="130" y="50" width="50" height="90" rx="4" fill="#2a4a38" stroke="#52b788"/>
+  <text x="155" y="90" fill="#52b788" font-size="10" text-anchor="middle">gate</text>
+  <text x="155" y="106" fill="#888" font-size="9" text-anchor="middle">H×I</text>
+  <rect x="180" y="50" width="50" height="90" rx="4" fill="#4a3a2a" stroke="#e09f3e"/>
+  <text x="205" y="90" fill="#e09f3e" font-size="10" text-anchor="middle">up</text>
+  <text x="205" y="106" fill="#888" font-size="9" text-anchor="middle">H×I</text>
+  <text x="180" y="160" fill="#888" font-size="9" text-anchor="middle">W_gate_up = [gate | up]</text>
+
+  <text x="250" y="100" fill="#ccc" font-size="18">→</text>
+
+  <rect x="280" y="50" width="50" height="90" rx="4" fill="#2a4a38" stroke="#52b788"/>
+  <text x="305" y="90" fill="#52b788" font-size="10" text-anchor="middle">gate</text>
+  <text x="305" y="106" fill="#888" font-size="9" text-anchor="middle">M×I</text>
+  <rect x="330" y="50" width="50" height="90" rx="4" fill="#4a3a2a" stroke="#e09f3e"/>
+  <text x="355" y="90" fill="#e09f3e" font-size="10" text-anchor="middle">up</text>
+  <text x="355" y="106" fill="#888" font-size="9" text-anchor="middle">M×I</text>
+
+  <text x="400" y="85" fill="#ffcc66" font-size="11">SiLU</text>
+  <text x="400" y="110" fill="#ffcc66" font-size="11">×</text>
+
+  <text x="450" y="100" fill="#ccc" font-size="18">→</text>
+
+  <rect x="480" y="50" width="70" height="90" rx="4" fill="#3a2a4a" stroke="#c77dff"/>
+  <text x="515" y="100" fill="#c77dff" font-size="11" text-anchor="middle">output</text>
+  <text x="515" y="116" fill="#888" font-size="9" text-anchor="middle">M×I</text>
+
+  <text x="16" y="190" fill="#ffcc66" font-size="10">SiLU(z) = z · σ(z) = z / (1 + e^{-z}). Columns [0, I) of the GEMM are the gate; [I, 2I) are up.</text>
+  <text x="16" y="208" fill="#ffcc66" font-size="10">Distinct from #54 (elementwise only, no GEMM) and #84 (adds the down-projection GEMM).</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<p>
+  Implement <code>solve(x, W_gate_up, output, M, H, I)</code>:
+</p>
+<ul>
+  <li><code>x</code>: shape <code>(M, H)</code>, the token hidden states</li>
+  <li><code>W_gate_up</code>: shape <code>(H, 2I)</code>, packed gate and up weights laid out
+    row-major so columns <code>[0, I)</code> are <code>W_gate</code> and columns
+    <code>[I, 2I)</code> are <code>W_up</code></li>
+  <li><code>output</code>: shape <code>(M, I)</code></li>
+</ul>
+<p>
+  For every token \(m\) and channel \(i\):
+  \[
+  g_{m,i} = \sum_{h=0}^{H-1} x_{m,h}\, W\_gate\_up_{h,i}, \qquad
+  u_{m,i} = \sum_{h=0}^{H-1} x_{m,h}\, W\_gate\_up_{h,\,I+i}
+  \]
+  \[
+  output_{m,i} = \mathrm{SiLU}(g_{m,i}) · u_{m,i}
+  = \frac{g_{m,i}}{1 + e^{-g_{m,i}}} · u_{m,i}
+  \]
+</p>
+<ul>
+  <li>Use only native features of the framework you choose (no external libraries); keep the function signature unchanged</li>
+  <li>Write the result into <code>output</code>; every entry of <code>output</code> must be written</li>
+  <li>Accumulate the GEMM in <code>float32</code> or better; reduced-precision (TF32/FP16) products of <code>x</code> and <code>W_gate_up</code> exceed the tolerance on the larger tests</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>M</code> = 2, <code>H</code> = 2, <code>I</code> = 2,
+  <code>x</code> = identity, <code>W_gate_up</code> = identity on both the gate and up halves:
+  \[
+  x = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}, \quad
+  W\_gate\_up = \begin{bmatrix} 1 & 0 & 1 & 0 \\ 0 & 1 & 0 & 1 \end{bmatrix}
+  \]
+  So the GEMM yields <code>gate = up = I</code>. With \(\mathrm{SiLU}(1) = \sigma(1) \approx 0.731059\)
+  and \(\mathrm{SiLU}(0) = 0\):
+  \[
+  output = \begin{bmatrix} 0.731059 & 0 \\ 0 & 0.731059 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code> &le; 8,192</li>
+  <li>1 &le; <code>H</code> &le; 8,192</li>
+  <li>1 &le; <code>I</code> &le; 16,384</li>
+  <li>Inputs are drawn from a normal distribution; <code>x</code> and <code>W_gate_up</code> may be scaled so gate values reach about &plusmn;20</li>
+  <li>Performance is measured with <code>M</code> = 4,096, <code>H</code> = 4,096, <code>I</code> = 11,008 (Llama-3-8B-style gate-up widths)</li>
+</ul>
