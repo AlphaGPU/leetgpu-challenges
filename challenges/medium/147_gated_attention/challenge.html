@@ -1,0 +1,174 @@
+<p>
+  Implement <strong>Gated Attention</strong>, the mechanism introduced by Qiu et al. (Qwen, 2025)
+  to mitigate <em>attention sink</em>: a sigmoid gate is applied element-wise to the output of
+  standard causal attention. The gate acts per position and per feature, letting the model
+  suppress stale attention mass and re-weight what flows through the residual stream.
+</p>
+
+<p>
+  Given query matrix <code>Q</code>, key matrix <code>K</code>, value matrix <code>V</code>,
+  and gate-logit matrix <code>G</code>, each of shape <code>M &times; d</code>, compute for every
+  query position <code>i</code>:
+</p>
+
+<p style="text-align:center;">
+  \( \text{score}_{i,j} = \frac{Q_i \cdot K_j}{\sqrt{d}} \)
+</p>
+
+<p>
+  where positions <code>j &gt; i</code> are masked out (causal masking), then:
+</p>
+
+<p style="text-align:center;">
+  \( \text{output}_i = \Bigl( \sum_{j \le i} \operatorname{softmax}\!\left(\text{score}_{i,:}\right)_j \cdot V_j \Bigr) \odot \sigma(G_i) \)
+</p>
+
+<p>
+  with \( \sigma \) the element-wise sigmoid and \( \odot \) element-wise multiplication.
+  The gate logits <code>G</code> are precomputed (in practice they come from a linear projection
+  of the attention layer's input); a large positive logit opens the gate (\( \sigma \approx 1 \))
+  and a large negative logit closes it (\( \sigma \approx 0 \)).
+</p>
+
+<svg width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;">
+  <style>
+    text { font-family: monospace; fill: #cccccc; }
+  </style>
+  <rect width="300" height="300" fill="#222222" rx="6"/>
+
+  <text x="170" y="16" text-anchor="middle" font-size="11">key position &#x2192;</text>
+  <text x="14" y="160" text-anchor="middle" font-size="11" transform="rotate(-90,14,160)">query position</text>
+
+  <g font-size="10" text-anchor="middle">
+    <text x="72" y="40">0</text>
+    <text x="116" y="40">1</text>
+    <text x="160" y="40">2</text>
+    <text x="204" y="40">3</text>
+  </g>
+
+  <g font-size="10" text-anchor="middle">
+    <text x="38" y="76">0</text>
+    <text x="38" y="120">1</text>
+    <text x="38" y="164">2</text>
+    <text x="38" y="208">3</text>
+  </g>
+
+  <!-- 4x4 causal mask: blue = attend, gray = masked -->
+  <rect x="52" y="52" width="40" height="40" fill="#2a5a8a"/>
+  <rect x="96" y="52" width="40" height="40" fill="#3a3a3a"/>
+  <rect x="140" y="52" width="40" height="40" fill="#3a3a3a"/>
+  <rect x="184" y="52" width="40" height="40" fill="#3a3a3a"/>
+  <rect x="52" y="96" width="40" height="40" fill="#2a5a8a"/>
+  <rect x="96" y="96" width="40" height="40" fill="#2a5a8a"/>
+  <rect x="140" y="96" width="40" height="40" fill="#3a3a3a"/>
+  <rect x="184" y="96" width="40" height="40" fill="#3a3a3a"/>
+  <rect x="52" y="140" width="40" height="40" fill="#2a5a8a"/>
+  <rect x="96" y="140" width="40" height="40" fill="#2a5a8a"/>
+  <rect x="140" y="140" width="40" height="40" fill="#2a5a8a"/>
+  <rect x="184" y="140" width="40" height="40" fill="#3a3a3a"/>
+  <rect x="52" y="184" width="40" height="40" fill="#2a5a8a"/>
+  <rect x="96" y="184" width="40" height="40" fill="#2a5a8a"/>
+  <rect x="140" y="184" width="40" height="40" fill="#2a5a8a"/>
+  <rect x="184" y="184" width="40" height="40" fill="#2a5a8a"/>
+
+  <g font-size="11">
+    <rect x="60" y="244" width="14" height="14" fill="#2a5a8a"/>
+    <text x="80" y="256" font-size="11">attend</text>
+    <rect x="150" y="244" width="14" height="14" fill="#3a3a3a"/>
+    <text x="170" y="256" font-size="11">masked</text>
+  </g>
+
+  <text x="150" y="284" text-anchor="middle" font-size="11" fill="#999999">
+    Causal mask; gating is applied after the softmax attention
+  </text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in the output matrix <code>output</code></li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+  <strong>Input:</strong><br>
+  <code>Q</code> (4&times;4):
+  \[
+  \begin{bmatrix}
+  1.0 & 0.0 & 0.0 & 0.0 \\
+  0.0 & 1.0 & 0.0 & 0.0 \\
+  0.0 & 0.0 & 1.0 & 0.0 \\
+  0.0 & 0.0 & 0.0 & 1.0
+  \end{bmatrix}
+  \]
+  <code>K</code> (4&times;4):
+  \[
+  \begin{bmatrix}
+  1.0 & 0.0 & 0.0 & 0.0 \\
+  0.0 & 1.0 & 0.0 & 0.0 \\
+  0.0 & 0.0 & 1.0 & 0.0 \\
+  0.0 & 0.0 & 0.0 & 1.0
+  \end{bmatrix}
+  \]
+  <code>V</code> (4&times;4):
+  \[
+  \begin{bmatrix}
+  1.0 & 2.0 & 3.0 & 4.0 \\
+  5.0 & 6.0 & 7.0 & 8.0 \\
+  9.0 & 10.0 & 11.0 & 12.0 \\
+  13.0 & 14.0 & 15.0 & 16.0
+  \end{bmatrix}
+  \]
+  <code>G</code> (4&times;4):
+  \[
+  \begin{bmatrix}
+  2.0 & 0.0 & -2.0 & 1.0 \\
+  0.0 & 2.0 & 1.0 & -1.0 \\
+  -1.0 & 1.0 & 2.0 & 0.0 \\
+  1.0 & -2.0 & 0.0 & 2.0
+  \end{bmatrix}
+  \]
+</p>
+
+<p>
+  <strong>Output:</strong><br>
+  <code>output</code> (4&times;4):
+  \[
+  \begin{bmatrix}
+  0.8807971 & 1.0000000 & 0.3576088 & 2.9242343 \\
+  1.7449187 & 3.9546356 & 4.0133927 & 1.7453861 \\
+  1.5359719 & 4.9062632 & 6.7919818 & 4.3555883 \\
+  5.7295181 & 1.0534308 & 4.9186450 & 9.5454533
+  \end{bmatrix}
+  \]
+</p>
+
+<p>
+  Position <code>0</code> attends only to itself, so its pre-gate output is the first row of
+  <code>V</code>, <code>[1.0, 2.0, 3.0, 4.0]</code>. The gate
+  <code>&sigma;(G_0) = [0.8808, 0.5000, 0.1192, 0.7311]</code> scales it element-wise,
+  giving the first output row <code>[0.8808, 1.0000, 0.3576, 2.9242]</code>.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>Matrices <code>Q</code>, <code>K</code>, <code>V</code>, and <code>G</code> are all of size <code>M &times; d</code></li>
+  <li>1 &le; <code>M</code> &le; 10,000</li>
+  <li>1 &le; <code>d</code> &le; 128</li>
+  <li>All elements in <code>Q</code>, <code>K</code>, and <code>V</code> are sampled from <code>[-1.0, 1.0]</code></li>
+  <li><code>G</code> holds gate logits (any <code>float32</code> values); large positive logits open the gate (&sigma; &approx; 1) and large negative logits close it (&sigma; &approx; 0)</li>
+  <li>Data type for all matrices is <code>float32</code></li>
+  <li>Performance is measured with <code>M</code> = 4,096, <code>d</code> = 128</li>
+</ul>
+
+<h2>References</h2>
+<ul>
+  <li>
+    Qiu et al.,
+    <a href="https://arxiv.org/abs/2505.06708" target="_blank" rel="noopener noreferrer"
+       style="color:#60a5fa; text-decoration:underline">Gated Attention for Large Language Models: Non-linearity, Sparsity, and Attention-Sink-Free</a>
+    (arXiv:2505.06708, NeurIPS 2025) &mdash; introduces the gated attention mechanism.
+  </li>
+</ul>
