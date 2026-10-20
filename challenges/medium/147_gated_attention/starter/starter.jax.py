@@ -1,0 +1,16 @@
+import jax
+import jax.numpy as jnp
+
+
+# Q, K, V, G are tensors on device
+@jax.jit
+def solve(
+    Q: jax.Array,
+    K: jax.Array,
+    V: jax.Array,
+    G: jax.Array,
+    M: int,
+    d: int,
+) -> jax.Array:
+    # return output tensor directly
+    pass
