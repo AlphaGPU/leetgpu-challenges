@@ -1,0 +1,92 @@
+<p>
+  Implement the causal <strong>differential attention</strong> layer of the Differential Transformer.
+  Every head splits its query and key into two halves, computes two causal softmax attention maps, and
+  attends with their difference <code>A1 - &lambda;&middot;A2</code>, which cancels attention noise
+  that both maps share. The per-head result is RMS-normalized over its <code>2 &times; head_dim</code>
+  features and scaled by <code>1 - lambda_init</code>. All tensors are <code>float32</code>.
+</p>
+
+<svg width="620" height="230" viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto; font-family:monospace;">
+  <rect width="620" height="230" fill="#222" rx="8"/>
+  <text x="16" y="22" fill="#ccc" font-size="11" font-weight="bold">One head h (each row of Q, K, V has 2 &#215; head_dim features)</text>
+  <g font-size="10" text-anchor="middle">
+    <rect x="20" y="40" width="80" height="24" rx="3" fill="#2a3a4a" stroke="#4a8abf"/><text x="60" y="56" fill="#4a8abf">Q1 | K1</text>
+    <rect x="20" y="100" width="80" height="24" rx="3" fill="#2a4a38" stroke="#52b788"/><text x="60" y="116" fill="#52b788">Q2 | K2</text>
+    <rect x="140" y="40" width="150" height="24" rx="3" fill="#2a3a4a" stroke="#4a8abf"/><text x="215" y="56" fill="#4a8abf">A1 = causal softmax</text>
+    <rect x="140" y="100" width="150" height="24" rx="3" fill="#2a4a38" stroke="#52b788"/><text x="215" y="116" fill="#52b788">A2 = causal softmax</text>
+    <rect x="330" y="70" width="110" height="24" rx="3" fill="#4a3a2a" stroke="#ffcc66"/><text x="385" y="86" fill="#ffcc66">(A1 - &#955;A2) V</text>
+    <rect x="470" y="70" width="130" height="24" rx="3" fill="#4a2a3a" stroke="#e07a9a"/><text x="535" y="86" fill="#e07a9a">RMSNorm &#215; (1-&#955;init)</text>
+  </g>
+  <g stroke="#888" stroke-width="1.2" fill="none">
+    <line x1="100" y1="52" x2="138" y2="52"/><line x1="100" y1="112" x2="138" y2="112"/>
+    <line x1="290" y1="52" x2="328" y2="78"/><line x1="290" y1="112" x2="328" y2="86"/>
+    <line x1="440" y1="82" x2="468" y2="82"/>
+  </g>
+  <text x="16" y="160" fill="#ffcc66" font-size="10">Q1 = Q[:, h, 0:head_dim], Q2 = Q[:, h, head_dim:2*head_dim]; K1, K2 likewise</text>
+  <text x="16" y="182" fill="#ffcc66" font-size="10">Scores use scale 1 / sqrt(head_dim); query i attends to keys 0..i</text>
+  <text x="16" y="204" fill="#ffcc66" font-size="10">V[:, h] keeps all 2 * head_dim features; lambda is lambdas[h]</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<p>
+  Implement <code>solve(Q, K, V, lambdas, output, seq_len, num_heads, head_dim, lambda_init)</code>:
+</p>
+<ul>
+  <li><code>Q</code>, <code>K</code>, <code>V</code>: shape <code>(seq_len, num_heads, 2 * head_dim)</code></li>
+  <li><code>lambdas</code>: shape <code>(num_heads,)</code>, the per-head weight &lambda;<sub>h</sub> of the second map</li>
+  <li><code>output</code>: shape <code>(seq_len, num_heads, 2 * head_dim)</code></li>
+  <li><code>lambda_init</code>: a scalar; the normalized output is multiplied by <code>1 - lambda_init</code></li>
+</ul>
+<p>
+  For head \(h\) with \(d = \text{head_dim}\), let \(Q_1, K_1\) be features \(0 \ldots d-1\) and
+  \(Q_2, K_2\) be features \(d \ldots 2d-1\) of <code>Q[:, h]</code> and <code>K[:, h]</code>. For query
+  row \(i\) and key \(t \le i\):
+  \[
+  A_1[i, t] = \text{softmax}_t\!\left(\frac{Q_1[i] \cdot K_1[t]}{\sqrt{d}}\right), \quad
+  A_2[i, t] = \text{softmax}_t\!\left(\frac{Q_2[i] \cdot K_2[t]}{\sqrt{d}}\right)
+  \]
+  with keys \(t &gt; i\) masked out of both softmaxes. Then
+  \[
+  O[i] = \sum_{t=0}^{i} \left(A_1[i, t] - \lambda_h A_2[i, t]\right) V[t, h], \qquad
+  \text{output}[i, h] = (1 - \text{lambda_init}) \cdot
+  \frac{O[i]}{\sqrt{\frac{1}{2d}\sum_{j=0}^{2d-1} O[i]_j^2 + 10^{-5}}}
+  \]
+</p>
+<ul>
+  <li>Use only native features of the framework you choose (no external libraries); keep the function signature unchanged</li>
+  <li>Write the result into <code>output</code>; every element must be written</li>
+  <li>Compute scores and accumulate in <code>float32</code> or better; reduced-precision (TF32/FP16) products exceed the tolerance</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>seq_len</code> = 2, <code>num_heads</code> = 1, <code>head_dim</code> = 1,
+  <code>lambdas</code> = [0.5], <code>lambda_init</code> = 0.2. Each row below is one token's
+  <code>2 &times; head_dim</code> features for head 0:
+  \[
+  Q = \begin{bmatrix} 1 & 0 \\ 1 & 0 \end{bmatrix}, \quad
+  K = \begin{bmatrix} 0 & 5 \\ 1 & 7 \end{bmatrix}, \quad
+  V = \begin{bmatrix} 2 & 0 \\ 0 & 2 \end{bmatrix}
+  \]
+</p>
+<p>
+  \(Q_2 = 0\), so \(A_2\) is a uniform causal average. Row 0 sees only key 0: \(A_1 = A_2 = [1]\), so
+  \(O[0] = 0.5 \cdot [2, 0] = [1, 0]\), whose RMS is \(\sqrt{0.5}\). Row 1 has
+  \(A_1 = \text{softmax}([0, 1]) = [0.2689, 0.7311]\) and \(A_2 = [0.5, 0.5]\), so the weights are
+  \([0.0189, 0.4811]\) and \(O[1] = [0.0379, 0.9621]\). After RMS normalization and the factor 0.8:
+  \[
+  \text{output} = \begin{bmatrix} 1.1314 & 0 \\ 0.0445 & 1.1305 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>seq_len</code> &le; 8,192</li>
+  <li>1 &le; <code>num_heads</code> &le; 64</li>
+  <li>1 &le; <code>head_dim</code> &le; 128</li>
+  <li>-1 &le; <code>lambdas[h]</code> &le; 1 and 0 &le; <code>lambda_init</code> &lt; 1</li>
+  <li><code>Q</code>, <code>K</code>, <code>V</code> are drawn from a standard normal distribution; <code>Q</code> may be scaled so that scores reach about &plusmn;30</li>
+  <li>When \(O[i]\) is all zeros the output row is all zeros</li>
+  <li>Performance is measured with <code>seq_len</code> = 4,096, <code>num_heads</code> = 32, <code>head_dim</code> = 64</li>
+</ul>
