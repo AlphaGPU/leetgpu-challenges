@@ -1,0 +1,129 @@
+<div class="challenge-description">
+    <p>
+        Implement <strong>gated attention</strong> (Qiu et al., 2025), the attention variant adopted by recent
+        open-weight LLMs. In addition to standard multi-head causal attention, every head applies its own
+        <em>element-wise sigmoid gate</em> to its output. The gate is not given: it is computed from the layer
+        input <code>X</code> through a learned projection <code>W<sub>g</sub></code>, so the gate projection is a
+        full matrix multiplication that an efficient kernel should fuse with the attention computation instead of
+        materializing it separately.
+    </p>
+    <p>
+        The head-specific gate lets the model suppress individual feature dimensions of a head's output for each
+        token independently. In the paper, this removes the massive activations and <em>attention sink</em>
+        behavior of standard softmax attention and improves training stability and long-context performance.
+    </p>
+
+    <h2>Task</h2>
+    <p>
+        Given the query, key, and value matrices <code>Q</code>, <code>K</code>, <code>V</code> (each of shape
+        <code>M &times; d_model</code>), the layer input <code>X</code> (shape <code>M &times; d_model</code>), and the
+        gate projection <code>W<sub>g</sub></code> (shape <code>d_model &times; d_model</code>), compute for each head
+        <code>j = 1..h</code> with head dimension <code>d<sub>k</sub> = d_model / h</code>:
+    </p>
+    <div class="formula">
+        <p>
+            <code>head<sub>j</sub> = softmax( (Q<sub>j</sub> K<sub>j</sub><sup>T</sup> / &radic;d<sub>k</sub>) + causal_mask ) V<sub>j</sub></code>
+        </p>
+        <p>
+            <code>output<sub>j</sub> = head<sub>j</sub> &odot; &sigma;( (X W<sub>g</sub>)<sub>j</sub> )</code>
+        </p>
+        <p>
+            <code>output = concat(output<sub>1</sub>, ..., output<sub>h</sub>)</code>
+        </p>
+    </div>
+    <p>
+        Here <code>Q<sub>j</sub></code>, <code>K<sub>j</sub></code>, <code>V<sub>j</sub></code> are the column blocks
+        <code>[j &middot; d<sub>k</sub> : (j+1) &middot; d<sub>k</sub>)</code> of <code>Q</code>, <code>K</code>,
+        <code>V</code>; <code>(X W<sub>g</sub>)<sub>j</sub></code> is the same column block of the gate-logit matrix
+        <code>X W<sub>g</sub></code>; <code>&sigma;</code> is the sigmoid function applied element-wise; and
+        <code>causal_mask</code> sets every position <code>(i, j)</code> with <code>j &gt; i</code> to
+        <code>-&infin;</code> before the softmax, so a token can only attend to itself and earlier tokens:
+    </p>
+    <svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="4 by 4 causal attention mask: lower triangle visible, upper triangle masked">
+        <rect x="10" y="10" width="40" height="40" fill="#4caf50"/>
+        <rect x="50" y="10" width="40" height="40" fill="#e0e0e0"/>
+        <rect x="90" y="10" width="40" height="40" fill="#e0e0e0"/>
+        <rect x="130" y="10" width="40" height="40" fill="#e0e0e0"/>
+        <rect x="10" y="50" width="40" height="40" fill="#4caf50"/>
+        <rect x="50" y="50" width="40" height="40" fill="#4caf50"/>
+        <rect x="90" y="50" width="40" height="40" fill="#e0e0e0"/>
+        <rect x="130" y="50" width="40" height="40" fill="#e0e0e0"/>
+        <rect x="10" y="90" width="40" height="40" fill="#4caf50"/>
+        <rect x="50" y="90" width="40" height="40" fill="#4caf50"/>
+        <rect x="90" y="90" width="40" height="40" fill="#4caf50"/>
+        <rect x="130" y="90" width="40" height="40" fill="#e0e0e0"/>
+        <rect x="10" y="130" width="40" height="40" fill="#4caf50"/>
+        <rect x="50" y="130" width="40" height="40" fill="#4caf50"/>
+        <rect x="90" y="130" width="40" height="40" fill="#4caf50"/>
+        <rect x="130" y="130" width="40" height="40" fill="#4caf50"/>
+    </svg>
+
+    <h2>Inputs</h2>
+    <ul>
+        <li><code>Q</code>: Tensor of shape <code>(M, d_model)</code> - query matrix</li>
+        <li><code>K</code>: Tensor of shape <code>(M, d_model)</code> - key matrix</li>
+        <li><code>V</code>: Tensor of shape <code>(M, d_model)</code> - value matrix</li>
+        <li><code>X</code>: Tensor of shape <code>(M, d_model)</code> - layer input (hidden states) the gate is computed from</li>
+        <li><code>W_g</code>: Tensor of shape <code>(d_model, d_model)</code> - gate projection weights</li>
+        <li><code>M</code>: Number of tokens (sequence length)</li>
+        <li><code>d_model</code>: Model dimension; must be divisible by <code>h</code></li>
+        <li><code>h</code>: Number of attention heads</li>
+    </ul>
+
+    <h2>Output</h2>
+    <ul>
+        <li><code>output</code>: Tensor of shape <code>(M, d_model)</code> - gated attention output</li>
+    </ul>
+
+    <h2>Example</h2>
+    <h3>Example 1</h3>
+    <p>Input:</p>
+    <pre><code>X =
+[1.0, 0.0, 2.0, 1.0]
+[0.0, 1.0, 1.0, 2.0]
+[2.0, 1.0, 0.0, 1.0]
+
+W_g =
+[1.0, 0.0, -1.0, 0.0]
+[0.0, 1.0, 0.0, -1.0]
+[1.0, 1.0, 0.0, 0.0]
+[0.0, 0.0, 1.0, 1.0]
+
+Q =
+[1.0, 2.0, 0.0, 1.0]
+[0.0, 1.0, 2.0, 0.0]
+[1.0, 0.0, 1.0, 2.0]
+
+K =
+[2.0, 0.0, 1.0, 1.0]
+[1.0, 1.0, 0.0, 2.0]
+[0.0, 2.0, 1.0, 0.0]
+
+V =
+[1.0, 2.0, 3.0, 4.0]
+[5.0, 6.0, 7.0, 8.0]
+[9.0, 10.0, 11.0, 12.0]
+
+M = 3, d_model = 4, h = 2</code></pre>
+    <p>Output:</p>
+    <pre><code>output =
+[0.9525741, 1.7615942, 1.5000000, 2.9242343]
+[2.6895983, 4.1212902, 3.3314223, 3.4961277]
+[2.8680652, 3.1115429, 1.6336840, 3.5372488]</code></pre>
+
+    <h2>Constraints</h2>
+    <ul>
+        <li>All tensors are float32</li>
+        <li><code>1 &le; M &le; 4096</code></li>
+        <li><code>d_model</code> up to 512, divisible by <code>h</code>; <code>h</code> up to 8</li>
+        <li>The performance test uses <code>M = 4096</code>, <code>d_model = 512</code>, <code>h = 8</code> (head dimension 64): a competitive kernel computes the gate projection <code>X W<sub>g</sub></code> and applies the gate without materializing the full <code>M &times; M</code> attention matrix per head</li>
+    </ul>
+
+    <h2>References</h2>
+    <ul>
+        <li>
+            Qiu, Z., Wang, Z., Zheng, B., et al. "Gated Attention for Large Language Models: Non-linearity, Sparsity,
+            and Attention-Sink-Free." arXiv:2505.06708, 2025. (Best Paper Award, NeurIPS 2025)
+        </li>
+    </ul>
+</div>
