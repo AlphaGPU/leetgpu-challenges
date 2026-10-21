@@ -106,6 +106,7 @@ class Challenge(ChallengeBase):
             "V": V,
             "X": X,
             "W_g": W_g,
+            "output": torch.empty(3, 4, device=self.device, dtype=dtype),
             "M": 3,
             "d_model": 4,
             "h": 2,
@@ -134,7 +135,19 @@ class Challenge(ChallengeBase):
         Q = torch.tensor([[0.5, 1.5, -1.0, 2.0]], device=self.device, dtype=dtype)
         K = torch.tensor([[1.0, 0.0, -0.5, 1.0]], device=self.device, dtype=dtype)
         V = torch.tensor([[3.0, -2.0, 1.0, 0.5]], device=self.device, dtype=dtype)
-        tests.append({"Q": Q, "K": K, "V": V, "X": X, "W_g": W_g, "M": 1, "d_model": 4, "h": 2})
+        tests.append(
+            {
+                "Q": Q,
+                "K": K,
+                "V": V,
+                "X": X,
+                "W_g": W_g,
+                "output": torch.empty((1, 4), device=self.device, dtype=dtype),
+                "M": 1,
+                "d_model": 4,
+                "h": 2,
+            }
+        )
 
         # 3: zero gate weights — every gate is exactly 0.5, so the output is
         # half of plain multi-head causal attention
@@ -146,6 +159,7 @@ class Challenge(ChallengeBase):
                 "V": self._rand((4, 4), -1.0, 1.0),
                 "X": self._rand((4, 4), -1.0, 1.0),
                 "W_g": torch.zeros((4, 4), device=self.device, dtype=dtype),
+                "output": torch.empty((4, 4), device=self.device, dtype=dtype),
                 "M": 4,
                 "d_model": 4,
                 "h": 2,
@@ -162,6 +176,7 @@ class Challenge(ChallengeBase):
                 "V": self._rand((4, 4), -1.0, 1.0),
                 "X": torch.ones((4, 4), device=self.device, dtype=dtype),
                 "W_g": torch.full((4, 4), 12.5, device=self.device, dtype=dtype),
+                "output": torch.empty((4, 4), device=self.device, dtype=dtype),
                 "M": 4,
                 "d_model": 4,
                 "h": 2,
@@ -178,6 +193,7 @@ class Challenge(ChallengeBase):
                 "V": self._rand((4, 4), -1.0, 1.0),
                 "X": torch.ones((4, 4), device=self.device, dtype=dtype),
                 "W_g": torch.full((4, 4), -12.5, device=self.device, dtype=dtype),
+                "output": torch.empty((4, 4), device=self.device, dtype=dtype),
                 "M": 4,
                 "d_model": 4,
                 "h": 2,
@@ -192,6 +208,7 @@ class Challenge(ChallengeBase):
                 "V": torch.zeros((4, 8), device=self.device, dtype=dtype),
                 "X": torch.zeros((4, 8), device=self.device, dtype=dtype),
                 "W_g": torch.zeros((8, 8), device=self.device, dtype=dtype),
+                "output": torch.empty((4, 8), device=self.device, dtype=dtype),
                 "M": 4,
                 "d_model": 8,
                 "h": 2,
@@ -257,7 +274,19 @@ class Challenge(ChallengeBase):
             device=self.device,
             dtype=dtype,
         )
-        tests.append({"Q": Q, "K": K, "V": V, "X": X, "W_g": W_g, "M": 5, "d_model": 8, "h": 2})
+        tests.append(
+            {
+                "Q": Q,
+                "K": K,
+                "V": V,
+                "X": X,
+                "W_g": W_g,
+                "output": torch.empty((5, 8), device=self.device, dtype=dtype),
+                "M": 5,
+                "d_model": 8,
+                "h": 2,
+            }
+        )
 
         # 8: medium random case, 4 heads
         torch.manual_seed(42)
@@ -268,14 +297,15 @@ class Challenge(ChallengeBase):
                 "V": self._rand((64, 64), -1.0, 1.0),
                 "X": self._rand((64, 64), -1.0, 1.0),
                 "W_g": self._rand((64, 64), -0.25, 0.25),
+                "output": torch.empty((64, 64), device=self.device, dtype=dtype),
                 "M": 64,
                 "d_model": 64,
                 "h": 4,
             }
         )
 
-        # 9: head_dim 128 (same head_dim as the performance test) with a
-        # sequence length that is not a multiple of typical tile sizes
+        # 9: head_dim 128 with a sequence length that is not a multiple of
+        # typical tile sizes
         torch.manual_seed(123)
         tests.append(
             {
@@ -284,6 +314,7 @@ class Challenge(ChallengeBase):
                 "V": self._rand((1031, 256), -1.0, 1.0),
                 "X": self._rand((1031, 256), -1.0, 1.0),
                 "W_g": self._rand((256, 256), -0.125, 0.125),
+                "output": torch.empty((1031, 256), device=self.device, dtype=dtype),
                 "M": 1031,
                 "d_model": 256,
                 "h": 2,
@@ -300,6 +331,7 @@ class Challenge(ChallengeBase):
                 "V": self._rand((128, 64), -1.0, 1.0),
                 "X": self._rand((128, 64), -1.0, 1.0),
                 "W_g": self._rand((64, 64), -0.25, 0.25),
+                "output": torch.empty((128, 64), device=self.device, dtype=dtype),
                 "M": 128,
                 "d_model": 64,
                 "h": 4,
@@ -315,8 +347,26 @@ class Challenge(ChallengeBase):
                 "V": self._rand((257, 128), -2.0, 2.0),
                 "X": self._rand((257, 128), -1.0, 1.0),
                 "W_g": self._rand((128, 128), -0.25, 0.25),
+                "output": torch.empty((257, 128), device=self.device, dtype=dtype),
                 "M": 257,
                 "d_model": 128,
+                "h": 8,
+            }
+        )
+
+        # 12: performance-test head dimension (d_model=512, h=8, d_k=64) with a
+        # sequence length that is not a multiple of typical tile sizes
+        torch.manual_seed(2025)
+        tests.append(
+            {
+                "Q": self._rand((1031, 512), -1.0, 1.0),
+                "K": self._rand((1031, 512), -1.0, 1.0),
+                "V": self._rand((1031, 512), -1.0, 1.0),
+                "X": self._rand((1031, 512), -1.0, 1.0),
+                "W_g": self._rand((512, 512), -0.125, 0.125),
+                "output": torch.empty((1031, 512), device=self.device, dtype=dtype),
+                "M": 1031,
+                "d_model": 512,
                 "h": 8,
             }
         )
@@ -325,19 +375,13 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         return {
-            "Q": RandTensor((4096, 512)),
-            "K": RandTensor((4096, 512)),
-            "V": RandTensor((4096, 512)),
-            "X": RandTensor((4096, 512)),
-            "W_g": RandTensor((512, 512)),
+            "Q": RandTensor((4096, 512), -1.0, 1.0),
+            "K": RandTensor((4096, 512), -1.0, 1.0),
+            "V": RandTensor((4096, 512), -1.0, 1.0),
+            "X": RandTensor((4096, 512), -1.0, 1.0),
+            "W_g": RandTensor((512, 512), -0.125, 0.125),
             "output": OutTensor((4096, 512)),
             "M": 4096,
             "d_model": 512,
             "h": 8,
         }
-
-    def get_functional_test_count(self) -> int:
-        return 11
-
-    def get_performance_test_count(self) -> int:
-        return 1
