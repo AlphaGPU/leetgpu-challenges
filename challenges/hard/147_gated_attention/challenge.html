@@ -1,27 +1,27 @@
 <p>
-  Implement <strong>gated attention</strong> (Qiu et al., 2025), the attention variant adopted by recent
-  open-weight LLMs. In addition to standard multi-head causal attention, every head applies its own
-  element-wise sigmoid gate to its output. The gate is not given: it is computed from the layer
-  input <code>X</code> through a learned projection <code>W_g</code>, so the gate projection is a
-  full matrix multiplication that an efficient kernel should fuse with the attention computation
-  instead of materializing it separately. All tensors are <code>float32</code>.
+  Implement <strong>gated attention</strong> (Qiu et al., 2025). In addition to standard multi-head
+  causal attention, every head applies its own element-wise sigmoid gate to its output. The gate
+  is not given: it is computed from the layer input <code>X</code> through a learned projection
+  <code>W_g</code>, so the gate projection is a full matrix multiplication that an efficient kernel
+  should fuse with the attention computation instead of materializing it separately. All tensors
+  are <code>float32</code>.
 </p>
 
 <svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg"
      role="img" aria-label="4 by 4 causal attention mask: lower triangle visible, upper triangle masked">
   <rect width="180" height="180" fill="#222" rx="8"/>
   <rect x="10" y="10" width="40" height="40" fill="#4caf50"/>
-  <rect x="50" y="10" width="40" height="40" fill="#e0e0e0"/>
-  <rect x="90" y="10" width="40" height="40" fill="#e0e0e0"/>
-  <rect x="130" y="10" width="40" height="40" fill="#e0e0e0"/>
+  <rect x="50" y="10" width="40" height="40" fill="#444"/>
+  <rect x="90" y="10" width="40" height="40" fill="#444"/>
+  <rect x="130" y="10" width="40" height="40" fill="#444"/>
   <rect x="10" y="50" width="40" height="40" fill="#4caf50"/>
   <rect x="50" y="50" width="40" height="40" fill="#4caf50"/>
-  <rect x="90" y="50" width="40" height="40" fill="#e0e0e0"/>
-  <rect x="130" y="50" width="40" height="40" fill="#e0e0e0"/>
+  <rect x="90" y="50" width="40" height="40" fill="#444"/>
+  <rect x="130" y="50" width="40" height="40" fill="#444"/>
   <rect x="10" y="90" width="40" height="40" fill="#4caf50"/>
   <rect x="50" y="90" width="40" height="40" fill="#4caf50"/>
   <rect x="90" y="90" width="40" height="40" fill="#4caf50"/>
-  <rect x="130" y="90" width="40" height="40" fill="#e0e0e0"/>
+  <rect x="130" y="90" width="40" height="40" fill="#444"/>
   <rect x="10" y="130" width="40" height="40" fill="#4caf50"/>
   <rect x="50" y="130" width="40" height="40" fill="#4caf50"/>
   <rect x="90" y="130" width="40" height="40" fill="#4caf50"/>
@@ -66,7 +66,7 @@
   \[
   X = \begin{bmatrix} 1 & 0 & 2 & 1 \\ 0 & 1 & 1 & 2 \\ 2 & 1 & 0 & 1 \end{bmatrix},
   \quad
-  W\_g = \begin{bmatrix} 1 & 0 & -1 & 0 \\ 0 & 1 & 0 & -1 \\ 1 & 1 & 0 & 0 \\ 0 & 0 & 1 & 1 \end{bmatrix}
+  W_g = \begin{bmatrix} 1 & 0 & -1 & 0 \\ 0 & 1 & 0 & -1 \\ 1 & 1 & 0 & 0 \\ 0 & 0 & 1 & 1 \end{bmatrix}
   \]
   \[
   Q = \begin{bmatrix} 1 & 2 & 0 & 1 \\ 0 & 1 & 2 & 0 \\ 1 & 0 & 1 & 2 \end{bmatrix},
@@ -88,16 +88,8 @@
 <h2>Constraints</h2>
 <ul>
   <li>All tensors are float32</li>
-  <li><code>1 &le; M &le; 4096</code></li>
+  <li><code>1</code> &le; <code>M</code> &le; 4,096</li>
   <li><code>d_model</code> up to 512, divisible by <code>h</code>; <code>h</code> up to 8</li>
   <li>Inputs <code>Q</code>, <code>K</code>, <code>V</code>, <code>X</code> are drawn from signed ranges; <code>W_g</code> is scaled so gate values stay in a range where the sigmoid is not saturated</li>
-  <li>Performance is measured with <code>M</code> = 4096, <code>d_model</code> = 512, <code>h</code> = 8 (head dimension 64): a competitive kernel computes the gate projection <code>X W_g</code> and applies the gate without materializing the full <code>M &times; M</code> attention matrix per head</li>
-</ul>
-
-<h2>References</h2>
-<ul>
-  <li>
-    Qiu, Z., Wang, Z., Zheng, B., et al. "Gated Attention for Large Language Models: Non-linearity, Sparsity,
-    and Attention-Sink-Free." arXiv:2505.06708, 2025. (Best Paper Award, NeurIPS 2025)
-  </li>
+  <li>Performance is measured with <code>M</code> = 4,096, <code>d_model</code> = 512, <code>h</code> = 8</li>
 </ul>

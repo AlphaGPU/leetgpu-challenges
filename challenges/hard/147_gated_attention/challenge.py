@@ -7,6 +7,10 @@ from core.challenge_base import ChallengeBase, OutTensor, RandTensor
 
 class Challenge(ChallengeBase):
     name = "Gated Attention"
+    # Same float32 tolerance as Multi-Head Attention (#12) and Causal Attention (#53). Outputs are
+    # bounded by max |V| (gate in (0, 1)); on CPU the float32 reference stays within 15% of this
+    # tolerance of a float64 implementation, worst on the large-score case. A missing causal mask,
+    # a missing gate, W_g transposed or the gate applied to V before attention all miss by far more.
     atol = 1e-05
     rtol = 1e-05
     num_gpus = 1
@@ -32,18 +36,19 @@ class Challenge(ChallengeBase):
         assert output.shape == (M, d_model)
         assert Q.dtype == K.dtype == V.dtype == output.dtype
         assert X.dtype == W_g.dtype == output.dtype
+        assert d_model % h == 0
 
         # Head-specific gate logits for all heads at once: column block
         # [head * d_k : (head + 1) * d_k] of X @ W_g belongs to that head.
         gate = torch.sigmoid(torch.matmul(X, W_g))
 
         d_k = d_model // h
-        mask = torch.triu(torch.full((M, M), float("-inf"), device=self.device), diagonal=1)
+        causal = torch.ones(M, M, dtype=torch.bool, device=Q.device).tril()
         result = torch.empty_like(Q)
         for head in range(h):
             s = slice(head * d_k, (head + 1) * d_k)
             scores = torch.matmul(Q[:, s], K[:, s].t()) / (d_k**0.5)
-            attn_weights = torch.softmax(scores + mask, dim=-1)
+            attn_weights = torch.softmax(scores.masked_fill(~causal, float("-inf")), dim=-1)
             head_output = torch.matmul(attn_weights, V[:, s])
             result[:, s] = head_output * gate[:, s]
         output.copy_(result)
@@ -106,7 +111,7 @@ class Challenge(ChallengeBase):
             "V": V,
             "X": X,
             "W_g": W_g,
-            "output": torch.empty(3, 4, device=self.device, dtype=dtype),
+            "output": torch.full((3, 4), 123.0, device=self.device, dtype=dtype),
             "M": 3,
             "d_model": 4,
             "h": 2,
@@ -116,7 +121,11 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         tests: List[Dict[str, Any]] = []
 
-        # 1: basic example (same as generate_example_test)
+        # Every output buffer is pre-filled with 123.0, so a kernel that skips rows, heads or a
+        # tile tail fails instead of passing on leftover zeros.
+        #
+        # 1: basic example (same as generate_example_test). W_g is not symmetric, so it also
+        # catches using W_g transposed (X @ W_g.T); cases 2 and 7-12 catch it too.
         tests.append(self.generate_example_test())
 
         # 2: single token — attention is trivial, only the gate acts:
@@ -142,7 +151,7 @@ class Challenge(ChallengeBase):
                 "V": V,
                 "X": X,
                 "W_g": W_g,
-                "output": torch.empty((1, 4), device=self.device, dtype=dtype),
+                "output": torch.full((1, 4), 123.0, device=self.device, dtype=dtype),
                 "M": 1,
                 "d_model": 4,
                 "h": 2,
@@ -159,7 +168,7 @@ class Challenge(ChallengeBase):
                 "V": self._rand((4, 4), -1.0, 1.0),
                 "X": self._rand((4, 4), -1.0, 1.0),
                 "W_g": torch.zeros((4, 4), device=self.device, dtype=dtype),
-                "output": torch.empty((4, 4), device=self.device, dtype=dtype),
+                "output": torch.full((4, 4), 123.0, device=self.device, dtype=dtype),
                 "M": 4,
                 "d_model": 4,
                 "h": 2,
@@ -176,7 +185,7 @@ class Challenge(ChallengeBase):
                 "V": self._rand((4, 4), -1.0, 1.0),
                 "X": torch.ones((4, 4), device=self.device, dtype=dtype),
                 "W_g": torch.full((4, 4), 12.5, device=self.device, dtype=dtype),
-                "output": torch.empty((4, 4), device=self.device, dtype=dtype),
+                "output": torch.full((4, 4), 123.0, device=self.device, dtype=dtype),
                 "M": 4,
                 "d_model": 4,
                 "h": 2,
@@ -193,7 +202,7 @@ class Challenge(ChallengeBase):
                 "V": self._rand((4, 4), -1.0, 1.0),
                 "X": torch.ones((4, 4), device=self.device, dtype=dtype),
                 "W_g": torch.full((4, 4), -12.5, device=self.device, dtype=dtype),
-                "output": torch.empty((4, 4), device=self.device, dtype=dtype),
+                "output": torch.full((4, 4), 123.0, device=self.device, dtype=dtype),
                 "M": 4,
                 "d_model": 4,
                 "h": 2,
@@ -208,14 +217,16 @@ class Challenge(ChallengeBase):
                 "V": torch.zeros((4, 8), device=self.device, dtype=dtype),
                 "X": torch.zeros((4, 8), device=self.device, dtype=dtype),
                 "W_g": torch.zeros((8, 8), device=self.device, dtype=dtype),
-                "output": torch.empty((4, 8), device=self.device, dtype=dtype),
+                "output": torch.full((4, 8), 123.0, device=self.device, dtype=dtype),
                 "M": 4,
                 "d_model": 8,
                 "h": 2,
             }
         )
 
-        # 7: mixed negative and positive values (deterministic literals)
+        # 7: mixed negative and positive values (deterministic literals). With per-element gates
+        # that differ across tokens, applying the gate to V before attention (softmax(QK^T)(V*g))
+        # gives a different result than gating the head output; cases 1 and 8-12 catch it too.
         X = torch.tensor(
             [
                 [1.0, -1.0, 0.5, 2.0, -0.5, 1.0, 0.0, -2.0],
@@ -281,7 +292,7 @@ class Challenge(ChallengeBase):
                 "V": V,
                 "X": X,
                 "W_g": W_g,
-                "output": torch.empty((5, 8), device=self.device, dtype=dtype),
+                "output": torch.full((5, 8), 123.0, device=self.device, dtype=dtype),
                 "M": 5,
                 "d_model": 8,
                 "h": 2,
@@ -297,7 +308,7 @@ class Challenge(ChallengeBase):
                 "V": self._rand((64, 64), -1.0, 1.0),
                 "X": self._rand((64, 64), -1.0, 1.0),
                 "W_g": self._rand((64, 64), -0.25, 0.25),
-                "output": torch.empty((64, 64), device=self.device, dtype=dtype),
+                "output": torch.full((64, 64), 123.0, device=self.device, dtype=dtype),
                 "M": 64,
                 "d_model": 64,
                 "h": 4,
@@ -314,7 +325,7 @@ class Challenge(ChallengeBase):
                 "V": self._rand((1031, 256), -1.0, 1.0),
                 "X": self._rand((1031, 256), -1.0, 1.0),
                 "W_g": self._rand((256, 256), -0.125, 0.125),
-                "output": torch.empty((1031, 256), device=self.device, dtype=dtype),
+                "output": torch.full((1031, 256), 123.0, device=self.device, dtype=dtype),
                 "M": 1031,
                 "d_model": 256,
                 "h": 2,
@@ -331,7 +342,7 @@ class Challenge(ChallengeBase):
                 "V": self._rand((128, 64), -1.0, 1.0),
                 "X": self._rand((128, 64), -1.0, 1.0),
                 "W_g": self._rand((64, 64), -0.25, 0.25),
-                "output": torch.empty((128, 64), device=self.device, dtype=dtype),
+                "output": torch.full((128, 64), 123.0, device=self.device, dtype=dtype),
                 "M": 128,
                 "d_model": 64,
                 "h": 4,
@@ -347,7 +358,7 @@ class Challenge(ChallengeBase):
                 "V": self._rand((257, 128), -2.0, 2.0),
                 "X": self._rand((257, 128), -1.0, 1.0),
                 "W_g": self._rand((128, 128), -0.25, 0.25),
-                "output": torch.empty((257, 128), device=self.device, dtype=dtype),
+                "output": torch.full((257, 128), 123.0, device=self.device, dtype=dtype),
                 "M": 257,
                 "d_model": 128,
                 "h": 8,
@@ -364,7 +375,7 @@ class Challenge(ChallengeBase):
                 "V": self._rand((1031, 512), -1.0, 1.0),
                 "X": self._rand((1031, 512), -1.0, 1.0),
                 "W_g": self._rand((512, 512), -0.125, 0.125),
-                "output": torch.empty((1031, 512), device=self.device, dtype=dtype),
+                "output": torch.full((1031, 512), 123.0, device=self.device, dtype=dtype),
                 "M": 1031,
                 "d_model": 512,
                 "h": 8,
