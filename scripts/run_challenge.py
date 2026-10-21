@@ -25,21 +25,25 @@ LEETGPU_API_KEY = os.getenv("LEETGPU_API_KEY")
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
 
+LANGUAGE_TO_EXTENSION = {
+    "cuda": "cu",
+    "mojo": "mojo",
+    "pytorch": "py",
+    "cute": "py",
+    "triton": "py",
+    "jax": "py",
+}
+
 
 def find_solution_file(challenge_dir: Path, language: str) -> tuple[str, str]:
-    language_to_extension = {
-        "cuda": "cu",
-        "mojo": "mojo",
-        "pytorch": "py",
-        "cute": "py",
-        "triton": "py",
-        "jax": "py",
-    }
-    solution_file = challenge_dir / "solution" / f"solution.{language_to_extension[language]}"
+    if language not in LANGUAGE_TO_EXTENSION:
+        supported = ", ".join(sorted(LANGUAGE_TO_EXTENSION))
+        raise ValueError(f"Unsupported language: {language!r}. Supported languages: {supported}")
+    extension = LANGUAGE_TO_EXTENSION[language]
+    solution_file = challenge_dir / "solution" / f"solution.{extension}"
     if not solution_file.exists():
         raise FileNotFoundError(
-            f"No solution file found for {language}. "
-            f"Add a solution/solution.{language_to_extension[language]} file. "
+            f"No solution file found for {language}. Add a solution/solution.{extension} file."
         )
     return solution_file.name, solution_file.read_text()
 
@@ -88,18 +92,23 @@ def submit_solution(
 
 
 def main() -> int:
-    if not LEETGPU_API_KEY:
-        logger.error("LEETGPU_API_KEY environment variable is required")
-        return 1
-
     parser = argparse.ArgumentParser(description="Submit a solution via WebSocket API.")
     parser.add_argument("challenge_path", type=Path, help="Path to the challenge directory")
-    parser.add_argument("--language", default="cuda", help="Language (default: cuda)")
+    parser.add_argument(
+        "--language",
+        default="cuda",
+        choices=sorted(LANGUAGE_TO_EXTENSION),
+        help="Language (default: cuda)",
+    )
     parser.add_argument("--accelerator", default="T4", help="Accelerator name (default: T4)")
     parser.add_argument(
         "--action", default="run", choices=["run", "submit"], help="Action (run or submit)"
     )
     args = parser.parse_args()
+
+    if not LEETGPU_API_KEY:
+        logger.error("LEETGPU_API_KEY environment variable is required")
+        return 1
 
     challenge_py = args.challenge_path / "challenge.py"
     if not challenge_py.exists():

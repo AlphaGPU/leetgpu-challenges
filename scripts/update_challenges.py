@@ -36,11 +36,10 @@ def extract_id(name: str) -> int:
 
 
 def get_difficulty(path: Path) -> str:
-    s = str(path).lower()
-    for d in ("easy", "medium", "hard"):
-        if d in s:
-            return d
-    return "easy"
+    difficulty = path.parent.name.lower()
+    if difficulty in ("easy", "medium", "hard"):
+        return difficulty
+    raise ValueError(f"Cannot determine difficulty from path: {path}")
 
 
 def get_language(filename: str) -> Optional[str]:
@@ -141,13 +140,13 @@ def update_challenge(service_url: str, payload: Dict, api_key: str) -> bool:
 
 
 def main():
-    if not LEETGPU_API_KEY:
-        logger.error("LEETGPU_API_KEY environment variable is required")
-        return 1
-
     parser = argparse.ArgumentParser()
     parser.add_argument("path", type=Path, nargs="?")
     args = parser.parse_args()
+
+    if not LEETGPU_API_KEY:
+        logger.error("LEETGPU_API_KEY environment variable is required")
+        return 1
 
     if args.path:
         dirs = [args.path]
