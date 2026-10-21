@@ -1,0 +1,95 @@
+<p>
+  Implement <strong>gated attention</strong> (Qiu et al., 2025). In addition to standard multi-head
+  causal attention, every head applies its own element-wise sigmoid gate to its output. The gate
+  is not given: it is computed from the layer input <code>X</code> through a learned projection
+  <code>W_g</code>, so the gate projection is a full matrix multiplication that an efficient kernel
+  should fuse with the attention computation instead of materializing it separately. All tensors
+  are <code>float32</code>.
+</p>
+
+<svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="4 by 4 causal attention mask: lower triangle visible, upper triangle masked">
+  <rect width="180" height="180" fill="#222" rx="8"/>
+  <rect x="10" y="10" width="40" height="40" fill="#4caf50"/>
+  <rect x="50" y="10" width="40" height="40" fill="#444"/>
+  <rect x="90" y="10" width="40" height="40" fill="#444"/>
+  <rect x="130" y="10" width="40" height="40" fill="#444"/>
+  <rect x="10" y="50" width="40" height="40" fill="#4caf50"/>
+  <rect x="50" y="50" width="40" height="40" fill="#4caf50"/>
+  <rect x="90" y="50" width="40" height="40" fill="#444"/>
+  <rect x="130" y="50" width="40" height="40" fill="#444"/>
+  <rect x="10" y="90" width="40" height="40" fill="#4caf50"/>
+  <rect x="50" y="90" width="40" height="40" fill="#4caf50"/>
+  <rect x="90" y="90" width="40" height="40" fill="#4caf50"/>
+  <rect x="130" y="90" width="40" height="40" fill="#444"/>
+  <rect x="10" y="130" width="40" height="40" fill="#4caf50"/>
+  <rect x="50" y="130" width="40" height="40" fill="#4caf50"/>
+  <rect x="90" y="130" width="40" height="40" fill="#4caf50"/>
+  <rect x="130" y="130" width="40" height="40" fill="#4caf50"/>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<p>
+  Implement <code>solve(Q, K, V, X, W_g, output, M, d_model, h)</code>:
+</p>
+<ul>
+  <li><code>Q</code>, <code>K</code>, <code>V</code>: shape <code>(M, d_model)</code>, query, key, and value matrices</li>
+  <li><code>X</code>: shape <code>(M, d_model)</code>, the layer input the gate is computed from</li>
+  <li><code>W_g</code>: shape <code>(d_model, d_model)</code>, gate projection weights</li>
+  <li><code>output</code>: shape <code>(M, d_model)</code>, the gated attention output</li>
+  <li><code>M</code>: number of tokens; <code>d_model</code>: model dimension, divisible by <code>h</code>;
+    <code>h</code>: number of attention heads, head dimension <code>d_k = d_model / h</code></li>
+</ul>
+<p>
+  For head <code>j = 0..h-1</code>, let <code>Q_j</code>, <code>K_j</code>, <code>V_j</code> be the column
+  blocks <code>[j·d_k, (j+1)·d_k)</code> of <code>Q</code>, <code>K</code>, <code>V</code>, and let
+  <code>G_j</code> be the same column block of the gate-logit matrix <code>X W_g</code>:
+  \[
+  head_j = \mathrm{softmax}\!\left(\frac{Q_j K_j^T}{\sqrt{d_k}} + \mathrm{causal\_mask}\right) V_j,
+  \qquad output_j = head_j \odot \sigma(G_j)
+  \]
+  \[
+  output = \mathrm{concat}(output_0, \ldots, output_{h-1})
+  \]
+  where <code>causal_mask</code> sets every position <code>(i, j)</code> with <code>j &gt; i</code> to
+  <code>-∞</code> before the softmax, so a token can only attend to itself and earlier tokens.
+</p>
+<ul>
+  <li>Use only native features of the framework you choose (no external libraries); keep the function signature unchanged</li>
+  <li>Write the result into <code>output</code>; every entry of <code>output</code> must be written</li>
+  <li>Accumulate the GEMM in <code>float32</code> or better; compute the softmax in <code>float32</code> with max subtraction</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>M</code> = 3, <code>d_model</code> = 4, <code>h</code> = 2:
+  \[
+  X = \begin{bmatrix} 1 & 0 & 2 & 1 \\ 0 & 1 & 1 & 2 \\ 2 & 1 & 0 & 1 \end{bmatrix},
+  \quad
+  W_g = \begin{bmatrix} 1 & 0 & -1 & 0 \\ 0 & 1 & 0 & -1 \\ 1 & 1 & 0 & 0 \\ 0 & 0 & 1 & 1 \end{bmatrix}
+  \]
+  \[
+  Q = \begin{bmatrix} 1 & 2 & 0 & 1 \\ 0 & 1 & 2 & 0 \\ 1 & 0 & 1 & 2 \end{bmatrix},
+  \quad
+  K = \begin{bmatrix} 2 & 0 & 1 & 1 \\ 1 & 1 & 0 & 2 \\ 0 & 2 & 1 & 0 \end{bmatrix},
+  \quad
+  V = \begin{bmatrix} 1 & 2 & 3 & 4 \\ 5 & 6 & 7 & 8 \\ 9 & 10 & 11 & 12 \end{bmatrix}
+  \]
+  Output:
+  \[
+  output = \begin{bmatrix}
+  0.9525741 & 1.7615942 & 1.5000000 & 2.9242343 \\
+  2.6895983 & 4.1212902 & 3.3314223 & 3.4961277 \\
+  2.8680652 & 3.1115429 & 1.6336840 & 3.5372488
+  \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>All tensors are float32</li>
+  <li><code>1</code> &le; <code>M</code> &le; 4,096</li>
+  <li><code>d_model</code> up to 512, divisible by <code>h</code>; <code>h</code> up to 8</li>
+  <li>Inputs <code>Q</code>, <code>K</code>, <code>V</code>, <code>X</code> are drawn from signed ranges; <code>W_g</code> is scaled so gate values stay in a range where the sigmoid is not saturated</li>
+  <li>Performance is measured with <code>M</code> = 4,096, <code>d_model</code> = 512, <code>h</code> = 8</li>
+</ul>
