@@ -1,0 +1,88 @@
+<p>
+  Implement the <strong>fused RMSNorm + W8A8 linear layer</strong> used by int8 LLM inference
+  (SmoothQuant-style W8A8). Each token row of <code>x</code> is RMS-normalized and scaled by
+  <code>gamma</code>, then quantized on the fly to <code>int8</code> with its own symmetric
+  per-token scale. The int8 activations are multiplied by an <code>int8</code> weight matrix that
+  was quantized offline with one scale per output channel, the products are accumulated as
+  integers, and the result is dequantized to <code>float32</code>.
+</p>
+
+<svg width="620" height="230" viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto; font-family:monospace;">
+  <rect width="620" height="230" fill="#222" rx="8"/>
+  <text x="16" y="22" fill="#ccc" font-size="11" font-weight="bold">One token row i (K features) against output channel j</text>
+  <g font-size="10" text-anchor="middle">
+    <rect x="20" y="70" width="70" height="24" rx="3" fill="#2a3a4a" stroke="#4a8abf"/><text x="55" y="86" fill="#4a8abf">x[i] fp32</text>
+    <rect x="115" y="70" width="110" height="24" rx="3" fill="#2a4a38" stroke="#52b788"/><text x="170" y="86" fill="#52b788">RMSNorm &#215; gamma</text>
+    <rect x="250" y="70" width="120" height="24" rx="3" fill="#4a3a2a" stroke="#ffcc66"/><text x="310" y="86" fill="#ffcc66">q[i] int8, s[i]</text>
+    <rect x="250" y="130" width="120" height="24" rx="3" fill="#2a3a4a" stroke="#4a8abf"/><text x="310" y="146" fill="#4a8abf">W[j] int8, w_scale[j]</text>
+    <rect x="395" y="100" width="90" height="24" rx="3" fill="#4a3a2a" stroke="#ffcc66"/><text x="440" y="116" fill="#ffcc66">int32 dot</text>
+    <rect x="510" y="100" width="95" height="24" rx="3" fill="#4a2a3a" stroke="#e07a9a"/><text x="557" y="116" fill="#e07a9a">&#215; s[i] w_scale[j]</text>
+  </g>
+  <g stroke="#888" stroke-width="1.2" fill="none">
+    <line x1="90" y1="82" x2="113" y2="82"/><line x1="225" y1="82" x2="248" y2="82"/>
+    <line x1="370" y1="82" x2="393" y2="108"/><line x1="370" y1="142" x2="393" y2="116"/>
+    <line x1="485" y1="112" x2="508" y2="112"/>
+  </g>
+  <text x="16" y="182" fill="#ffcc66" font-size="10">s[i] = max_k |y[i, k]| / 127, q[i, k] = round(y[i, k] / s[i]) in [-127, 127]</text>
+  <text x="16" y="204" fill="#ffcc66" font-size="10">W has shape (N, K): row j holds the K weights of output channel j</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<p>
+  Implement <code>solve(x, gamma, W, w_scale, output, M, N, K)</code>:
+</p>
+<ul>
+  <li><code>x</code>: shape <code>(M, K)</code>, <code>float32</code>, one row per token</li>
+  <li><code>gamma</code>: shape <code>(K,)</code>, <code>float32</code>, the RMSNorm weight</li>
+  <li><code>W</code>: shape <code>(N, K)</code>, <code>int8</code> with values in [-127, 127]</li>
+  <li><code>w_scale</code>: shape <code>(N,)</code>, <code>float32</code>, one scale per output channel</li>
+  <li><code>output</code>: shape <code>(M, N)</code>, <code>float32</code></li>
+</ul>
+<p>
+  For token row \(i\), with \(\epsilon = 10^{-6}\):
+  \[
+  y_{i,k} = \frac{x_{i,k}}{\sqrt{\frac{1}{K}\sum_{k'=0}^{K-1} x_{i,k'}^2 + \epsilon}} \, \gamma_k, \qquad
+  s_i = \frac{\max_k |y_{i,k}|}{127}, \qquad
+  q_{i,k} = \text{clamp}\!\left(\text{round}\!\left(\frac{y_{i,k}}{s_i}\right), -127, 127\right)
+  \]
+  where round is round-to-nearest (ties to even). If \(s_i = 0\), every \(q_{i,k} = 0\). Then
+  \[
+  \text{output}[i, j] = s_i \cdot \text{w_scale}_j \cdot \sum_{k=0}^{K-1} q_{i,k} \, W_{j,k}
+  \]
+</p>
+<ul>
+  <li>Use only native features of the framework you choose (no external libraries); keep the function signature unchanged</li>
+  <li>Write the result into <code>output</code>; every element must be written</li>
+  <li>The activations must really be quantized to int8 levels; the sums \(\sum_k q_{i,k} W_{j,k}\) are integers and should be accumulated exactly (for example in <code>int32</code>)</li>
+  <li>Floating-point rounding may move an activation that lies right on a rounding boundary to the neighbouring level; the tolerance allows for this</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>M</code> = 2, <code>N</code> = 3, <code>K</code> = 4, <code>gamma</code> = [1, 1, 1, 1],
+  <code>w_scale</code> = [0.5, 0.25, 0.01]:
+  \[
+  x = \begin{bmatrix} 3 & -1 & 0 & 1 \\ 1 & 1 & 1 & 1 \end{bmatrix}, \quad
+  W = \begin{bmatrix} 1 & 0 & 0 & 0 \\ 0 & 2 & -2 & 0 \\ 10 & 10 & 10 & 10 \end{bmatrix}
+  \]
+</p>
+<p>
+  Row 0 has mean square 2.75, so \(y_0 = x_0 / 1.65831\) and \(s_0 = 1.80907 / 127 = 0.0142446\);
+  \(q_0 = [127, -42, 0, 42]\) and the integer dot products with the rows of \(W\) are
+  \([127, -84, 1270]\). Row 1 normalizes to all ones, so \(s_1 \approx 1/127\), \(q_1 = [127, 127, 127, 127]\)
+  and the dot products are \([127, 0, 5080]\). Scaling by \(s_i \cdot \text{w_scale}_j\):
+  \[
+  \text{output} = \begin{bmatrix} 0.9045 & -0.2991 & 0.1809 \\ 0.5000 & 0.0000 & 0.4000 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code> &le; 8,192</li>
+  <li>1 &le; <code>N</code> &le; 16,384</li>
+  <li>1 &le; <code>K</code> &le; 8,192</li>
+  <li><code>x</code> is drawn from a standard normal distribution, possibly scaled, with a few outlier channels or tokens up to about 60&times; larger; rows may be all zero</li>
+  <li><code>gamma</code> is in [0.5, 1.5]; <code>w_scale</code> is about 1 / (127 &middot; &radic;K)</li>
+  <li>Performance is measured with <code>M</code> = 4,096, <code>N</code> = 4,096, <code>K</code> = 4,096</li>
+</ul>
