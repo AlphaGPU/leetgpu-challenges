@@ -9,11 +9,11 @@ class Challenge(ChallengeBase):
     name = "Fused RMSNorm and W8A8 Linear"
     # Outputs are O(1). A float32 solution can round a handful of activations whose scaled
     # value lands within ~1e-5 of a .5 boundary to the neighbouring int8 level; each such
-    # flip moves the affected outputs by at most x_scale * w_scale * 127 (< 4e-3 here), so
-    # 1e-2 absorbs them. Skipping activation quantization, using one scale for the whole
-    # tensor, truncating instead of rounding, dropping RMSNorm, gamma, eps, w_scale or the
-    # per-token scale, or wrapping the accumulator in 16 bits are all far outside 1e-2 on
-    # the targeted cases below.
+    # flip moves the affected outputs by at most x_scale * w_scale * 127 (< 4e-3 except on the
+    # small-K outlier cases, where flips are rare), so 1e-2 absorbs them. Skipping activation
+    # quantization, using one scale for the whole tensor, truncating instead of rounding,
+    # dropping RMSNorm, gamma, eps, w_scale or the per-token scale, or wrapping the
+    # accumulator in 16 bits are all far outside 1e-2 on the targeted cases below.
     atol = 1e-02
     rtol = 1e-02
     num_gpus = 1
