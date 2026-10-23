@@ -90,8 +90,8 @@ class Challenge(ChallengeBase):
         tests.append(self._case(self._tensor([[5.0]]), self._tensor([[-7.0]]), 1.0))
 
         # Zero teacher (uniform p) against a peaked student, plus all-zero rows (kl = 0).
-        # Hand-computed row 0: KL(uniform || softmax([4,0,0,0])) = LSE(b) - mean(b)
-        # = log(e^4 + 3) - 1 = 3.0539. Reverse KL here would be 2.4228.
+        # Hand-computed row 0: KL(uniform || softmax([4,0,0,0])) = LSE(b) - mean(b) - log(V)
+        # = log(e^4 + 3) - 1 - log(4) = 1.6672. Reverse KL here would be 1.1245.
         tests.append(
             self._case(
                 self._tensor([[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]]),
