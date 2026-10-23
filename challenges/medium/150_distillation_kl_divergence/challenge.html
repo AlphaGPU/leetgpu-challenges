@@ -1,0 +1,105 @@
+<p>
+  In knowledge distillation, a small student LLM is trained to match the full next-token
+  distribution of a larger teacher. For each of <code>N</code> token positions, compute the forward
+  KL divergence between the temperature-softened teacher and student distributions over a vocabulary
+  of <code>V</code> entries. The inputs <code>teacher_logits</code> and <code>student_logits</code>
+  are float32 matrices of shape <code>(N, V)</code>. Write one float32 value per row to
+  <code>kl</code>, a vector of shape <code>(N,)</code>.
+</p>
+
+<svg width="640" height="220" viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="ah" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#999"/>
+    </marker>
+  </defs>
+  <rect width="640" height="220" fill="#222" rx="8"/>
+
+  <text x="20" y="30" fill="#8ecae6" font-family="monospace" font-size="12">teacher row i</text>
+  <rect x="130" y="16" width="360" height="22" fill="#1a3a5c" stroke="#3a6a9c"/>
+  <text x="20" y="66" fill="#e3b07e" font-family="monospace" font-size="12">student row i</text>
+  <rect x="130" y="52" width="360" height="22" fill="#4b2e22" stroke="#9c6a3a"/>
+  <g stroke="#555">
+    <line x1="190" y1="16" x2="190" y2="74"/>
+    <line x1="250" y1="16" x2="250" y2="74"/>
+    <line x1="310" y1="16" x2="310" y2="74"/>
+    <line x1="370" y1="16" x2="370" y2="74"/>
+    <line x1="430" y1="16" x2="430" y2="74"/>
+  </g>
+  <rect x="250" y="16" width="60" height="58" fill="#2d5a27" opacity="0.7"/>
+  <text x="280" y="92" fill="#aaa" font-family="monospace" font-size="11" text-anchor="middle">chunk</text>
+  <text x="560" y="50" fill="#888" font-family="monospace" font-size="11" text-anchor="middle">V up to 262,144</text>
+
+  <line x1="280" y1="98" x2="280" y2="128" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+  <rect x="110" y="132" width="340" height="44" fill="#333" stroke="#7ec8a0" rx="4"/>
+  <text x="280" y="150" fill="#ddd" font-family="monospace" font-size="12" text-anchor="middle">LSE(a), LSE(b), &#931; p&#183;(a &#8722; b)</text>
+  <text x="280" y="167" fill="#aaa" font-family="monospace" font-size="11" text-anchor="middle">row statistics</text>
+  <line x1="450" y1="154" x2="510" y2="154" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+  <rect x="514" y="136" width="100" height="36" fill="#2d5a27" rx="4"/>
+  <text x="564" y="159" fill="#ddd" font-family="monospace" font-size="12" text-anchor="middle">kl[i]</text>
+  <text x="320" y="204" fill="#999" font-family="monospace" font-size="11" text-anchor="middle">a = teacher / T, b = student / T</text>
+</svg>
+
+<p>
+  With temperature \(T\) = <code>temperature</code>, let \(a_{i,j} = \text{teacher_logits}_{i,j} / T\)
+  and \(b_{i,j} = \text{student_logits}_{i,j} / T\). For each row \(i\):
+</p>
+<p>
+  \[
+  \begin{align}
+  p_{i,j} &= \frac{e^{a_{i,j}}}{\sum_{k=0}^{V-1} e^{a_{i,k}}}, \qquad
+  q_{i,j} = \frac{e^{b_{i,j}}}{\sum_{k=0}^{V-1} e^{b_{i,k}}} \\
+  \text{kl}_i &= \sum_{j=0}^{V-1} p_{i,j} \left( \log p_{i,j} - \log q_{i,j} \right)
+  \end{align}
+  \]
+</p>
+<p>
+  This is \(\mathrm{KL}(p \,\|\, q)\) with the teacher as the reference distribution. No
+  \(T^2\) factor is applied. Logits can be large in magnitude, so the exponentials must be
+  computed in a numerically stable way.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>The final result must be stored in <code>kl</code></li>
+  <li><code>kl</code> is not zero-initialized; every element must be written</li>
+</ul>
+
+<h2>Example 1</h2>
+<p>
+  Input (<code>N</code> = 2, <code>V</code> = 3, <code>temperature</code> = 1.0):
+  \[
+  \text{teacher_logits} = \begin{bmatrix} 1.0 & 2.0 & 3.0 \\ 0.0 & 0.0 & 0.0 \end{bmatrix}, \quad
+  \text{student_logits} = \begin{bmatrix} 3.0 & 2.0 & 1.0 \\ 0.0 & 0.0 & 0.0 \end{bmatrix}
+  \]
+  Output:
+  \[
+  \text{kl} = \begin{bmatrix} 1.1504 & 0.0000 \end{bmatrix}
+  \]
+</p>
+
+<h2>Example 2</h2>
+<p>
+  Input (<code>N</code> = 2, <code>V</code> = 3, <code>temperature</code> = 2.0):
+  \[
+  \text{teacher_logits} = \begin{bmatrix} 1.0 & 2.0 & 3.0 \\ 0.0 & 0.0 & 0.0 \end{bmatrix}, \quad
+  \text{student_logits} = \begin{bmatrix} 3.0 & 2.0 & 1.0 \\ 0.0 & 0.0 & 0.0 \end{bmatrix}
+  \]
+  Output:
+  \[
+  \text{kl} = \begin{bmatrix} 0.3202 & 0.0000 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 65,536</li>
+  <li>1 &le; <code>V</code> &le; 262,144</li>
+  <li>0.5 &le; <code>temperature</code> &le; 10.0</li>
+  <li>All logits are float32 values in [&minus;500, 500]</li>
+  <li>Performance is measured with <code>N</code> = 2,048, <code>V</code> = 128,256,
+      <code>temperature</code> = 2.0</li>
+</ul>
