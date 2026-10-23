@@ -18,6 +18,7 @@
      <li>The <code>solve</code> function signature must remain unchanged</li>
      <li>The final result must be stored in the output matrix <code>C</code> as <code>int8</code></li>
      <li>After accumulation in int32 and scaling in float32, values must be rounded to the nearest integer, shifted by <code>zero_point_C</code>, and clamped to the <code>[-128, 127]</code> range</li>
+     <li>\(\mathrm{round}\) is round-half-to-even, the same as <code>torch.round</code>, <code>rintf</code> in CUDA, <code>tl.extra.cuda.libdevice.rint</code> in Triton and <code>jnp.round</code>. For example, 2.5 rounds to 2 and -3.5 rounds to -4. Note that <code>roundf</code> rounds halves away from zero and <code>floorf(x + 0.5f)</code> rounds them up, so both give a different result on ties</li>
      </ul>
 
      <h2>Example 1:</h2>
@@ -31,9 +32,9 @@
      scale_A = 0.1, scale_B = 0.2, scale_C = 0.05
      zero_point_A = 0, zero_point_B = 0, zero_point_C = 0
 
-     Output:
-     C = [[19, 22],
-          [43, 50]]
+     Output (the scaled values are [[7.6, 8.8], [17.2, 20.0]]):
+     C = [[8, 9],
+          [17, 20]]
      </pre>
 
      <h2>Example 2:</h2>

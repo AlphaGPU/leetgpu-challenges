@@ -158,7 +158,7 @@ class Challenge(ChallengeBase):
             }
         )
 
-        # 4. 3x5x2
+        # 4. 3x5x2, exact .5 ties
         A4 = torch.randint(-50, 51, (3, 2), dtype=dtype, device=device)
         B4 = torch.randint(-50, 51, (2, 5), dtype=dtype, device=device)
         C4 = torch.zeros((3, 5), dtype=dtype, device=device)
@@ -170,9 +170,14 @@ class Challenge(ChallengeBase):
                 "M": 3,
                 "N": 5,
                 "K": 2,
-                "scale_A": 0.05,
-                "scale_B": 0.1,
-                "scale_C": 0.01,
+                # Power-of-two scales: the effective scale is exactly 0.5 whatever order the
+                # scales are multiplied in, so odd accumulators land exactly on .5 ties and
+                # check round-half-to-even deterministically. (0.05 * 0.1 / 0.01 landed within
+                # float32 rounding of .5, so a correct kernel that multiplied the scales in a
+                # different order could fail at random.)
+                "scale_A": 0.25,
+                "scale_B": 0.5,
+                "scale_C": 0.25,
                 "zero_point_A": 0,
                 "zero_point_B": 0,
                 "zero_point_C": 0,
