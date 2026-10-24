@@ -128,9 +128,11 @@ class Challenge(ChallengeBase):
 
     def generate_performance_test(self) -> Dict[str, Any]:
         return {
-            "Q": RandTensor((1024, 1024), -10.0, 10.0),
-            "K": RandTensor((1024, 1024), -10.0, 10.0),
-            "V": RandTensor((1024, 1024), -10.0, 10.0),
+            # [-1, 1]: with [-10, 10] the per-head scores had a std of ~33, and float32
+            # rounding differences between correct kernels moved the outputs past the 1e-5 check.
+            "Q": RandTensor((1024, 1024), -1.0, 1.0),
+            "K": RandTensor((1024, 1024), -1.0, 1.0),
+            "V": RandTensor((1024, 1024), -1.0, 1.0),
             "output": OutTensor((1024, 1024)),
             "N": 1024,
             "d_model": 1024,

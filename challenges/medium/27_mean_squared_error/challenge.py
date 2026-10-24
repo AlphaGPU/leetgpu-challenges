@@ -7,8 +7,11 @@ from core.challenge_base import ChallengeBase
 
 class Challenge(ChallengeBase):
     name = "Mean Squared Error"
+    # rtol 1e-4: the perf test sums 50M squared differences of ~1e6. A correct kernel that
+    # combines per-warp or per-block partial sums with atomicAdd (in nondeterministic order)
+    # lands up to ~1e-5 relative from torch.mean, so 1e-5 failed it at random.
     atol = 1e-05
-    rtol = 1e-05
+    rtol = 1e-04
     num_gpus = 1
     access_tier = "free"
 

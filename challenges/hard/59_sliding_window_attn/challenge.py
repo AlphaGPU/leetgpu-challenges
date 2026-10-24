@@ -170,9 +170,13 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         M, d, window_size = 5000, 64, 16
         return {
-            "Q": RandTensor((M, d), -100, 100),
-            "K": RandTensor((M, d), -100, 100),
-            "V": RandTensor((M, d), -100, 100),
+            # [-1, 1] like Causal Attention (#53). With [-100, 100] the scores had a std of
+            # ~3,000, so softmax was a near-argmax and float32 rounding in Q @ K^T flipped the
+            # weights of near-tied keys. Correct kernels that summed in a different order than
+            # the reference then failed the 1e-5 check at random.
+            "Q": RandTensor((M, d), -1.0, 1.0),
+            "K": RandTensor((M, d), -1.0, 1.0),
+            "V": RandTensor((M, d), -1.0, 1.0),
             "output": OutTensor((M, d)),
             "M": M,
             "d": d,
