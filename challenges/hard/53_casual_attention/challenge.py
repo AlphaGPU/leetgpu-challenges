@@ -7,8 +7,11 @@ from core.challenge_base import ChallengeBase, OutTensor, RandTensor
 
 class Challenge(ChallengeBase):
     name = "Causal Self-Attention"
-    atol = 1e-05
-    rtol = 1e-05
+    # 1e-4 like Softmax Attention (#6). Each output row averages up to 5,000 values, and with
+    # 1e-5 a correct flash-style (online softmax) kernel failed the perf check at random
+    # because its summation order differs from the reference.
+    atol = 1e-04
+    rtol = 1e-04
     num_gpus = 1
     access_tier = "free"
 
