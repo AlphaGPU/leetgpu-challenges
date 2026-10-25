@@ -10,12 +10,15 @@ class Challenge(ChallengeBase):
     # The Newton-Schulz iteration is a chain of 15 matrix multiplications
     # (3 per step), and its result is scaled by up to sqrt(max(M, N)). On CPU
     # the float32 reference matches a float64 implementation of the same
-    # iteration to on the order of 1e-5 on every test case, including the
-    # near-low-rank one (sigma2 / sigma1 = 0.05), whose small singular
-    # directions amplify float32 rounding in any implementation. Every
-    # plausible bug variant (wrong polynomial, no Frobenius normalization,
-    # missing epsilon, wrong sqrt scale, sign flip, fewer steps) misses by
-    # orders of magnitude more than this tolerance.
+    # iteration to within 2.9e-5 on every functional test case (worst case:
+    # the large 1024 x 512 one; the near-low-rank case, sigma2 / sigma1 =
+    # 0.05, measures 9.2e-6 despite its small singular directions amplifying
+    # float32 rounding) and to about 6e-5 on the 1024 x 1024 performance
+    # case, where a square Gaussian matrix has singular values near zero
+    # that amplify rounding the same way. Every plausible bug variant (wrong
+    # polynomial, no Frobenius normalization, missing epsilon, wrong sqrt
+    # scale, sign flip, fewer steps) misses by orders of magnitude more than
+    # this tolerance.
     atol = 1e-04
     rtol = 1e-04
     num_gpus = 1
@@ -46,10 +49,13 @@ class Challenge(ChallengeBase):
         # = 1), and each step applies the polynomial p(s) = a*s + b*s^3 +
         # c*s^5 to every singular value. The quintic has no fixed point at
         # s = 1 (p(1) = 0.701): it is tuned to lift small singular values
-        # quickly, and after 5 steps the singular values of X lie in a band
-        # around 1 (roughly [0.68, 1.13] for typical inputs) — an
-        # approximation of the orthogonal polar factor of V by design, exactly
-        # as in Keller Jordan's and PyTorch's Muon implementations. The 5-step
+        # quickly. For rectangular inputs, the singular values of X after 5
+        # steps land in a band around 1 (roughly [0.68, 1.13]). Square
+        # Gaussian inputs behave differently: they have singular values
+        # near 0 that 5 steps do not lift (measured range at 1024 x 1024:
+        # roughly [0.01, 1.20]), so in general X is only an approximation
+        # of the orthogonal polar factor of V — by design, exactly as in
+        # Keller Jordan's and PyTorch's Muon implementations. The 5-step
         # iteration itself, not the exact polar factor, defines the result.
         a, b, c = 3.4445, -4.7750, 2.0315
         X = V / (V.norm() + 1e-7)
