@@ -21,9 +21,12 @@
   \(\sigma_{\max} \le \|X_0\|_F = 1\)), and the polynomial
   \(p(s) = a s + b s^{3} + c s^{5}\) maps the singular values into a band
   around 1: the quintic has no fixed point at \(s = 1\) (\(p(1) = 0.701\))
-  and is tuned to lift small singular values quickly, so after 5 steps the
-  singular values of \(X\) lie roughly in \([0.68, 1.13]\) for typical
-  inputs. \(X\) is therefore an approximation of the orthogonal polar factor
+  and is tuned to lift small singular values quickly. For rectangular
+  inputs, the singular values of \(X\) after 5 steps lie roughly in
+  \([0.68, 1.13]\); square Gaussian inputs keep some singular values well
+  below that band (measured down to about 0.01 at 1024 x 1024), because a
+  square Gaussian matrix has singular values near 0 that 5 steps do not
+  lift. \(X\) is therefore an approximation of the orthogonal polar factor
   of \(V\) by design &mdash; exactly as in Keller Jordan's and PyTorch's Muon
   implementations &mdash; and the 5-step iteration itself defines the
   expected result, not the exact polar factor. Finally, scale by
@@ -58,7 +61,7 @@
   <li>Use only native features of the framework you choose (no external libraries); keep the function signature unchanged</li>
   <li>Write the result into <code>output</code>; every entry of <code>output</code> must be written</li>
   <li>Run exactly 5 Newton&ndash;Schulz steps with the coefficients above; when <code>M &gt; N</code>, the iteration may equivalently be run on the transposed matrix so the Gram matrix <code>X X<sup>T</sup></code> is formed on the smaller dimension</li>
-  <li>Accumulate the matrix multiplications in <code>float32</code> or better</li>
+  <li>All matrix-multiplication inputs and accumulation must be <code>float32</code> (no TF32, fp16, or bf16 operands); reduced-precision matrix multiplication does not meet the tolerance</li>
 </ul>
 
 <h2>Example</h2>
