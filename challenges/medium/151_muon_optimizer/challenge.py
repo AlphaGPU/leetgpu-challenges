@@ -9,10 +9,11 @@ class Challenge(ChallengeBase):
     name = "Muon Optimizer"
     # The Newton-Schulz iteration is a chain of 15 matrix multiplications
     # (3 per step), and its result is scaled by up to sqrt(max(M, N)). On CPU
-    # the float32 reference matches a float64 implementation of the same
-    # iteration to within 3e-5 on every functional case and ~6e-5 on the
-    # 1024 x 1024 performance case, whose tiny singular values amplify
-    # float32 rounding in any implementation. Every plausible bug variant
+    # the float32 reference (with its two-level Frobenius-norm sum) matches a
+    # float64 implementation of the same iteration to within 2e-5 on every
+    # functional case and on the 1024 x 1024 performance case, i.e. under
+    # 0.07 of the tolerance, so more accurate kernels pass with wide margin.
+    # Every plausible bug variant
     # (wrong polynomial, no Frobenius normalization, missing epsilon, wrong
     # sqrt scale, sign flip, fewer steps) misses by orders of magnitude more
     # than this tolerance.
@@ -53,7 +54,12 @@ class Challenge(ChallengeBase):
         # implementations. The 5-step iteration itself, not the exact polar
         # factor, defines the result.
         a, b, c = 3.4445, -4.7750, 2.0315
-        X = V / (V.norm() + 1e-7)
+        # Frobenius norm as a two-level float32 sum (per row, then over rows).
+        # A single flat float32 reduction carries ~1e-5 relative error at
+        # 1024 x 1024, which the iteration passes through almost 1:1 and which
+        # would penalize kernels that compute the norm more accurately.
+        norm = V.pow(2).sum(dim=1).sum().sqrt()
+        X = V / (norm + 1e-7)
         transposed = M > N
         if transposed:
             # Iterate with the Gram matrix on the smaller dimension.
