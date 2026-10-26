@@ -1,0 +1,95 @@
+<p>
+  Implement the update computation of one <strong>Muon</strong> optimizer step.
+  Muon (Keller Jordan, 2024) is the optimizer used to train Moonlight and
+  Kimi K2; instead of scaling each gradient coordinate independently like
+  AdamW, it orthogonalizes the whole momentum-updated gradient matrix, so
+  every singular direction of the update contributes almost equally. Given a gradient
+  matrix <code>G</code> and the optimizer's momentum buffer <code>Buf</code>,
+  compute the orthogonalized, rescaled update and write it to
+  <code>output</code>. All tensors are <code>float32</code>.
+</p>
+<p>
+  First combine the buffer and the gradient into the update direction
+  \[ V = \text{momentum} \cdot Buf + G \]
+  then orthogonalize <code>V</code> with 5 steps of the quintic Newton&ndash;Schulz
+  iteration. With \(X_0 = V / (\|V\|_F + 10^{-7})\), each step computes
+  \[
+  A = X X^{T}, \qquad B = b A + c A^{2}, \qquad X \leftarrow a X + B X
+  \]
+  with coefficients \(a = 3.4445\), \(b = -4.7750\), \(c = 2.0315\). The
+  normalization makes the largest singular value of \(X_0\) at most 1 (since
+  \(\sigma_{\max} \le \|X_0\|_F = 1\)), and the polynomial
+  \(p(s) = a s + b s^{3} + c s^{5}\) maps the singular values into a band
+  around 1: the quintic has no fixed point at \(s = 1\) (\(p(1) = 0.701\))
+  and is tuned to lift small singular values quickly. For rectangular
+  inputs, the singular values of \(X\) after 5 steps lie roughly in
+  \([0.68, 1.13]\); square Gaussian inputs keep some singular values well
+  below that band (measured as low as 0.001&ndash;0.02 at 1024 &times; 1024),
+  because a square Gaussian matrix has singular values near 0 that 5 steps do
+  not lift. \(X\) is therefore an approximation of the orthogonal polar factor
+  of \(V\) by design &mdash; exactly as in Keller Jordan's and PyTorch's Muon
+  implementations &mdash; and the 5-step iteration itself defines the
+  expected result, not the exact polar factor. Finally, scale by
+  \(\sqrt{\max(M, N)}\), the convention fixed by this challenge: a
+  semi-orthogonal matrix has RMS \(1 / \sqrt{\max(M, N)}\), so the scaled
+  update has RMS 1. (Other Muon implementations scale differently &mdash;
+  PyTorch's Muon uses \(0.2 \cdot \sqrt{\max(M, N)}\) and Keller Jordan's
+  current code uses \(\sqrt{\max(1, M / N)}\) &mdash; but
+  \(\sqrt{\max(M, N)}\) is the spec here.)
+  \[ output = X \cdot \sqrt{\max(M, N)} \]
+</p>
+<p>
+  <strong>Scope.</strong> This challenge computes the Muon update direction
+  only: there is no parameter update, no weight decay, and no Nesterov
+  momentum. Correctness is judged against the float32 5-step
+  Newton&ndash;Schulz iteration specified above, not against the exact SVD
+  polar factor of \(V\).
+</p>
+
+<h2>Implementation Requirements</h2>
+<p>
+  Implement <code>solve(G, Buf, output, M, N, momentum)</code>:
+</p>
+<ul>
+  <li><code>G</code>: shape <code>(M, N)</code>, the current gradient of a weight matrix; it is a read-only input and must not be modified</li>
+  <li><code>Buf</code>: shape <code>(M, N)</code>, the momentum buffer; it is a read-only input and must not be modified</li>
+  <li><code>output</code>: shape <code>(M, N)</code>, the orthogonalized update</li>
+  <li><code>M</code>, <code>N</code>: the dimensions of the weight matrix</li>
+  <li><code>momentum</code>: the momentum coefficient used to combine <code>Buf</code> and <code>G</code></li>
+</ul>
+<ul>
+  <li>Use only native features of the framework you choose (no external libraries); keep the function signature unchanged</li>
+  <li>Write the result into <code>output</code>; every entry of <code>output</code> must be written</li>
+  <li>Run exactly 5 Newton&ndash;Schulz steps with the coefficients above; when <code>M &gt; N</code>, the iteration may equivalently be run on the transposed matrix so the Gram matrix <code>X X<sup>T</sup></code> is formed on the smaller dimension</li>
+  <li>All matrix-multiplication inputs and accumulations must be <code>float32</code> or higher precision (no TF32, <code>float16</code> or <code>bfloat16</code> operands); reduced-precision matrix multiplication does not meet the tolerance</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>M</code> = 2, <code>N</code> = 3, <code>momentum</code> = 0.9:
+  \[
+  G = \begin{bmatrix} 0.5 & -1.0 & 2.0 \\ 1.0 & 0.0 & -0.5 \end{bmatrix},
+  \quad
+  Buf = \begin{bmatrix} 0.1 & 0.2 & 0.0 \\ -0.3 & 0.4 & 0.1 \end{bmatrix}
+  \]
+  \[
+  V = 0.9 \cdot Buf + G = \begin{bmatrix} 0.59 & -0.82 & 2.0 \\ 0.73 & 0.36 & -0.41 \end{bmatrix}
+  \]
+  Output:
+  \[
+  output = \begin{bmatrix}
+  0.5427371 & -0.4092258 & 1.1156158 \\
+  1.7146817 & 0.5666907 & -0.3777507
+  \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>All tensors are float32</li>
+  <li>1 &le; <code>M</code> &le; 1,024</li>
+  <li>1 &le; <code>N</code> &le; 1,024</li>
+  <li>0 &le; <code>momentum</code> &lt; 1</li>
+  <li>Entries of <code>G</code> and <code>Buf</code> are drawn from a standard normal distribution in the tests, apart from dedicated edge cases with all-zero and 1e-8-magnitude inputs</li>
+  <li>Performance is measured with <code>M</code> = 1,024, <code>N</code> = 1,024, <code>momentum</code> = 0.9</li>
+</ul>
