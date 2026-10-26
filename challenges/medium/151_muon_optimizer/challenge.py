@@ -10,9 +10,11 @@ class Challenge(ChallengeBase):
     # The Newton-Schulz iteration is a chain of 15 matrix multiplications
     # (3 per step), and its result is scaled by up to sqrt(max(M, N)). On CPU
     # the float32 reference (with its two-level Frobenius-norm sum) matches a
-    # float64 implementation of the same iteration to within 2e-5 on every
-    # functional case and on the 1024 x 1024 performance case, i.e. under
-    # 0.07 of the tolerance, so more accurate kernels pass with wide margin.
+    # float64 implementation of the same iteration (float64 norm included) to
+    # within 2e-5 max abs difference on every functional case and on the
+    # 1024 x 1024 performance case, i.e. at most 0.08 of the elementwise bound
+    # atol + rtol * |ref|. Reordered float32 kernels measure up to ~0.14 of
+    # that bound, so correct kernels pass with a ~7x margin.
     # Every plausible bug variant
     # (wrong polynomial, no Frobenius normalization, missing epsilon, wrong
     # sqrt scale, sign flip, fewer steps) misses by orders of magnitude more
