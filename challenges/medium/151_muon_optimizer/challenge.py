@@ -9,16 +9,18 @@ class Challenge(ChallengeBase):
     name = "Muon Optimizer"
     # The Newton-Schulz iteration is a chain of 15 matrix multiplications
     # (3 per step), and its result is scaled by up to sqrt(max(M, N)). On CPU
-    # the float32 reference matches a float64 implementation of the same
-    # iteration to within 2.9e-5 on every functional test case (worst case:
-    # the large 1024 x 512 one; the near-low-rank case, sigma2 / sigma1 =
-    # 0.05, measures 9.2e-6 despite its small singular directions amplifying
-    # float32 rounding) and to about 6e-5 on the 1024 x 1024 performance
-    # case, where a square Gaussian matrix has singular values near zero
-    # that amplify rounding the same way. Every plausible bug variant (wrong
-    # polynomial, no Frobenius normalization, missing epsilon, wrong sqrt
-    # scale, sign flip, fewer steps) misses by orders of magnitude more than
-    # this tolerance.
+    # the float32 reference (with its two-level Frobenius-norm sum) matches a
+    # float64 implementation of the same iteration (float64 norm included) to
+    # within 1.9e-5 max abs difference: at most 1.9e-5 on the functional
+    # cases (worst case: the large 1024 x 512 one) and 1.3e-5 to 1.8e-5 on
+    # the 1024 x 1024 performance case over five seeds. Against atol alone
+    # that is up to 0.19 (2e-5 / 1e-4 = 0.2); against the elementwise bound
+    # atol + rtol * |ref| (torch.allclose-style) it is at most ~0.075.
+    # Reordered float32 kernels with an accurate norm measure up to ~0.14 of
+    # that bound, so correct kernels pass with a ~7x margin. Every plausible
+    # bug variant (wrong polynomial, no Frobenius normalization, missing
+    # epsilon, wrong sqrt scale, sign flip, fewer steps) misses by orders of
+    # magnitude more than this tolerance.
     atol = 1e-04
     rtol = 1e-04
     num_gpus = 1
@@ -52,13 +54,19 @@ class Challenge(ChallengeBase):
         # quickly. For rectangular inputs, the singular values of X after 5
         # steps land in a band around 1 (roughly [0.68, 1.13]). Square
         # Gaussian inputs behave differently: they have singular values
-        # near 0 that 5 steps do not lift (measured range at 1024 x 1024:
-        # roughly [0.01, 1.20]), so in general X is only an approximation
-        # of the orthogonal polar factor of V — by design, exactly as in
-        # Keller Jordan's and PyTorch's Muon implementations. The 5-step
-        # iteration itself, not the exact polar factor, defines the result.
+        # near 0 that 5 steps do not lift (at 1024 x 1024 the smallest
+        # measured 0.001-0.02, the largest 1.20), so in general X is only an
+        # approximation of the orthogonal polar factor of V — by design,
+        # exactly as in Keller Jordan's and PyTorch's Muon implementations.
+        # The 5-step iteration itself, not the exact polar factor, defines
+        # the result.
         a, b, c = 3.4445, -4.7750, 2.0315
-        X = V / (V.norm() + 1e-7)
+        # Frobenius norm as a two-level float32 sum (per row, then over rows).
+        # A single flat float32 reduction carries ~1e-5 relative error at
+        # 1024 x 1024, which the iteration passes through almost 1:1 and which
+        # would penalize kernels that compute the norm more accurately.
+        norm = V.pow(2).sum(dim=1).sum().sqrt()
+        X = V / (norm + 1e-7)
         transposed = M > N
         if transposed:
             # Iterate with the Gram matrix on the smaller dimension.
