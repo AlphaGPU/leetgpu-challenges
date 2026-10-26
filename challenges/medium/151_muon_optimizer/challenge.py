@@ -8,15 +8,16 @@ from core.challenge_base import ChallengeBase, OutTensor, RandnTensor
 class Challenge(ChallengeBase):
     name = "Muon Optimizer"
     # The Newton-Schulz iteration is a chain of 15 matrix multiplications
-    # (3 per step), and its result is scaled by up to sqrt(max(M, N)).
-    # On CPU, the float32 reference (with its two-level Frobenius-norm sum)
-    # matches a float64 implementation of the same iteration to within 2e-5
-    # on every functional case and on the 1024 x 1024 performance case; that
-    # is at most 0.08 of atol + rtol * |ref| elementwise, so kernels with a
-    # different fp32 accumulation order, or more accurate ones, pass with a
-    # wide margin. Every plausible bug variant (wrong polynomial, no
-    # Frobenius normalization, missing epsilon, wrong sqrt scale, sign flip,
-    # fewer steps) misses by orders of magnitude more than this tolerance.
+    # (3 per step), and its result is scaled by up to sqrt(max(M, N)). On CPU
+    # the float32 reference (with its two-level Frobenius-norm sum) matches a
+    # float64 implementation of the same iteration (float64 norm included) to
+    # within 2e-5 max abs difference on every functional case and on the
+    # 1024 x 1024 performance case, i.e. at most 0.08 of the elementwise bound
+    # atol + rtol * |ref|. Reordered float32 kernels measure up to ~0.14 of
+    # that bound, so correct kernels pass with a ~7x margin. Every plausible
+    # bug variant (wrong polynomial, no Frobenius normalization, missing
+    # epsilon, wrong sqrt scale, sign flip, fewer steps) misses by orders of
+    # magnitude more than this tolerance.
     atol = 1e-04
     rtol = 1e-04
     num_gpus = 1
