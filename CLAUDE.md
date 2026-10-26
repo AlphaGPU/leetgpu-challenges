@@ -165,7 +165,7 @@ Each starter file must have exactly one comment describing the parameters, place
 ## Creation Workflow
 
 1. Create directory: `mkdir -p challenges/<difficulty>/<number>_<name>/starter`
-2. Write `challenge.py` — inherit ChallengeBase, implement all 6 methods
+2. Write `challenge.py` — inherit ChallengeBase, implement all 5 methods
 3. Write `challenge.html` — all 4 sections
 4. Write starter code for all 6 frameworks
 5. Lint: `pre-commit run --all-files`
@@ -179,7 +179,7 @@ python scripts/run_challenge.py path/to/challenge_dir --language cuda --action r
 ```
 
 **Rules:**
-- **GPU**: Always use `--gpu "NVIDIA TESLA T4"` (the default). Do not use any other GPU.
+- **GPU**: Always use `--accelerator T4` (the default). Do not use any other GPU.
 - **Submission limit**: You may only run this script **5 times per session**. Use submissions carefully — verify your challenge locally (imports, assertions, lint) before submitting.
 - **Workflow**: Write a CUDA solution in `solution/solution.cu`, run the script with `--action run` to validate, and only use `--action submit` when confident. Do not commit the solution file to the PR.
 
