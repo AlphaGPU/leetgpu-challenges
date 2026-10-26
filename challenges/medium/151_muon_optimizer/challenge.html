@@ -21,10 +21,13 @@
   \(\sigma_{\max} \le \|X_0\|_F = 1\)), and the polynomial
   \(p(s) = a s + b s^{3} + c s^{5}\) maps the singular values into a band
   around 1: the quintic has no fixed point at \(s = 1\) (\(p(1) = 0.701\))
-  and is tuned to lift small singular values quickly, so after 5 steps most
-  singular values of \(X\) lie in a band around 1 (very small singular values
-  of \(V\), common in square matrices, may not be fully lifted). \(X\) is
-  therefore an approximation of the orthogonal polar factor of \(V\) by design &mdash; exactly as in Keller Jordan's and PyTorch's Muon
+  and is tuned to lift small singular values quickly. For rectangular
+  inputs, the singular values of \(X\) after 5 steps lie roughly in
+  \([0.68, 1.13]\); square Gaussian inputs keep some singular values well
+  below that band (measured as low as 0.001&ndash;0.02 at 1024 &times; 1024),
+  because a square Gaussian matrix has singular values near 0 that 5 steps do
+  not lift. \(X\) is therefore an approximation of the orthogonal polar factor
+  of \(V\) by design &mdash; exactly as in Keller Jordan's and PyTorch's Muon
   implementations &mdash; and the 5-step iteration itself defines the
   expected result, not the exact polar factor. Finally, scale by
   \(\sqrt{\max(M, N)}\), the convention fixed by this challenge: a
