@@ -89,7 +89,7 @@ class Challenge(ChallengeBase):
 
         # Resampled token at every (b, i): clamp(target - draft, 0), normalize, cdf,
         # searchsorted(cdf, uniform_samples[b, T]). Uniform fallback when total == 0.
-        adjusted = jnp.clip(target_probs - draft_probs, a_min=0.0)  # [B, T, V]
+        adjusted = jnp.maximum(target_probs - draft_probs, 0.0)  # [B, T, V]
         total = jnp.sum(adjusted, axis=2, keepdims=True)  # [B, T, 1]
         uniform_dist = jnp.ones_like(adjusted) / V
         normalized = jnp.where(total > 0.0, adjusted / total, uniform_dist)  # [B, T, V]
