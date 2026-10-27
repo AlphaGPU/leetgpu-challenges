@@ -1,0 +1,110 @@
+<p>
+  Implement causal <strong>sliding window attention with logit soft-capping</strong> and grouped
+  query attention, as used in the local attention layers of Gemma 2. Each query attends only to
+  itself and the previous <code>window_size - 1</code> tokens, and every attention score is
+  squashed by <code>softcap &middot; tanh(score / softcap)</code> before the softmax. Several query
+  heads share each key/value head. All tensors are <code>float32</code>.
+</p>
+
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="6 by 6 sliding window causal mask with window_size 3: each query row sees itself and the two previous keys">
+  <rect width="200" height="200" fill="#222" rx="8"/>
+  <rect x="10" y="10" width="28" height="28" fill="#4caf50"/>
+  <rect x="40" y="10" width="28" height="28" fill="#444"/>
+  <rect x="70" y="10" width="28" height="28" fill="#444"/>
+  <rect x="100" y="10" width="28" height="28" fill="#444"/>
+  <rect x="130" y="10" width="28" height="28" fill="#444"/>
+  <rect x="160" y="10" width="28" height="28" fill="#444"/>
+  <rect x="10" y="40" width="28" height="28" fill="#4caf50"/>
+  <rect x="40" y="40" width="28" height="28" fill="#4caf50"/>
+  <rect x="70" y="40" width="28" height="28" fill="#444"/>
+  <rect x="100" y="40" width="28" height="28" fill="#444"/>
+  <rect x="130" y="40" width="28" height="28" fill="#444"/>
+  <rect x="160" y="40" width="28" height="28" fill="#444"/>
+  <rect x="10" y="70" width="28" height="28" fill="#4caf50"/>
+  <rect x="40" y="70" width="28" height="28" fill="#4caf50"/>
+  <rect x="70" y="70" width="28" height="28" fill="#4caf50"/>
+  <rect x="100" y="70" width="28" height="28" fill="#444"/>
+  <rect x="130" y="70" width="28" height="28" fill="#444"/>
+  <rect x="160" y="70" width="28" height="28" fill="#444"/>
+  <rect x="10" y="100" width="28" height="28" fill="#444"/>
+  <rect x="40" y="100" width="28" height="28" fill="#4caf50"/>
+  <rect x="70" y="100" width="28" height="28" fill="#4caf50"/>
+  <rect x="100" y="100" width="28" height="28" fill="#4caf50"/>
+  <rect x="130" y="100" width="28" height="28" fill="#444"/>
+  <rect x="160" y="100" width="28" height="28" fill="#444"/>
+  <rect x="10" y="130" width="28" height="28" fill="#444"/>
+  <rect x="40" y="130" width="28" height="28" fill="#444"/>
+  <rect x="70" y="130" width="28" height="28" fill="#4caf50"/>
+  <rect x="100" y="130" width="28" height="28" fill="#4caf50"/>
+  <rect x="130" y="130" width="28" height="28" fill="#4caf50"/>
+  <rect x="160" y="130" width="28" height="28" fill="#444"/>
+  <rect x="10" y="160" width="28" height="28" fill="#444"/>
+  <rect x="40" y="160" width="28" height="28" fill="#444"/>
+  <rect x="70" y="160" width="28" height="28" fill="#444"/>
+  <rect x="100" y="160" width="28" height="28" fill="#4caf50"/>
+  <rect x="130" y="160" width="28" height="28" fill="#4caf50"/>
+  <rect x="160" y="160" width="28" height="28" fill="#4caf50"/>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<p>
+  Implement <code>solve(Q, K, V, output, num_q_heads, num_kv_heads, seq_len, head_dim, window_size, softcap)</code>:
+</p>
+<ul>
+  <li><code>Q</code>: shape <code>(num_q_heads, seq_len, head_dim)</code>, queries</li>
+  <li><code>K</code>, <code>V</code>: shape <code>(num_kv_heads, seq_len, head_dim)</code>, keys and values</li>
+  <li><code>output</code>: shape <code>(num_q_heads, seq_len, head_dim)</code>, the attention output</li>
+  <li><code>window_size</code>: number of keys each query can see, counting itself; <code>softcap</code>: the logit cap</li>
+</ul>
+<p>
+  Query head <code>h</code> uses key/value head <code>g = h / (num_q_heads / num_kv_heads)</code> (integer division), so consecutive query heads share a key/value head.
+  For query position <code>i</code> and key position <code>j</code>:
+  \[
+  s_{ij} = \text{softcap} \cdot \tanh\!\left(\frac{Q_h[i] \cdot K_g[j]}{\sqrt{head\_dim}\;\text{softcap}}\right),
+  \qquad j \in \mathcal{W}(i) = \{\, j : \max(0,\, i - window\_size + 1) \le j \le i \,\}
+  \]
+  \[
+  output_h[i] = \sum_{j \in \mathcal{W}(i)} \frac{e^{s_{ij}}}{\sum_{j' \in \mathcal{W}(i)} e^{s_{ij'}}}\, V_g[j]
+  \]
+  The <code>1/sqrt(head_dim)</code> scale is applied before the cap. Keys outside the window
+  (later tokens, or tokens more than <code>window_size - 1</code> positions back) get zero weight.
+  If <code>window_size</code> &ge; <code>seq_len</code> this is ordinary causal attention with soft-capping.
+</p>
+<ul>
+  <li>Use only native features of the framework you choose (no external libraries); keep the function signature unchanged</li>
+  <li>Write the result into <code>output</code>; every entry of <code>output</code> must be written</li>
+  <li>Accumulate dot products and the softmax in <code>float32</code> or better</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>num_q_heads</code> = 2, <code>num_kv_heads</code> = 1, <code>seq_len</code> = 3,
+  <code>head_dim</code> = 2, <code>window_size</code> = 2, <code>softcap</code> = 1.0:
+  \[
+  Q_0 = \begin{bmatrix} 2 & 0 \\ 0 & 2 \\ 2 & 2 \end{bmatrix},
+  \quad
+  Q_1 = \begin{bmatrix} -2 & 0 \\ 0 & -2 \\ 2 & -2 \end{bmatrix},
+  \quad
+  K_0 = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & -1 \end{bmatrix},
+  \quad
+  V_0 = \begin{bmatrix} 1 & 2 \\ 3 & 4 \\ 5 & 6 \end{bmatrix}
+  \]
+  Output:
+  \[
+  output_0 = \begin{bmatrix} 1.0000000 & 2.0000000 \\ 2.4171138 & 3.4171138 \\ 3.5828862 & 4.5828862 \end{bmatrix},
+  \quad
+  output_1 = \begin{bmatrix} 1.0000000 & 2.0000000 \\ 1.5828862 & 2.5828862 \\ 4.7355490 & 5.7355485 \end{bmatrix}
+  \]
+  Row 2 of each head sees only keys 1 and 2, because key 0 is outside the window of size 2.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>All tensors are <code>float32</code></li>
+  <li>1 &le; <code>num_kv_heads</code> &le; <code>num_q_heads</code> &le; 32, and <code>num_q_heads</code> is divisible by <code>num_kv_heads</code></li>
+  <li>1 &le; <code>seq_len</code> &le; 4,096; 1 &le; <code>head_dim</code> &le; 128</li>
+  <li>1 &le; <code>window_size</code> &le; 8,192 (it may exceed <code>seq_len</code>)</li>
+  <li>0 &lt; <code>softcap</code> &le; 50.0</li>
+  <li>Performance is measured with <code>num_q_heads</code> = 16, <code>num_kv_heads</code> = 4, <code>seq_len</code> = 4,096, <code>head_dim</code> = 64, <code>window_size</code> = 1,024, <code>softcap</code> = 10.0</li>
+</ul>
