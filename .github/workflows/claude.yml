@@ -12,10 +12,16 @@ on:
 
 jobs:
   claude:
+    # Fork PRs get no secrets on pull_request_review / pull_request_review_comment
+    # events, so the run can only fail. Skip them; issue_comment ("@claude" on the
+    # PR conversation) runs in the base repo context and still handles forks.
     if: >
-      github.actor == 'kunal-mansukhani' ||
+      (github.actor == 'kunal-mansukhani' ||
       github.actor == 'ishaan-arya' ||
-      github.actor == 'shxjames'
+      github.actor == 'shxjames') &&
+      !((github.event_name == 'pull_request_review' ||
+      github.event_name == 'pull_request_review_comment') &&
+      github.event.pull_request.head.repo.full_name != github.repository)
     runs-on: ubuntu-latest
     permissions:
       contents: write
