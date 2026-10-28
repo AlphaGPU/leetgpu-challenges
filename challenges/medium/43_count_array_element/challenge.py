@@ -106,5 +106,5 @@ class Challenge(ChallengeBase):
             "input": input,
             "output": output,
             "N": 100000000,
-            "K": 501010,
+            "K": 50101,
         }
