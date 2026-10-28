@@ -5,6 +5,13 @@ import torch
 from core.challenge_base import ChallengeBase
 
 
+def _pcg_hash(x: torch.Tensor) -> torch.Tensor:
+    # PCG hash (Jarzynski & Olano, 2020) on uint32 values held in an int64 tensor
+    state = (x * 747796405 + 2891336453) & 0xFFFFFFFF
+    word = (((state >> ((state >> 28) + 4)) ^ state) * 277803737) & 0xFFFFFFFF
+    return (word >> 22) ^ word
+
+
 class Challenge(ChallengeBase):
     name = "Top-p Sampling"
     atol = 1e-05
@@ -34,7 +41,8 @@ class Challenge(ChallengeBase):
         exp_logits = torch.exp(logits - max_logit)
         probs = exp_logits / torch.sum(exp_logits)
 
-        sorted_probs, sorted_indices = torch.sort(probs, descending=True)
+        # stable: tokens with equal probability stay in increasing index order
+        sorted_probs, sorted_indices = torch.sort(probs, descending=True, stable=True)
         cumsum = torch.cumsum(sorted_probs, dim=0)
 
         cutoff_idx = torch.searchsorted(cumsum, p_value, right=False).item()
@@ -45,8 +53,13 @@ class Challenge(ChallengeBase):
 
         nucleus_probs = nucleus_probs / torch.sum(nucleus_probs)
 
-        torch.manual_seed(seed_value)
-        sampled_idx = torch.multinomial(nucleus_probs, 1).item()
+        # One uniform per token, hashed from (seed, token id) so every language can reproduce it.
+        seed_hash = _pcg_hash(torch.tensor(seed_value & 0xFFFFFFFF, device=logits.device))
+        bits = _pcg_hash((seed_hash + nucleus_indices) & 0xFFFFFFFF)
+        u = (bits.double() + 0.5) / 2**32
+
+        # Exponential race: the argmax of prob / -ln(u) is a draw from the renormalized nucleus.
+        sampled_idx = torch.argmax(nucleus_probs.double() / -torch.log(u)).item()
         sampled_token[0] = nucleus_indices[sampled_idx]
 
     def get_solve_signature(self) -> Dict[str, tuple]:
