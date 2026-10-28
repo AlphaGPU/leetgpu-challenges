@@ -1,0 +1,104 @@
+<p>
+  Implement causal <strong>grouped-query attention with rotary positional embeddings (RoPE)
+  fused in</strong>, as in the attention layers of Llama, Qwen and Mistral. Before the scores are
+  computed, every query and key vector is rotated by an angle that depends on its position, using
+  precomputed <code>cos</code> / <code>sin</code> tables, so the attention score between two
+  tokens depends on how far apart they are. Each query attends to itself and all earlier tokens,
+  and several query heads share each key/value head. All tensors are <code>float32</code>.
+</p>
+
+<svg width="420" height="150" viewBox="0 0 420 150" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="Rotate-half RoPE: element d of the first half of a head vector is paired with element d plus head_dim over 2, and the pair is rotated by the angle for that position and frequency">
+  <rect width="420" height="150" fill="#222" rx="8"/>
+  <text x="14" y="24" fill="#ccc" font-family="monospace" font-size="12">x (one head, head_dim = 8)</text>
+  <rect x="14" y="34" width="44" height="28" fill="#4caf50"/>
+  <rect x="60" y="34" width="44" height="28" fill="#2196f3"/>
+  <rect x="106" y="34" width="44" height="28" fill="#ff9800"/>
+  <rect x="152" y="34" width="44" height="28" fill="#e91e63"/>
+  <rect x="198" y="34" width="44" height="28" fill="#4caf50" opacity="0.6"/>
+  <rect x="244" y="34" width="44" height="28" fill="#2196f3" opacity="0.6"/>
+  <rect x="290" y="34" width="44" height="28" fill="#ff9800" opacity="0.6"/>
+  <rect x="336" y="34" width="44" height="28" fill="#e91e63" opacity="0.6"/>
+  <text x="30" y="53" fill="#fff" font-family="monospace" font-size="12">x0</text>
+  <text x="76" y="53" fill="#fff" font-family="monospace" font-size="12">x1</text>
+  <text x="122" y="53" fill="#fff" font-family="monospace" font-size="12">x2</text>
+  <text x="168" y="53" fill="#fff" font-family="monospace" font-size="12">x3</text>
+  <text x="214" y="53" fill="#fff" font-family="monospace" font-size="12">x4</text>
+  <text x="260" y="53" fill="#fff" font-family="monospace" font-size="12">x5</text>
+  <text x="306" y="53" fill="#fff" font-family="monospace" font-size="12">x6</text>
+  <text x="352" y="53" fill="#fff" font-family="monospace" font-size="12">x7</text>
+  <path d="M36 64 Q128 100 220 64" stroke="#4caf50" fill="none" stroke-width="2"/>
+  <path d="M82 64 Q174 100 266 64" stroke="#2196f3" fill="none" stroke-width="2"/>
+  <path d="M128 64 Q220 100 312 64" stroke="#ff9800" fill="none" stroke-width="2"/>
+  <path d="M174 64 Q266 100 358 64" stroke="#e91e63" fill="none" stroke-width="2"/>
+  <text x="14" y="124" fill="#ccc" font-family="monospace" font-size="12">pair d = (x[d], x[d + 4]) rotated by angle with cos[pos, d], sin[pos, d]</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<p>
+  Implement <code>solve(Q, K, V, cos, sin, output, num_q_heads, num_kv_heads, seq_len, head_dim)</code>:
+</p>
+<ul>
+  <li><code>Q</code>: shape <code>(num_q_heads, seq_len, head_dim)</code>, queries before RoPE</li>
+  <li><code>K</code>, <code>V</code>: shape <code>(num_kv_heads, seq_len, head_dim)</code>, keys before RoPE and values (values are not rotated)</li>
+  <li><code>cos</code>, <code>sin</code>: shape <code>(seq_len, head_dim / 2)</code>, the rotation table for each position and frequency</li>
+  <li><code>output</code>: shape <code>(num_q_heads, seq_len, head_dim)</code>, the attention output</li>
+</ul>
+<p>
+  RoPE uses the rotate-half (Llama / GPT-NeoX) layout: with \(m = head\_dim / 2\), element
+  <code>d</code> of the first half is paired with element <code>d + m</code>, for
+  \(0 \le d &lt; m\). For a vector \(x\) at position \(p\):
+  \[
+  \text{rope}(x)_d = x_d \cos_{p,d} - x_{d+m} \sin_{p,d},
+  \qquad
+  \text{rope}(x)_{d+m} = x_{d+m} \cos_{p,d} + x_d \sin_{p,d}
+  \]
+  Query head <code>h</code> uses key/value head <code>g = h / (num_q_heads / num_kv_heads)</code>
+  (integer division), so consecutive query heads share a key/value head. For query position
+  <code>i</code> and key position <code>j &le; i</code>:
+  \[
+  s_{ij} = \frac{\text{rope}(Q_h[i]) \cdot \text{rope}(K_g[j])}{\sqrt{head\_dim}},
+  \qquad
+  output_h[i] = \sum_{j=0}^{i} \frac{e^{s_{ij}}}{\sum_{j'=0}^{i} e^{s_{ij'}}}\, V_g[j]
+  \]
+  Query <code>i</code> is rotated with row <code>i</code> of the tables and key <code>j</code>
+  with row <code>j</code>. Later keys (<code>j &gt; i</code>) get zero weight.
+</p>
+<ul>
+  <li>Use only native features of the framework you choose (no external libraries); keep the function signature unchanged</li>
+  <li>Write the result into <code>output</code>; every entry of <code>output</code> must be written, and the inputs must not be modified</li>
+  <li>Accumulate dot products and the softmax in <code>float32</code> or better</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>num_q_heads</code> = 1, <code>num_kv_heads</code> = 1, <code>seq_len</code> = 3,
+  <code>head_dim</code> = 4. Pair 0 (elements 0 and 2) turns by 90&deg; per position and pair 1
+  (elements 1 and 3) does not turn:
+  \[
+  Q_0 = K_0 = \begin{bmatrix} 1 & 0 & 0 & 1 \\ 1 & 0 & 0 & 1 \\ 1 & 0 & 0 & 1 \end{bmatrix},
+  \quad
+  V_0 = \begin{bmatrix} 1 & 0 & 0 & 0 \\ 0 & 1 & 0 & 0 \\ 0 & 0 & 1 & 0 \end{bmatrix},
+  \quad
+  \cos = \begin{bmatrix} 1 & 1 \\ 0 & 1 \\ -1 & 1 \end{bmatrix},
+  \quad
+  \sin = \begin{bmatrix} 0 & 0 \\ 1 & 0 \\ 0 & 0 \end{bmatrix}
+  \]
+  After RoPE, row <code>p</code> of both Q and K is
+  \([\cos_{p,0},\ 0,\ \sin_{p,0},\ 1]\), so \(s_{ij} = (\cos(90^\circ (i - j)) + 1) / 2\).
+  Output:
+  \[
+  output_0 = \begin{bmatrix} 1.0000000 & 0.0000000 & 0.0000000 & 0.0000000 \\ 0.3775407 & 0.6224593 & 0.0000000 & 0.0000000 \\ 0.1863237 & 0.3071959 & 0.5064804 & 0.0000000 \end{bmatrix}
+  \]
+  Without RoPE every score would be equal and row 2 would be the plain average
+  \([1/3,\ 1/3,\ 1/3,\ 0]\).
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>All tensors are <code>float32</code></li>
+  <li>1 &le; <code>num_kv_heads</code> &le; <code>num_q_heads</code> &le; 32, and <code>num_q_heads</code> is divisible by <code>num_kv_heads</code></li>
+  <li>1 &le; <code>seq_len</code> &le; 4,096; 2 &le; <code>head_dim</code> &le; 128, and <code>head_dim</code> is even</li>
+  <li>-1 &le; <code>cos</code>, <code>sin</code> &le; 1</li>
+  <li>Performance is measured with <code>num_q_heads</code> = 16, <code>num_kv_heads</code> = 4, <code>seq_len</code> = 4,096, <code>head_dim</code> = 64</li>
+</ul>
