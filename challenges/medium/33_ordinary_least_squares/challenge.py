@@ -315,13 +315,14 @@ class Challenge(ChallengeBase):
     def generate_performance_test(self) -> Dict[str, Any]:
         dtype = torch.float32
         device = self.device
-        n_samples = 32
+        n_samples = 100000
         n_features = 32
-        X = torch.eye(n_samples, dtype=dtype, device=device)
-        y = torch.ones(n_samples, dtype=dtype, device=device)
+        X = torch.randn(n_samples, n_features, dtype=dtype, device=device)
+        beta_true = torch.empty(n_features, dtype=dtype, device=device).uniform_(-10.0, 10.0)
+        y = X @ beta_true + 0.1 * torch.randn(n_samples, dtype=dtype, device=device)
         beta = torch.zeros(n_features, dtype=dtype, device=device)
         return {
-            "X": X.flatten(),  # flattened as in your other examples,
+            "X": X.flatten(),
             "y": y,
             "beta": beta,
             "n_samples": n_samples,
