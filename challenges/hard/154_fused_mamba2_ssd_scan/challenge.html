@@ -1,0 +1,116 @@
+<p>
+  Implement the <strong>fused Mamba-2 selective state space (SSD) layer</strong> used for prefill in
+  Mamba-2 and hybrid LLMs such as Codestral Mamba, Nemotron-H and Granite 4. Each head keeps a
+  <code>head_dim</code> &times; <code>state_dim</code> state that decays by a data-dependent
+  scalar every token, takes a rank-1 update from the token, and is read out by the token's
+  <code>C</code> vector. Fuse the time-step softplus, the scan, the <code>D</code> skip connection
+  and the <code>silu(z)</code> output gate into one pass. All tensors are <code>float32</code>.
+</p>
+
+<svg width="640" height="200" viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="Per-head recurrence: the state S is multiplied by the decay a_t, the rank-1 update delta_t x_t B_t transposed is added, the state is read out with C_t, then D x_t is added and the sum is gated by silu of z_t">
+  <rect width="640" height="200" fill="#222" rx="8"/>
+  <text x="14" y="22" fill="#ccc" font-family="monospace" font-size="12">one head h, group g = h / (num_heads / num_groups)</text>
+  <rect x="20" y="70" width="70" height="44" fill="#455a64" rx="4"/>
+  <text x="34" y="97" fill="#fff" font-family="monospace" font-size="13">S[t-1]</text>
+  <line x1="90" y1="92" x2="150" y2="92" stroke="#ccc" stroke-width="2"/>
+  <circle cx="165" cy="92" r="15" fill="#ff9800"/>
+  <text x="160" y="97" fill="#000" font-family="monospace" font-size="14">&#215;</text>
+  <text x="128" y="60" fill="#ff9800" font-family="monospace" font-size="12">a_t = exp(&#916;_t A_h)</text>
+  <line x1="180" y1="92" x2="240" y2="92" stroke="#ccc" stroke-width="2"/>
+  <circle cx="255" cy="92" r="15" fill="#4caf50"/>
+  <text x="249" y="97" fill="#000" font-family="monospace" font-size="16">+</text>
+  <line x1="255" y1="150" x2="255" y2="107" stroke="#4caf50" stroke-width="2"/>
+  <text x="196" y="168" fill="#4caf50" font-family="monospace" font-size="12">&#916;_t x_t B_t&#7488;  (rank 1)</text>
+  <line x1="270" y1="92" x2="320" y2="92" stroke="#ccc" stroke-width="2"/>
+  <rect x="320" y="70" width="60" height="44" fill="#455a64" rx="4"/>
+  <text x="333" y="97" fill="#fff" font-family="monospace" font-size="13">S[t]</text>
+  <line x1="380" y1="92" x2="430" y2="92" stroke="#ccc" stroke-width="2"/>
+  <text x="384" y="84" fill="#2196f3" font-family="monospace" font-size="12">&#183; C_t</text>
+  <circle cx="445" cy="92" r="15" fill="#4caf50"/>
+  <text x="439" y="97" fill="#000" font-family="monospace" font-size="16">+</text>
+  <line x1="445" y1="150" x2="445" y2="107" stroke="#4caf50" stroke-width="2"/>
+  <text x="425" y="168" fill="#4caf50" font-family="monospace" font-size="12">D_h x_t</text>
+  <line x1="460" y1="92" x2="510" y2="92" stroke="#ccc" stroke-width="2"/>
+  <circle cx="525" cy="92" r="15" fill="#e91e63"/>
+  <text x="520" y="97" fill="#000" font-family="monospace" font-size="14">&#215;</text>
+  <text x="490" y="60" fill="#e91e63" font-family="monospace" font-size="12">silu(z_t)</text>
+  <line x1="540" y1="92" x2="590" y2="92" stroke="#ccc" stroke-width="2"/>
+  <text x="596" y="97" fill="#fff" font-family="monospace" font-size="13">y_t</text>
+  <path d="M350 114 Q350 140 90 140 Q55 140 55 114" stroke="#888" fill="none" stroke-dasharray="4 3"/>
+  <text x="120" y="134" fill="#888" font-family="monospace" font-size="11">next token</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<p>
+  Implement <code>solve(x, dt, dt_bias, A, B, C, D, z, y, batch, seq_len, num_heads, head_dim, num_groups, state_dim)</code>:
+</p>
+<ul>
+  <li><code>x</code>, <code>z</code>: shape <code>(batch, seq_len, num_heads, head_dim)</code>, the SSM input and the gate input</li>
+  <li><code>dt</code>: shape <code>(batch, seq_len, num_heads)</code>, the raw time step</li>
+  <li><code>dt_bias</code>, <code>A</code>, <code>D</code>: shape <code>(num_heads,)</code>; every <code>A[h]</code> is negative</li>
+  <li><code>B</code>, <code>C</code>: shape <code>(batch, seq_len, num_groups, state_dim)</code>, shared by the heads of a group</li>
+  <li><code>y</code>: shape <code>(batch, seq_len, num_heads, head_dim)</code>, the output</li>
+</ul>
+<p>
+  Head <code>h</code> reads group <code>g = h / (num_heads / num_groups)</code> (integer
+  division), so consecutive heads share <code>B</code> and <code>C</code>. For each sequence
+  <code>b</code> and head <code>h</code>, the state \(S \in \mathbb{R}^{head\_dim \times state\_dim}\)
+  starts at zero and, for \(t = 0, \ldots, seq\_len - 1\):
+  \[
+  \Delta_t = \text{softplus}(dt_{b,t,h} + dt\_bias_h) = \ln\!\left(1 + e^{dt_{b,t,h} + dt\_bias_h}\right),
+  \qquad
+  S_t = e^{\Delta_t A_h}\, S_{t-1} + \Delta_t\, x_{b,t,h}\, B_{b,t,g}^{\top}
+  \]
+  \[
+  y_{b,t,h} = \left(S_t\, C_{b,t,g} + D_h\, x_{b,t,h}\right) \odot \text{silu}(z_{b,t,h}),
+  \qquad
+  \text{silu}(v) = \frac{v}{1 + e^{-v}}
+  \]
+  The state decays before the new token is added, and the new token's own update is included in
+  its output. Sequences in the batch are independent.
+</p>
+<ul>
+  <li>Use only native features of the framework you choose (no external libraries); keep the function signature unchanged</li>
+  <li>Write the result into <code>y</code>; every entry of <code>y</code> must be written, and the inputs must not be modified</li>
+  <li>Accumulate in <code>float32</code> or better. A sequential scan is correct but slow; the chunked SSD form (a masked quadratic form inside each chunk plus states carried between chunks) maps onto matrix multiplies</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>batch</code> = 1, <code>seq_len</code> = 3, <code>num_heads</code> = 1,
+  <code>head_dim</code> = 2, <code>num_groups</code> = 1, <code>state_dim</code> = 2,
+  <code>dt</code> = 0, <code>dt_bias</code> = [0], <code>A</code> = [-1],
+  <code>D</code> = [0.5], and every entry of <code>z</code> is 1. Rows are time steps:
+  \[
+  x = \begin{bmatrix} 1 & 2 \\ 0 & -1 \\ 2 & 0 \end{bmatrix},
+  \quad
+  B = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1 \end{bmatrix},
+  \quad
+  C = \begin{bmatrix} 1 & 0 \\ 1 & 1 \\ 0 & 1 \end{bmatrix}
+  \]
+  Then \(\Delta_t = \ln 2\), each step decays the state by \(e^{-\ln 2} = 0.5\), and
+  \(\text{silu}(1) = 0.7310586\):
+  \[
+  S_0 = \ln 2 \begin{bmatrix} 1 & 0 \\ 2 & 0 \end{bmatrix},
+  \quad
+  S_1 = \ln 2 \begin{bmatrix} 0.5 & 0 \\ 1 & -1 \end{bmatrix},
+  \quad
+  S_2 = \ln 2 \begin{bmatrix} 2.25 & 2 \\ 0.5 & -0.5 \end{bmatrix}
+  \]
+  \[
+  S_t C_t + D x_t = \begin{bmatrix} \ln 2 + 0.5 & 2 \ln 2 + 1 \\ 0.5 \ln 2 & -0.5 \\ 2 \ln 2 + 1 & -0.5 \ln 2 \end{bmatrix},
+  \quad
+  y = \begin{bmatrix} 0.8722605 & 1.7445210 \\ 0.2533656 & -0.3655293 \\ 1.7445210 & -0.2533656 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>All tensors are <code>float32</code></li>
+  <li>1 &le; <code>batch</code> &le; 4; 1 &le; <code>seq_len</code> &le; 4,096</li>
+  <li>1 &le; <code>num_groups</code> &le; <code>num_heads</code> &le; 32, and <code>num_heads</code> is divisible by <code>num_groups</code></li>
+  <li>1 &le; <code>head_dim</code> &le; 128; 1 &le; <code>state_dim</code> &le; 128</li>
+  <li>-16 &le; <code>A</code> &lt; 0; -30 &le; <code>dt</code> + <code>dt_bias</code> &le; 30</li>
+  <li>Performance is measured with <code>batch</code> = 2, <code>seq_len</code> = 4,096, <code>num_heads</code> = 32, <code>head_dim</code> = 64, <code>num_groups</code> = 4, <code>state_dim</code> = 128</li>
+</ul>
