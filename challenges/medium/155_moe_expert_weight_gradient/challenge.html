@@ -1,0 +1,115 @@
+<p>
+  Compute the weight gradients of a Mixture-of-Experts (MoE) expert projection in the backward
+  pass. Routed tokens have already been sorted by expert: the activations <code>X</code>
+  (<code>M_total &times; K</code>) and the upstream gradients <code>dY</code>
+  (<code>M_total &times; N</code>) are partitioned into <code>G</code> contiguous row groups whose
+  boundaries are given by <code>group_offsets</code> (length <code>G + 1</code>). For every expert
+  <code>g</code>, with <code>s = group_offsets[g]</code> and <code>e = group_offsets[g+1]</code>,
+  compute <code>dW[g] = X[s:e]<sup>T</sup> &times; dY[s:e]</code>, a <code>K &times; N</code>
+  matrix. All floating-point tensors are 32-bit.
+</p>
+
+<p>
+  \[
+  dW[g]_{k,n} = \sum_{m=s}^{e-1} X_{m,k}\, dY_{m,n}
+  \]
+</p>
+
+<p>
+  Unlike the forward grouped GEMM, the ragged dimension (tokens per expert) is the
+  <em>reduction</em> dimension: every expert's output has the same fixed size, but the amount of
+  work behind it depends on how many tokens the router sent to that expert. An expert that
+  received no tokens has an all-zero gradient.
+</p>
+
+<svg width="700" height="250" viewBox="0 0 700 250" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <rect width="700" height="250" fill="#222"/>
+  <defs>
+    <marker id="arr155" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <text x="70" y="22" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">X</text>
+  <rect x="40" y="32" width="60" height="110" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="70" y="91" text-anchor="middle" fill="#cce" font-size="11" font-family="monospace">g=0</text>
+  <rect x="40" y="142" width="60" height="0" fill="none" stroke="#cc88ff" stroke-width="3"/>
+  <rect x="40" y="142" width="60" height="30" fill="#3a2a1a" stroke="#ffaa44" stroke-width="1.5"/>
+  <text x="70" y="161" text-anchor="middle" fill="#ecc" font-size="11" font-family="monospace">g=2</text>
+  <text x="112" y="146" fill="#cc88ff" font-size="10" font-family="monospace">g=1 (empty)</text>
+  <text x="70" y="192" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">M_total &times; K</text>
+
+  <text x="230" y="22" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">dY</text>
+  <rect x="195" y="32" width="70" height="110" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="230" y="91" text-anchor="middle" fill="#cce" font-size="11" font-family="monospace">g=0</text>
+  <rect x="195" y="142" width="70" height="30" fill="#3a2a1a" stroke="#ffaa44" stroke-width="1.5"/>
+  <text x="230" y="161" text-anchor="middle" fill="#ecc" font-size="11" font-family="monospace">g=2</text>
+  <text x="230" y="192" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">M_total &times; N</text>
+
+  <line x1="275" y1="87" x2="390" y2="60" stroke="#4a9eff" stroke-width="1.5" marker-end="url(#arr155)"/>
+  <line x1="275" y1="157" x2="390" y2="200" stroke="#ffaa44" stroke-width="1.5" marker-end="url(#arr155)"/>
+  <text x="330" y="125" text-anchor="middle" fill="#aaa" font-size="11" font-family="monospace">X[s:e]&#7488; &#215; dY[s:e]</text>
+  <text x="330" y="140" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">sum over tokens</text>
+
+  <text x="450" y="22" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">dW</text>
+  <rect x="400" y="35" width="100" height="50" fill="#1a4a2a" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="450" y="64" text-anchor="middle" fill="#cce" font-size="11" font-family="monospace">dW[0]</text>
+  <rect x="400" y="105" width="100" height="50" fill="#2a2a2a" stroke="#cc88ff" stroke-width="1.5"/>
+  <text x="450" y="134" text-anchor="middle" fill="#ecc" font-size="11" font-family="monospace">dW[1] = 0</text>
+  <rect x="400" y="175" width="100" height="50" fill="#1a4a2a" stroke="#ffaa44" stroke-width="1.5"/>
+  <text x="450" y="204" text-anchor="middle" fill="#ecc" font-size="11" font-family="monospace">dW[2]</text>
+  <text x="450" y="242" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">G &times; K &times; N</text>
+
+  <text x="600" y="60" text-anchor="middle" fill="#aaa" font-size="10" font-family="monospace">long reduction</text>
+  <text x="600" y="134" text-anchor="middle" fill="#aaa" font-size="10" font-family="monospace">no tokens</text>
+  <text x="600" y="204" text-anchor="middle" fill="#aaa" font-size="10" font-family="monospace">short reduction</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the <code>solve</code> function; do not change its signature.</li>
+  <li>External libraries are not permitted.</li>
+  <li>Write the result into <code>dW</code>, laid out as <code>G</code> consecutive row-major
+      <code>K &times; N</code> matrices.</li>
+  <li><code>dW</code> is not zero-initialized; every element must be written, including the
+      gradients of experts that received no tokens (which must be 0).</li>
+  <li>Any router / gate weighting is already folded into <code>dY</code>; do not apply gate weights.</li>
+  <li>Use <code>float32</code> operands and accumulate in <code>float32</code> or better; rounding
+      <code>X</code> or <code>dY</code> to TF32, FP16 or BF16 is outside the tolerance.</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>G</code> = 3, <code>M_total</code> = 3, <code>K</code> = 2, <code>N</code> = 2,
+  <code>group_offsets</code> = <code>[0, 2, 2, 3]</code>
+  \[
+  X = \begin{bmatrix} 1 & 2 \\ 3 & -1 \\ 0 & 4 \end{bmatrix}, \quad
+  dY = \begin{bmatrix} 1 & 0 \\ 2 & 1 \\ -1 & 3 \end{bmatrix}
+  \]
+  Output:
+  \[
+  dW[0] = \begin{bmatrix} 7 & 3 \\ 0 & -1 \end{bmatrix}, \quad
+  dW[1] = \begin{bmatrix} 0 & 0 \\ 0 & 0 \end{bmatrix}, \quad
+  dW[2] = \begin{bmatrix} 0 & 0 \\ -4 & 12 \end{bmatrix}
+  \]
+</p>
+<p>
+  Expert 0 owns rows 0 and 1, so \(dW[0] = \begin{bmatrix} 1 \\ 2 \end{bmatrix}
+  \begin{bmatrix} 1 & 0 \end{bmatrix} + \begin{bmatrix} 3 \\ -1 \end{bmatrix}
+  \begin{bmatrix} 2 & 1 \end{bmatrix}\). Expert 1 is empty, so its gradient is zero. Expert 2
+  owns row 2 only.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>G</code> &le; 128 (number of experts)</li>
+  <li>1 &le; <code>M_total</code> &le; 65,536 (total routed rows across all experts)</li>
+  <li>1 &le; <code>K</code>, <code>N</code> &le; 4,096</li>
+  <li><code>group_offsets[0]</code> = 0, <code>group_offsets[G]</code> = <code>M_total</code>,
+      and <code>group_offsets</code> is non-decreasing; a group may be empty</li>
+  <li><code>X</code>, <code>dY</code> and <code>dW</code> are 32-bit floats;
+      <code>group_offsets</code> is 32-bit integer</li>
+  <li>Values of <code>X</code> and <code>dY</code> are in the range [-1, 1]</li>
+  <li>Performance is measured with <code>G</code> = 64, <code>M_total</code> = 32,768,
+      <code>K</code> = 1,024, <code>N</code> = 512 (skewed expert loads, two experts empty)</li>
+</ul>
