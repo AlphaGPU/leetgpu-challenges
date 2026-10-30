@@ -9,12 +9,13 @@ class Challenge(ChallengeBase):
     name = "MoE Expert Weight Gradient"
     # Each dW element is a sum of n_g products of values in [-1, 1] (n_g <= 4,720 here), so its
     # magnitude is O(sqrt(n_g) / 3) (max |dW| ~115 on the performance case). Against a float64
-    # recomputation the float32 result differs by <= 4e-5; other summation orders (tiling,
-    # split-K, atomics) stay at that level. Attributing one row to the wrong expert, dropping a
-    # boundary row, or leaving garbage in an empty expert changes an element by ~0.25 on average
-    # (and by >= 1 in the targeted cases), far outside atol + rtol * |ref|.
-    atol = 1e-03
-    rtol = 1e-03
+    # recomputation the float32 result differs by <= 5e-5; other float32 summation orders
+    # (tiling, split-K, atomics) stay under 1% of the grader's atol + rtol * max|ref| budget.
+    # Rounding X and dY to TF32 / FP16 exceeds it by ~2.6x and BF16 by ~20x. Attributing one row
+    # to the wrong expert, dropping a boundary row, or leaving garbage in an empty expert misses
+    # by orders of magnitude more.
+    atol = 1e-04
+    rtol = 1e-04
     num_gpus = 1
     access_tier = "free"
 

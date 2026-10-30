@@ -73,6 +73,9 @@
       <code>K &times; N</code> matrices.</li>
   <li><code>dW</code> is not zero-initialized; every element must be written, including the
       gradients of experts that received no tokens (which must be 0).</li>
+  <li>Any router / gate weighting is already folded into <code>dY</code>; do not apply gate weights.</li>
+  <li>Use <code>float32</code> operands and accumulate in <code>float32</code> or better; rounding
+      <code>X</code> or <code>dY</code> to TF32, FP16 or BF16 is outside the tolerance.</li>
 </ul>
 
 <h2>Example</h2>
