@@ -310,6 +310,21 @@ class Challenge(ChallengeBase):
             }
         )
 
+        # Test 6: noisy_3000x32 (catches dropped tail rows in the X^T X / X^T y reduction)
+        n_samples, n_features = 3000, 32
+        X = torch.randn(n_samples, n_features, dtype=dtype, device=device)
+        beta_true = torch.empty(n_features, dtype=dtype, device=device).uniform_(-10.0, 10.0)
+        y = X @ beta_true + 50.0 * torch.randn(n_samples, dtype=dtype, device=device)
+        tests.append(
+            {
+                "X": X.flatten(),
+                "y": y,
+                "beta": torch.zeros(n_features, dtype=dtype, device=device),
+                "n_samples": n_samples,
+                "n_features": n_features,
+            }
+        )
+
         return tests
 
     def generate_performance_test(self) -> Dict[str, Any]:
