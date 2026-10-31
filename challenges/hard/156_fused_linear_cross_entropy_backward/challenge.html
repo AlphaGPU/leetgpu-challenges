@@ -1,0 +1,82 @@
+<p>
+  Compute the gradients of the mean cross-entropy loss of a language-model output head
+  with respect to both its inputs, <em>without</em> materializing the full logits matrix. Given
+  hidden states <code>X</code> of shape <code>N &times; D</code>, an output projection
+  <code>W</code> of shape <code>V &times; D</code> (one row per vocabulary token) and integer
+  targets <code>targets</code> of length <code>N</code>, where a target of <code>-100</code>
+  marks an ignored (padding) row, write \(\partial \text{loss} / \partial X\) to
+  <code>dX</code> and \(\partial \text{loss} / \partial W\) to <code>dW</code>:
+</p>
+<p>
+  \[
+  z_{i,v} = \sum_{d} X_{i,d} W_{v,d}, \qquad
+  \text{loss} = \frac{1}{n_{\text{valid}}} \sum_{i \,:\, \text{targets}_i \ne -100}
+  \Big( \log \sum_{v=0}^{V-1} e^{z_{i,v}} - z_{i,\,\text{targets}_i} \Big)
+  \]
+  \[
+  G_{i,v} = \begin{cases}
+  \dfrac{\text{softmax}(z_i)_v - [v = \text{targets}_i]}{n_{\text{valid}}} & \text{targets}_i \ne -100 \\
+  0 & \text{targets}_i = -100
+  \end{cases}, \qquad
+  dX = G\,W, \qquad dW = G^{\top} X
+  \]
+</p>
+<p>
+  \(n_{\text{valid}}\) is the number of rows whose target is not <code>-100</code>. If every
+  row is ignored, both gradients are all zeros. All tensors are 32-bit floats except
+  <code>targets</code>, which is 32-bit integer. The <code>N &times; V</code> logits matrix is
+  far larger than the inputs, so a fast solution recomputes logit tiles on the fly, fusing the
+  matmul with an online log-sum-exp over vocabulary tiles and the two gradient matmuls &mdash;
+  the backward half of the Liger / "cut cross-entropy" kernels.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Do not change the function signature.</li>
+  <li>Do not use external libraries beyond what is available in the starter.</li>
+  <li>Write the gradients to <code>dX</code> and <code>dW</code>. Neither buffer is
+    zero-initialized, so every entry must be written (rows of ignored targets, and vocabulary
+    rows that no target points to, still receive their gradient or zero).</li>
+  <li>The computation must be numerically stable for logits of several hundred (subtract the
+    row maximum).</li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+  Input (<code>N</code> = 3, <code>D</code> = 2, <code>V</code> = 3; row 2 is ignored, so
+  \(n_{\text{valid}} = 2\)):
+  \[
+  X = \begin{bmatrix} 1 & 0 \\ 0 & 2 \\ 1 & 1 \end{bmatrix}, \quad
+  W = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1 \end{bmatrix}, \quad
+  \text{targets} = \begin{bmatrix} 0 & 2 & -100 \end{bmatrix}
+  \]
+  Logits of the valid rows are \(z_0 = [1, 0, 1]\) and \(z_1 = [0, 2, 2]\), so
+  \[
+  G = \begin{bmatrix}
+  \frac{1}{2}\left(\frac{e}{2e+1} - 1\right) & \frac{1}{2} \cdot \frac{1}{2e+1} & \frac{1}{2} \cdot \frac{e}{2e+1} \\
+  \frac{1}{2} \cdot \frac{1}{1+2e^2} & \frac{1}{2} \cdot \frac{e^2}{1+2e^2} & \frac{1}{2}\left(\frac{e^2}{1+2e^2} - 1\right) \\
+  0 & 0 & 0
+  \end{bmatrix}
+  \approx \begin{bmatrix}
+  -0.2888406 & 0.0776812 & 0.2111594 \\
+  0.0316895 & 0.2341553 & -0.2658447 \\
+  0 & 0 & 0
+  \end{bmatrix}
+  \]
+  Output:
+  \[
+  dX = \begin{bmatrix} -0.0776812 & 0.2888406 \\ -0.2341553 & -0.0316895 \\ 0 & 0 \end{bmatrix},
+  \quad
+  dW = \begin{bmatrix} -0.2888406 & 0.0633789 \\ 0.0776812 & 0.4683105 \\ 0.2111594 & -0.5316895 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 8,192</li>
+  <li>1 &le; <code>D</code> &le; 4,096</li>
+  <li>2 &le; <code>V</code> &le; 65,536</li>
+  <li><code>targets[i]</code> = -100 or 0 &le; <code>targets[i]</code> &lt; <code>V</code></li>
+  <li>Logit magnitudes may reach several hundred</li>
+  <li>Performance is measured with <code>N</code> = 4,096, <code>D</code> = 1,024, <code>V</code> = 32,768</li>
+</ul>
