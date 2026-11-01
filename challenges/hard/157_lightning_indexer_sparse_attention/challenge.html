@@ -1,0 +1,90 @@
+<p>
+  Implement one decode step of <strong>indexer-driven sparse attention</strong>, the scheme used
+  by DeepSeek Sparse Attention: a cheap int8 &ldquo;lightning indexer&rdquo; scores every cached
+  token, only the <code>topk</code> highest-scoring positions are kept, and the new token's
+  query heads attend to those positions only. Fuse the indexer, the top-k selection and the
+  attention so the full key/value cache is never read. Each of the <code>B</code> sequences has
+  its own cache of <code>S</code> tokens with one key/value head of size <code>D</code> shared
+  by all <code>H</code> query heads (multi-query attention).
+</p>
+
+<svg width="640" height="170" viewBox="0 0 640 170" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="The int8 indexer scores all S cached tokens, the topk best positions are selected, and attention reads the keys and values of the selected positions only">
+  <rect width="640" height="170" fill="#222" rx="8"/>
+  <rect x="20" y="40" width="150" height="50" fill="#455a64" rx="4"/>
+  <text x="34" y="62" fill="#fff" font-family="monospace" font-size="12">int8 indexer</text>
+  <text x="34" y="80" fill="#ccc" font-family="monospace" font-size="11">I[s], all S tokens</text>
+  <line x1="170" y1="65" x2="230" y2="65" stroke="#ccc" stroke-width="2"/>
+  <rect x="230" y="40" width="150" height="50" fill="#ff9800" rx="4"/>
+  <text x="244" y="62" fill="#000" font-family="monospace" font-size="12">top-k positions</text>
+  <text x="244" y="80" fill="#000" font-family="monospace" font-size="11">ties: lower s</text>
+  <line x1="380" y1="65" x2="440" y2="65" stroke="#ccc" stroke-width="2"/>
+  <rect x="440" y="40" width="180" height="50" fill="#4caf50" rx="4"/>
+  <text x="452" y="62" fill="#000" font-family="monospace" font-size="12">MQA attention over</text>
+  <text x="452" y="80" fill="#000" font-family="monospace" font-size="12">selected K, V only</text>
+  <text x="20" y="130" fill="#888" font-family="monospace" font-size="11">reads: int8 idx_k for all S tokens, fp32 K/V for topk tokens</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<p>
+  Implement <code>solve(q, k_cache, v_cache, idx_q, idx_k, idx_w, output, B, S, H, D, H_I, D_I, topk)</code>:
+</p>
+<ul>
+  <li><code>q</code>: shape <code>(B, H, D)</code>, <code>float32</code>, the new token's query heads</li>
+  <li><code>k_cache</code>, <code>v_cache</code>: shape <code>(B, S, D)</code>, <code>float32</code></li>
+  <li><code>idx_q</code>: shape <code>(B, H_I, D_I)</code>, <code>int8</code>, the indexer query heads</li>
+  <li><code>idx_k</code>: shape <code>(B, S, D_I)</code>, <code>int8</code>, the indexer key of every cached token</li>
+  <li><code>idx_w</code>: shape <code>(B, H_I)</code>, <code>int8</code>, the per-head indexer weights (may be negative)</li>
+  <li><code>output</code>: shape <code>(B, H, D)</code>, <code>float32</code></li>
+</ul>
+<p>
+  For each sequence <code>b</code>, the indexer score of position <code>s</code> is
+  \[
+  I_{b,s} = \sum_{j=0}^{H_I - 1} \text{idx_w}_{b,j} \cdot \max\!\Big(0,\ \sum_{d=0}^{D_I - 1} \text{idx_q}_{b,j,d}\, \text{idx_k}_{b,s,d}\Big)
+  \]
+  Every term is an integer and \(|I_{b,s}| \le 2^{23}\), so the scores are exact in
+  <code>int32</code> and in <code>float32</code>. Let \(n = \min(\text{topk}, S)\). The selected
+  set \(P_b\) is the \(n\) positions with the largest \(I_{b,s}\); among equal scores, the lower
+  position is selected first. Then for every query head <code>h</code>:
+  \[
+  \text{output}_{b,h} = \sum_{s \in P_b} \frac{e^{\ell_{h,s}}}{\sum_{s' \in P_b} e^{\ell_{h,s'}}}\, \text{v_cache}_{b,s},
+  \qquad \ell_{h,s} = \frac{q_{b,h} \cdot \text{k_cache}_{b,s}}{\sqrt{D}}
+  \]
+  Each selected position is attended exactly once; when <code>topk</code> &ge; <code>S</code>,
+  every position is selected.
+</p>
+<ul>
+  <li>Use only native features of the framework you choose (no external libraries); keep the function signature unchanged</li>
+  <li>Write the result into <code>output</code>; the inputs must not be modified</li>
+  <li>The softmax must be numerically stable for attention logits in the hundreds (subtract the row maximum)</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>B</code> = 1, <code>S</code> = 4, <code>H</code> = 1, <code>D</code> = 2,
+  <code>H_I</code> = 1, <code>D_I</code> = 2, <code>topk</code> = 2, <code>q</code> = [1, 0],
+  <code>idx_q</code> = [1, 2], <code>idx_w</code> = [3]. Rows are positions:
+  \[
+  \text{k_cache} = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 2 & 0 \\ 0 & 2 \end{bmatrix},
+  \quad
+  \text{v_cache} = \begin{bmatrix} 1 & 2 \\ 3 & 4 \\ 5 & 6 \\ 7 & 8 \end{bmatrix},
+  \quad
+  \text{idx_k} = \begin{bmatrix} 2 & 1 \\ 0 & 1 \\ -1 & 0 \\ 0 & 1 \end{bmatrix}
+  \]
+  The indexer dot products are [4, 2, -1, 2], so \(I = 3 \cdot [4, 2, 0, 2] = [12, 6, 0, 6]\).
+  Position 0 is selected first; positions 1 and 3 tie at 6 and the lower position, 1, wins, so
+  \(P = \{0, 1\}\). The attention logits are \(\ell = [1/\sqrt{2}, 0]\), giving weights
+  \([0.6697615, 0.3302385]\) and
+  \[
+  \text{output} = 0.6697615 \cdot [1, 2] + 0.3302385 \cdot [3, 4] = [1.6604769, 2.6604769]
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 8; 1 &le; <code>S</code> &le; 65,536; 1 &le; <code>topk</code> &le; 4,096</li>
+  <li>1 &le; <code>H</code> &le; 64; 1 &le; <code>D</code> &le; 256; 1 &le; <code>H_I</code> &le; 64; 1 &le; <code>D_I</code> &le; 128</li>
+  <li>-8 &le; <code>idx_q</code>, <code>idx_k</code> &le; 8; -16 &le; <code>idx_w</code> &le; 16</li>
+  <li><code>q</code>, <code>k_cache</code>, <code>v_cache</code> values lie in [-150, 150], [-1, 1] and [-1, 1]</li>
+  <li>Performance is measured with <code>B</code> = 4, <code>S</code> = 65,536, <code>H</code> = 32, <code>D</code> = 128, <code>H_I</code> = 64, <code>D_I</code> = 128, <code>topk</code> = 2,048</li>
+</ul>
