@@ -78,7 +78,7 @@ class Challenge(ChallengeBase):
     def _make_rotation(self, D):
         G = torch.randn(D, D, device=self.device)
         Q, _ = torch.linalg.qr(G)
-        return Q
+        return Q.contiguous()
 
     def _make_codebook(self, C, scale=1.0):
         return torch.linspace(-scale, scale, C, device=self.device, dtype=torch.float32)
