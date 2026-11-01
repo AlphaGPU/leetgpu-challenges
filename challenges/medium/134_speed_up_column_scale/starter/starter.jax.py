@@ -1,0 +1,9 @@
+import jax
+import jax.numpy as jnp
+
+
+# input, gamma, beta are tensors on device
+@jax.jit
+def solve(input: jax.Array, gamma: jax.Array, beta: jax.Array, M: int, N: int) -> jax.Array:
+    # return output tensor directly
+    pass
