@@ -1,0 +1,92 @@
+<p>
+  Implement the forward pass of causal <strong>stick-breaking attention</strong> (Tan et al.,
+  &ldquo;Scaling Stick-Breaking Attention&rdquo;, ICLR 2025), a softmax-free replacement for
+  attention that needs no positional encoding. Each query breaks a unit-length stick, starting
+  from the most recent earlier token and moving back in time: token <code>j</code> takes the
+  fraction &sigma;(<em>z</em>) of whatever is left of the stick, so recent tokens with large
+  logits soak up the attention and older tokens only get what remains. All tensors are
+  <code>float32</code>; the <code>H</code> query heads share <code>H_KV</code> key/value heads
+  (grouped-query attention).
+</p>
+
+<svg width="640" height="190" viewBox="0 0 640 190" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="Query i breaks the stick from the most recent key backwards; each key takes sigmoid of its logit times the remaining stick">
+  <rect width="640" height="190" fill="#222" rx="8"/>
+  <text x="20" y="28" fill="#ccc" font-family="monospace" font-size="12">query i, keys j &lt; i (most recent first)</text>
+  <rect x="20" y="45" width="600" height="34" fill="#37474f" rx="3"/>
+  <rect x="440" y="45" width="180" height="34" fill="#4caf50" rx="3"/>
+  <text x="452" y="67" fill="#000" font-family="monospace" font-size="12">j = i-1: &#963;(z)</text>
+  <rect x="290" y="45" width="150" height="34" fill="#8bc34a" rx="3"/>
+  <text x="300" y="67" fill="#000" font-family="monospace" font-size="12">j = i-2</text>
+  <rect x="180" y="45" width="110" height="34" fill="#cddc39" rx="3"/>
+  <text x="190" y="67" fill="#000" font-family="monospace" font-size="12">j = i-3</text>
+  <rect x="120" y="45" width="60" height="34" fill="#ffeb3b" rx="3"/>
+  <text x="26" y="67" fill="#ccc" font-family="monospace" font-size="12">... rest</text>
+  <text x="20" y="112" fill="#ccc" font-family="monospace" font-size="12">A[i,j] = &#963;(z[i,j]) &#183; &#928; over j &lt; m &lt; i of (1 - &#963;(z[i,m]))</text>
+  <text x="20" y="136" fill="#ccc" font-family="monospace" font-size="12">output[i] = &#931; over j &lt; i of A[i,j] &#183; v[j]   (no normalization)</text>
+  <text x="20" y="168" fill="#888" font-family="monospace" font-size="11">flash-style: walk key blocks from i-1 back to 0, carrying the log of the remaining stick</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<p>
+  Implement <code>solve(q, k, v, output, B, H, H_KV, S, D)</code>:
+</p>
+<ul>
+  <li><code>q</code>: shape <code>(B, H, S, D)</code>, <code>float32</code>, the queries</li>
+  <li><code>k</code>, <code>v</code>: shape <code>(B, H_KV, S, D)</code>, <code>float32</code>, the keys and values</li>
+  <li><code>output</code>: shape <code>(B, H, S, D)</code>, <code>float32</code></li>
+</ul>
+<p>
+  Query head <code>h</code> uses key/value head \(g = \lfloor h / (H / H_{KV}) \rfloor\). For
+  sequence <code>b</code>, head <code>h</code> and query position <code>i</code>, with
+  \(\sigma(x) = 1 / (1 + e^{-x})\):
+  \[
+  z_{i,j} = \frac{q_{b,h,i} \cdot k_{b,g,j}}{\sqrt{D}}, \qquad
+  A_{i,j} = \sigma(z_{i,j}) \prod_{m=j+1}^{i-1} \big(1 - \sigma(z_{i,m})\big) \quad (0 \le j < i)
+  \]
+  \[
+  \text{output}_{b,h,i} = \sum_{j=0}^{i-1} A_{i,j}\, v_{b,g,j}
+  \]
+  Only keys strictly before the query are attended (the diagonal is excluded), so
+  <code>output</code> at position 0 is all zeros. The weights are not normalized: their sum is
+  \(1 - \prod_{j<i} (1 - \sigma(z_{i,j})) \le 1\). Equivalently, in log space,
+  \(\log A_{i,j} = \log\sigma(z_{i,j}) - \sum_{m=j+1}^{i-1} \operatorname{softplus}(z_{i,m})\).
+</p>
+<ul>
+  <li>Use only native features of the framework you choose (no external libraries); keep the function signature unchanged</li>
+  <li>Write the result into <code>output</code>; the inputs must not be modified</li>
+  <li>The weights must be computed stably for logits in the hundreds (e.g. \(\log(1 + e^{z})\) overflows <code>float32</code> for \(z &gt; 88\))</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>B</code> = 1, <code>H</code> = 1, <code>H_KV</code> = 1, <code>S</code> = 4,
+  <code>D</code> = 2. Rows are positions:
+  \[
+  q = \begin{bmatrix} 0 & 0 \\ 2 & 0 \\ 0 & 2 \\ 2 & 2 \end{bmatrix},
+  \quad
+  k = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ -1 & 0 \\ 0 & 0 \end{bmatrix},
+  \quad
+  v = \begin{bmatrix} 1 & 2 \\ 3 & 4 \\ 5 & 6 \\ 7 & 8 \end{bmatrix}
+  \]
+  Every logit is \(0\) or \(\pm\sqrt{2}\), and \(\sigma(\sqrt{2}) = 0.8044297\),
+  \(\sigma(0) = 0.5\), \(\sigma(-\sqrt{2}) = 0.1955703\).
+  Position 0 has no earlier key, so its output is \([0, 0]\).
+  Position 1 sees key 0 with \(z = \sqrt{2}\): \(A_{1,0} = 0.8044297\).
+  Position 2 has \(z = [0, \sqrt{2}]\): \(A_{2,1} = 0.8044297\) and
+  \(A_{2,0} = 0.5 \cdot (1 - 0.8044297) = 0.0977852\).
+  Position 3 has \(z = [\sqrt{2}, \sqrt{2}, -\sqrt{2}]\): \(A_{3,2} = 0.1955703\),
+  \(A_{3,1} = 0.8044297 \cdot 0.8044297 = 0.6471071\) and
+  \(A_{3,0} = 0.8044297 \cdot 0.1955703 \cdot 0.8044297 = 0.1265549\). The output is
+  \[
+  \text{output} = \begin{bmatrix} 0 & 0 \\ 0.8044297 & 1.6088594 \\ 2.5110742 & 3.4132890 \\ 3.0457279 & 4.0149602 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>B</code> &le; 8; 1 &le; <code>S</code> &le; 8,192; 1 &le; <code>D</code> &le; 128</li>
+  <li>1 &le; <code>H_KV</code> &le; <code>H</code> &le; 32, and <code>H</code> is a multiple of <code>H_KV</code></li>
+  <li><code>q</code> values lie in [-150, 150]; <code>k</code> and <code>v</code> values lie in [-1, 1]</li>
+  <li>Performance is measured with <code>B</code> = 2, <code>H</code> = 16, <code>H_KV</code> = 4, <code>S</code> = 8,192, <code>D</code> = 128</li>
+</ul>
