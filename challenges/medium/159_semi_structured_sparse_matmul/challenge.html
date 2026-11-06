@@ -1,0 +1,134 @@
+<p>
+  Compute a linear layer <code>y = x &times; W<sup>T</sup></code> whose weight matrix
+  <code>W</code> (<code>N &times; K</code>) has been pruned to <strong>2:4 semi-structured
+  sparsity</strong>: along each row, every group of 4 consecutive weights contains at most 2
+  nonzeros. <code>W</code> is stored in compressed form: <code>w_values</code>
+  (<code>N &times; K/2</code>) holds the 2 kept values of each group, and <code>w_meta</code>
+  (<code>N &times; K/4</code>, one byte per group) records where they sit inside the group. The
+  activations <code>x</code> (<code>M &times; K</code>) are dense. <code>x</code>,
+  <code>w_values</code> and <code>y</code> are 32-bit floats; <code>w_meta</code> is 8-bit
+  unsigned.
+</p>
+
+<p>
+  For row <code>n</code> and group <code>g</code> (covering columns <code>4g</code> to
+  <code>4g+3</code>), let <code>b = w_meta[n, g]</code>, <code>i<sub>0</sub> = b &amp; 3</code>
+  (bits 1:0) and <code>i<sub>1</sub> = (b &gt;&gt; 2) &amp; 3</code> (bits 3:2). Then
+  <code>W[n, 4g + i<sub>0</sub>] = w_values[n, 2g]</code>,
+  <code>W[n, 4g + i<sub>1</sub>] = w_values[n, 2g + 1]</code>, and the other two weights of the
+  group are zero:
+  \[
+  y_{m,n} = \sum_{g=0}^{K/4-1} \Big( \text{w_values}_{n,2g}\; x_{m,\,4g+i_0}
+  + \text{w_values}_{n,2g+1}\; x_{m,\,4g+i_1} \Big)
+  \]
+</p>
+
+<svg width="700" height="230" viewBox="0 0 700 230" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <rect width="700" height="230" fill="#222" rx="8"/>
+  <text x="350" y="22" text-anchor="middle" fill="#ccc" font-family="monospace" font-size="13">One row of W (K = 8): dense view vs. compressed storage</text>
+
+  <text x="20" y="62" fill="#aaa" font-family="monospace" font-size="12">W[n,:]</text>
+  <g font-family="monospace" font-size="12" text-anchor="middle">
+    <rect x="90" y="42" width="44" height="30" fill="#1a3a5c" stroke="#4a9eff"/>
+    <text x="112" y="62" fill="#fff">2</text>
+    <rect x="134" y="42" width="44" height="30" fill="#333" stroke="#555"/>
+    <text x="156" y="62" fill="#777">0</text>
+    <rect x="178" y="42" width="44" height="30" fill="#333" stroke="#555"/>
+    <text x="200" y="62" fill="#777">0</text>
+    <rect x="222" y="42" width="44" height="30" fill="#1a3a5c" stroke="#4a9eff"/>
+    <text x="244" y="62" fill="#fff">-1</text>
+    <rect x="276" y="42" width="44" height="30" fill="#333" stroke="#555"/>
+    <text x="298" y="62" fill="#777">0</text>
+    <rect x="320" y="42" width="44" height="30" fill="#3a2a1a" stroke="#ffaa44"/>
+    <text x="342" y="62" fill="#fff">0.5</text>
+    <rect x="364" y="42" width="44" height="30" fill="#3a2a1a" stroke="#ffaa44"/>
+    <text x="386" y="62" fill="#fff">3</text>
+    <rect x="408" y="42" width="44" height="30" fill="#333" stroke="#555"/>
+    <text x="430" y="62" fill="#777">0</text>
+    <text x="178" y="88" fill="#4a9eff" font-size="11">group 0</text>
+    <text x="364" y="88" fill="#ffaa44" font-size="11">group 1</text>
+  </g>
+
+  <text x="20" y="142" fill="#aaa" font-family="monospace" font-size="12">w_values</text>
+  <g font-family="monospace" font-size="12" text-anchor="middle">
+    <rect x="134" y="122" width="44" height="30" fill="#1a3a5c" stroke="#4a9eff"/>
+    <text x="156" y="142" fill="#fff">2</text>
+    <rect x="178" y="122" width="44" height="30" fill="#1a3a5c" stroke="#4a9eff"/>
+    <text x="200" y="142" fill="#fff">-1</text>
+    <rect x="320" y="122" width="44" height="30" fill="#3a2a1a" stroke="#ffaa44"/>
+    <text x="342" y="142" fill="#fff">0.5</text>
+    <rect x="364" y="122" width="44" height="30" fill="#3a2a1a" stroke="#ffaa44"/>
+    <text x="386" y="142" fill="#fff">3</text>
+  </g>
+
+  <text x="20" y="202" fill="#aaa" font-family="monospace" font-size="12">w_meta</text>
+  <g font-family="monospace" font-size="12" text-anchor="middle">
+    <rect x="134" y="182" width="88" height="30" fill="#1a3a5c" stroke="#4a9eff"/>
+    <text x="178" y="202" fill="#fff">12 = (3&lt;&lt;2)|0</text>
+    <rect x="320" y="182" width="88" height="30" fill="#3a2a1a" stroke="#ffaa44"/>
+    <text x="364" y="202" fill="#fff">9 = (2&lt;&lt;2)|1</text>
+  </g>
+
+  <g font-family="monospace" font-size="11" fill="#aaa">
+    <text x="480" y="122">i0 = b &amp; 3</text>
+    <text x="480" y="140">i1 = (b &gt;&gt; 2) &amp; 3</text>
+    <text x="480" y="168">group 0: i0=0, i1=3</text>
+    <text x="480" y="186">group 1: i0=1, i1=2</text>
+    <text x="480" y="212" fill="#888">memory: 0.56&#215; of dense</text>
+  </g>
+</svg>
+
+<p>
+  This is the format used by sparse LLM inference (2:4-pruned weights, e.g. SparseGPT/Wanda): in
+  a batched decode step <code>M</code> is small, so the layer is limited by how fast the weights
+  can be streamed from memory, and the compressed weights are only 56% of the dense size.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the <code>solve</code> function; do not change its signature.</li>
+  <li>External libraries are not permitted.</li>
+  <li>Write the result into <code>y</code> (<code>M &times; N</code>, row-major).
+      <code>y</code> is not zero-initialized; every element must be written.</li>
+  <li>Use <code>float32</code> operands and accumulate in <code>float32</code> or better; rounding
+      <code>x</code> or the weights to FP16 or BF16 is outside the tolerance.</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>M</code> = 2, <code>N</code> = 3, <code>K</code> = 8
+  \[
+  x = \begin{bmatrix} 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 \\ 1 & 0 & -1 & 2 & 0 & 1 & -2 & 1 \end{bmatrix}
+  \]
+  \[
+  \text{w_values} = \begin{bmatrix} 1 & 1 & 1 & 1 \\ 2 & -1 & 0.5 & 3 \\ -1 & 1 & 1 & -2 \end{bmatrix},
+  \quad
+  \text{w_meta} = \begin{bmatrix} 4 & 14 \\ 12 & 9 \\ 13 & 8 \end{bmatrix}
+  \]
+  The metadata decodes to position pairs \((0,1),(2,3)\) for row 0, \((0,3),(1,2)\) for row 1
+  and \((1,3),(0,2)\) for row 2, so the dense weight matrix is
+  \[
+  W = \begin{bmatrix}
+  1 & 1 & 0 & 0 & 0 & 0 & 1 & 1 \\
+  2 & 0 & 0 & -1 & 0 & 0.5 & 3 & 0 \\
+  0 & -1 & 0 & 1 & 1 & 0 & -2 & 0
+  \end{bmatrix}
+  \]
+  Output:
+  \[
+  y = x \times W^T = \begin{bmatrix} 18 & 22 & -7 \\ 0 & -5.5 & 6 \end{bmatrix}
+  \]
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code> &le; 256</li>
+  <li>1 &le; <code>N</code> &le; 32,768</li>
+  <li>4 &le; <code>K</code> &le; 8,192, and <code>K</code> is divisible by 4</li>
+  <li>Every <code>w_meta</code> byte satisfies <code>i<sub>0</sub></code> &lt;
+      <code>i<sub>1</sub></code> and has bits 7:4 equal to zero</li>
+  <li>Values of <code>x</code> and <code>w_values</code> are in the range [-1, 1]</li>
+  <li>All tensors are stored in row-major order</li>
+  <li>Performance is measured with <code>M</code> = 16, <code>N</code> = 28,672,
+      <code>K</code> = 4,096</li>
+</ul>
