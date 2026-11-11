@@ -1,0 +1,266 @@
+<p>
+  Implement a fused <strong>single-token decoder layer</strong> &mdash; the Llama-style pre-norm
+  block that runs at every decode step. A batch of <code>B</code> sequences each contributes one
+  new hidden state (row of <code>x</code>, shape <code>[B, d_model]</code>). The kernel must
+  RMS-normalize that token, project Q, K and V, apply rotary embeddings, write the new key and
+  value into the KV cache at <code>positions[b]</code>, attend over the valid prefix of the cache,
+  apply the output projection and residual, then run a pre-norm SwiGLU MLP and residual. All
+  tensors are <code>float32</code> except <code>positions</code>, which is <code>int32</code>.
+</p>
+
+<p>
+  The intended approach is a <strong>megakernel</strong>: a single persistent kernel launch that
+  fuses the whole decode step, rather than a chain of separate kernels for RMSNorm, QKV, attention,
+  and the MLP. The judge checks numerical correctness, not the number of launches, but the problem
+  is designed so that a fused implementation is the natural way to hit the performance target.
+</p>
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 700" width="520" height="700" style="display:block; margin:20px auto;">
+  <rect width="520" height="700" fill="#222"/>
+  <defs>
+    <marker id="ah160" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#999"/>
+    </marker>
+  </defs>
+
+  <text x="160" y="22" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">x [B, d_model]</text>
+  <line x1="160" y1="30" x2="160" y2="48" stroke="#999" stroke-width="1.5" marker-end="url(#ah160)"/>
+
+  <line x1="160" y1="38" x2="310" y2="38" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="310" y1="38" x2="310" y2="368" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="310" y1="368" x2="177" y2="368" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#ah160)"/>
+  <text x="322" y="210" fill="#666" font-size="10" font-family="sans-serif" transform="rotate(90,322,210)">residual</text>
+
+  <rect x="80" y="51" width="160" height="28" rx="5" fill="#333" stroke="#777"/>
+  <text x="160" y="70" text-anchor="middle" fill="#ccc" font-size="12" font-family="sans-serif">RMSNorm 1</text>
+  <line x1="160" y1="79" x2="160" y2="97" stroke="#999" stroke-width="1.5" marker-end="url(#ah160)"/>
+
+  <rect x="80" y="100" width="160" height="28" rx="5" fill="#1e2d4d" stroke="#4477bb"/>
+  <text x="160" y="119" text-anchor="middle" fill="#aaccee" font-size="12" font-family="sans-serif">QKV Projection</text>
+  <line x1="160" y1="128" x2="160" y2="146" stroke="#999" stroke-width="1.5" marker-end="url(#ah160)"/>
+
+  <rect x="80" y="149" width="160" height="28" rx="5" fill="#2d1e4d" stroke="#7755bb"/>
+  <text x="160" y="168" text-anchor="middle" fill="#ccaaee" font-size="12" font-family="sans-serif">RoPE (Q and K)</text>
+  <line x1="160" y1="177" x2="160" y2="195" stroke="#999" stroke-width="1.5" marker-end="url(#ah160)"/>
+
+  <rect x="80" y="198" width="160" height="28" rx="5" fill="#3a2a1a" stroke="#cc8844"/>
+  <text x="160" y="217" text-anchor="middle" fill="#eecc99" font-size="11" font-family="sans-serif">Write K, V at positions[b]</text>
+  <line x1="160" y1="226" x2="160" y2="244" stroke="#999" stroke-width="1.5" marker-end="url(#ah160)"/>
+
+  <line x1="240" y1="212" x2="360" y2="212" stroke="#cc8844" stroke-width="1.2" marker-end="url(#ah160)"/>
+  <rect x="364" y="150" width="140" height="120" rx="6" fill="#2a2418" stroke="#cc8844"/>
+  <text x="434" y="172" text-anchor="middle" fill="#eecc99" font-size="11" font-family="sans-serif">KV cache</text>
+  <text x="434" y="190" text-anchor="middle" fill="#aaa" font-size="10" font-family="monospace">[B, H_kv, S_max, D]</text>
+  <text x="434" y="214" text-anchor="middle" fill="#888" font-size="10" font-family="sans-serif">keep other slots</text>
+  <text x="434" y="248" text-anchor="middle" fill="#eecc99" font-size="10" font-family="sans-serif">attend 0..pos</text>
+  <line x1="364" y1="258" x2="200" y2="272" stroke="#cc8844" stroke-width="1.2" marker-end="url(#ah160)"/>
+
+  <rect x="80" y="247" width="160" height="28" rx="5" fill="#1e2d4d" stroke="#4477bb"/>
+  <text x="160" y="266" text-anchor="middle" fill="#aaccee" font-size="12" font-family="sans-serif">Cache Attention (GQA)</text>
+  <line x1="160" y1="275" x2="160" y2="293" stroke="#999" stroke-width="1.5" marker-end="url(#ah160)"/>
+
+  <rect x="80" y="296" width="160" height="28" rx="5" fill="#1e2d4d" stroke="#4477bb"/>
+  <text x="160" y="315" text-anchor="middle" fill="#aaccee" font-size="12" font-family="sans-serif">Output Projection</text>
+  <line x1="160" y1="324" x2="160" y2="355" stroke="#999" stroke-width="1.5" marker-end="url(#ah160)"/>
+
+  <circle cx="160" cy="368" r="12" fill="#222" stroke="#999" stroke-width="1.5"/>
+  <text x="160" y="373" text-anchor="middle" fill="#ccc" font-size="15" font-family="sans-serif" font-weight="bold">+</text>
+  <line x1="160" y1="380" x2="160" y2="404" stroke="#999" stroke-width="1.5" marker-end="url(#ah160)"/>
+
+  <line x1="160" y1="392" x2="310" y2="392" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="310" y1="392" x2="310" y2="612" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="310" y1="612" x2="177" y2="612" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#ah160)"/>
+  <text x="322" y="510" fill="#666" font-size="10" font-family="sans-serif" transform="rotate(90,322,510)">residual</text>
+
+  <rect x="80" y="407" width="160" height="28" rx="5" fill="#333" stroke="#777"/>
+  <text x="160" y="426" text-anchor="middle" fill="#ccc" font-size="12" font-family="sans-serif">RMSNorm 2</text>
+  <line x1="160" y1="435" x2="160" y2="453" stroke="#999" stroke-width="1.5" marker-end="url(#ah160)"/>
+
+  <rect x="80" y="456" width="160" height="28" rx="5" fill="#1e3d2d" stroke="#44aa66"/>
+  <text x="160" y="475" text-anchor="middle" fill="#aaeebb" font-size="12" font-family="sans-serif">Gate &amp; Up Proj</text>
+  <line x1="160" y1="484" x2="160" y2="502" stroke="#999" stroke-width="1.5" marker-end="url(#ah160)"/>
+
+  <rect x="80" y="505" width="160" height="28" rx="5" fill="#1e3d2d" stroke="#44aa66"/>
+  <text x="160" y="524" text-anchor="middle" fill="#aaeebb" font-size="12" font-family="sans-serif">SiLU(gate) &#x2299; up</text>
+  <line x1="160" y1="533" x2="160" y2="551" stroke="#999" stroke-width="1.5" marker-end="url(#ah160)"/>
+
+  <rect x="80" y="554" width="160" height="28" rx="5" fill="#1e3d2d" stroke="#44aa66"/>
+  <text x="160" y="573" text-anchor="middle" fill="#aaeebb" font-size="12" font-family="sans-serif">Down Proj</text>
+  <line x1="160" y1="582" x2="160" y2="599" stroke="#999" stroke-width="1.5" marker-end="url(#ah160)"/>
+
+  <circle cx="160" cy="612" r="12" fill="#222" stroke="#999" stroke-width="1.5"/>
+  <text x="160" y="617" text-anchor="middle" fill="#ccc" font-size="15" font-family="sans-serif" font-weight="bold">+</text>
+  <line x1="160" y1="624" x2="160" y2="648" stroke="#999" stroke-width="1.5" marker-end="url(#ah160)"/>
+
+  <text x="160" y="668" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">output [B, d_model]</text>
+  <text x="400" y="668" text-anchor="middle" fill="#eecc99" font-size="11" font-family="monospace">updated KV cache</text>
+</svg>
+
+<p>
+  The block is pre-norm and has no bias terms. <code>d_model</code> equals
+  <code>H_q &times; D</code>, and <code>H_q</code> is divisible by <code>H_kv</code> (grouped-query
+  attention). Weight matrices are stored row-major with shape <code>(in_dim, out_dim)</code> and
+  are applied as <code>x &times; W</code>.
+</p>
+
+\[
+\begin{aligned}
+x' &= x + \text{Attn}\!\left(\text{RMSNorm}_1(x),\; K_{\text{cache}},\; V_{\text{cache}},\; \text{positions}\right) \\[4pt]
+\text{output} &= x' + \text{FFN}\!\left(\text{RMSNorm}_2(x')\right)
+\end{aligned}
+\]
+
+<p>The sub-operations in detail:</p>
+
+\[
+\begin{aligned}
+\text{RMSNorm}(z, w) &= \frac{z}{\sqrt{\frac{1}{d}\sum_i z_i^2 + \varepsilon}} \odot w, \quad \varepsilon = 10^{-5} \\[8pt]
+Q &= \text{RMSNorm}_1(x)\, W_Q \in \mathbb{R}^{B \times (H_q D)}, \quad \text{reshape to } (B, H_q, D) \\[4pt]
+K &= \text{RMSNorm}_1(x)\, W_K \in \mathbb{R}^{B \times (H_{kv} D)}, \quad \text{reshape to } (B, H_{kv}, D) \\[4pt]
+V &= \text{RMSNorm}_1(x)\, W_V \in \mathbb{R}^{B \times (H_{kv} D)}, \quad \text{reshape to } (B, H_{kv}, D) \\[8pt]
+\text{RoPE}(t, c, s)_j &= t_j\, c_j - t_{j+D/2}\, s_j, \qquad
+\text{RoPE}(t, c, s)_{j+D/2} = t_{j+D/2}\, c_j + t_j\, s_j \\[4pt]
+&\quad c = \text{cos_sin_cache}[p, {:}D/2],\; s = \text{cos_sin_cache}[p, {D/2:}],\; p = \text{positions}[b] \\[8pt]
+K_{\text{cache}}[b, h, p, :] &\leftarrow \text{RoPE}(K[b, h]), \qquad
+V_{\text{cache}}[b, h, p, :] \leftarrow V[b, h] \\[8pt]
+\text{GQA} &: \text{repeat each KV head } (H_q / H_{kv})\times \text{ along the head axis} \\[4pt]
+\text{head}_{b,i} &= \text{softmax}\!\left(\frac{Q_{b,i}\, K_{b,i,:}^{\top}}{\sqrt{D}} + M_b\right) V_{b,i} \\[4pt]
+M_b[s] &= 0 \text{ if } s \le \text{positions}[b],\ \text{else } -\infty \\[8pt]
+\text{Attn}(x) &= \text{Concat}(\text{heads})\; W_O \\[8pt]
+\text{FFN}(z) &= \bigl(\text{SiLU}(z\, W_{\text{gate}}) \odot z\, W_{\text{up}}\bigr)\; W_{\text{down}}
+\end{aligned}
+\]
+
+<p>
+  Every cache slot other than <code>positions[b]</code> must keep the value it had on entry.
+  Position <code>i</code> of sequence <code>b</code> may attend only to cache slots
+  <code>0, &hellip;, positions[b]</code> (inclusive of the slot just written).
+  \(\text{SiLU}(x) = x \cdot \sigma(x)\). RoPE is applied to Q and K only, never to V.
+</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>Store the layer output in <code>output</code> and write the new key and value into
+      <code>K_cache</code> and <code>V_cache</code> at <code>positions[b]</code></li>
+  <li>Leave every other cache slot unchanged</li>
+  <li>RMSNorm uses \(\varepsilon = 10^{-5}\) and has no additive bias</li>
+  <li>Repeat KV heads <code>H_q / H_kv</code> times before computing attention</li>
+  <li><code>cos_sin_cache</code> has shape <code>[S_max, D]</code>: the first
+      <code>D/2</code> entries of row <code>p</code> are cosines, the last <code>D/2</code>
+      are sines</li>
+  <li>All linear maps are <code>float32</code> matrix multiplies with no bias</li>
+  <li>Read every weight from the packed <code>weights</code> buffer described below</li>
+</ul>
+
+<h2>Weight Layout</h2>
+<p>
+  All parameters are packed into a single contiguous <code>weights</code> buffer in the order
+  below. Two-dimensional matrices are stored row-major with shape <code>(in_dim, out_dim)</code>
+  and applied as <code>z &times; W</code>. There are no bias terms. Because
+  <code>d_model = H_q &times; D</code>, <code>W_Q</code> and <code>W_O</code> are both
+  <code>d_model &times; d_model</code>.
+</p>
+
+<table style="border-collapse:separate; border-spacing:16px 6px;">
+  <tr>
+    <th style="text-align:left;">Parameter</th>
+    <th style="text-align:left;">Shape</th>
+    <th style="text-align:right;">Size</th>
+    <th style="text-align:right;">Offset</th>
+  </tr>
+  <tr>
+    <td>\(w_1\) (RMSNorm 1 scale)</td>
+    <td>(d_model,)</td>
+    <td style="text-align:right;">d_model</td>
+    <td style="text-align:right;">0</td>
+  </tr>
+  <tr>
+    <td>\(W_Q\)</td>
+    <td>(d_model, d_model)</td>
+    <td style="text-align:right;">d_model&sup2;</td>
+    <td style="text-align:right;">d_model</td>
+  </tr>
+  <tr>
+    <td>\(W_K\)</td>
+    <td>(d_model, H_kv &times; D)</td>
+    <td style="text-align:right;">d_model &times; H_kv &times; D</td>
+    <td style="text-align:right;">d_model + d_model&sup2;</td>
+  </tr>
+  <tr>
+    <td>\(W_V\)</td>
+    <td>(d_model, H_kv &times; D)</td>
+    <td style="text-align:right;">d_model &times; H_kv &times; D</td>
+    <td style="text-align:right;">d_model + d_model&sup2; + d_model &times; H_kv &times; D</td>
+  </tr>
+  <tr>
+    <td>\(W_O\)</td>
+    <td>(d_model, d_model)</td>
+    <td style="text-align:right;">d_model&sup2;</td>
+    <td style="text-align:right;">d_model + d_model&sup2; + 2 &times; d_model &times; H_kv &times; D</td>
+  </tr>
+  <tr>
+    <td>\(w_2\) (RMSNorm 2 scale)</td>
+    <td>(d_model,)</td>
+    <td style="text-align:right;">d_model</td>
+    <td style="text-align:right;">d_model + 2 &times; d_model&sup2; + 2 &times; d_model &times; H_kv &times; D</td>
+  </tr>
+  <tr>
+    <td>\(W_{\text{gate}}\)</td>
+    <td>(d_model, d_ffn)</td>
+    <td style="text-align:right;">d_model &times; d_ffn</td>
+    <td style="text-align:right;">2 &times; d_model + 2 &times; d_model&sup2; + 2 &times; d_model &times; H_kv &times; D</td>
+  </tr>
+  <tr>
+    <td>\(W_{\text{up}}\)</td>
+    <td>(d_model, d_ffn)</td>
+    <td style="text-align:right;">d_model &times; d_ffn</td>
+    <td style="text-align:right;">(same as gate) + d_model &times; d_ffn</td>
+  </tr>
+  <tr>
+    <td>\(W_{\text{down}}\)</td>
+    <td>(d_ffn, d_model)</td>
+    <td style="text-align:right;">d_ffn &times; d_model</td>
+    <td style="text-align:right;">(same as up) + d_model &times; d_ffn</td>
+  </tr>
+</table>
+
+<h2>Example</h2>
+<p>
+  With <code>B</code> = 1, <code>d_model</code> = 4, <code>H_q</code> = 2, <code>H_kv</code> = 1,
+  <code>D</code> = 2, <code>d_ffn</code> = 4, <code>S_max</code> = 2 and
+  <code>positions</code> = [1]:
+</p>
+<pre>
+x               = [[1, 0, 0, 0]]
+weights         = packed 104-vector (layout above; offsets for this example:
+                  w1@0, W_Q@4, W_K@20, W_V@28, W_O@36, w2@52,
+                  W_gate@56, W_up@72, W_down@88)
+                  w1 = w2 = [1, 1, 1, 1]
+                  W_Q = W_O = I_4
+                  W_K = [[1, 0], [0, 1], [0, 0], [0, 0]]
+                  W_V = [[1, 0], [0, 0], [0, 1], [0, 0]]
+                  W_gate = W_up = W_down = e_00  (1 at [0, 0], else 0)
+cos_sin_cache   = [[1, 0], [0, 1]]     # identity RoPE at pos 0, 90-degree at pos 1
+K_cache (in)    = [[[[2, 0], [9, 9]]]]
+V_cache (in)    = [[[[0, 1], [8, 8]]]]
+
+output          = [[5.899476, 0.055813, 0.999980, 0.500000]]
+K_cache (out)   = [[[[2, 0], [0, 1.999960]]]]   # slot 0 unchanged; slot 1 written
+V_cache (out)   = [[[[0, 1], [1.999960, 0]]]]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li><code>d_model</code> = <code>H_q</code> &times; <code>D</code>, and <code>H_q</code> is
+      divisible by <code>H_kv</code></li>
+  <li>1 &le; <code>B</code>, 1 &le; <code>H_kv</code> &le; <code>H_q</code>,
+      2 &le; <code>D</code> with <code>D</code> even, 1 &le; <code>d_ffn</code>,
+      1 &le; <code>S_max</code></li>
+  <li>0 &le; <code>positions[b]</code> &lt; <code>S_max</code></li>
+  <li>All floating-point tensors are 32-bit; <code>positions</code> is 32-bit integer</li>
+  <li>Performance is measured with <code>B</code> = 32, <code>d_model</code> = 2,048,
+      <code>H_q</code> = 16, <code>H_kv</code> = 4, <code>D</code> = 128,
+      <code>d_ffn</code> = 5,632, <code>S_max</code> = 2,048</li>
+</ul>
