@@ -1,0 +1,123 @@
+<p>
+  Implement a stack of <code>L</code> pre-norm residual SwiGLU MLP layers in one
+  <strong>persistent megakernel</strong>. The input <code>x</code> has shape
+  <code>[M, d_model]</code>. For each layer <code>l = 0, &hellip;, L-1</code>, RMS-normalize the
+  residual stream, apply a SwiGLU feed-forward (<code>gate</code>, <code>up</code>, SiLU, element-wise
+  product, <code>down</code>), and add the result back to the residual stream. All tensors are
+  <code>float32</code>.
+</p>
+
+<p>
+  The intended approach is a single persistent kernel launch that keeps the grid alive across
+  layers and uses grid-wide synchronization (for example cooperative groups) between layers,
+  rather than launching a separate kernel for every layer. The judge checks numerical correctness,
+  not the number of launches, but the problem is designed so that a persistent implementation is
+  the natural way to hit the performance target.
+</p>
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 560" width="420" height="560" style="display:block; margin:20px auto;">
+  <rect width="420" height="560" fill="#222"/>
+  <defs>
+    <marker id="ah161" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#999"/>
+    </marker>
+  </defs>
+
+  <text x="160" y="22" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">x [M, d_model]</text>
+  <line x1="160" y1="30" x2="160" y2="48" stroke="#999" stroke-width="1.5" marker-end="url(#ah161)"/>
+
+  <rect x="40" y="52" width="240" height="196" rx="10" fill="#1a1a1a" stroke="#666" stroke-dasharray="4,3"/>
+  <text x="160" y="72" text-anchor="middle" fill="#888" font-size="11" font-family="sans-serif">layer l  (repeat L times, one launch)</text>
+
+  <line x1="160" y1="80" x2="160" y2="96" stroke="#999" stroke-width="1.5" marker-end="url(#ah161)"/>
+  <line x1="160" y1="88" x2="300" y2="88" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="300" y1="88" x2="300" y2="220" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="300" y1="220" x2="177" y2="220" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#ah161)"/>
+  <text x="312" y="160" fill="#666" font-size="10" font-family="sans-serif" transform="rotate(90,312,160)">residual</text>
+
+  <rect x="80" y="99" width="160" height="26" rx="5" fill="#333" stroke="#777"/>
+  <text x="160" y="117" text-anchor="middle" fill="#ccc" font-size="12" font-family="sans-serif">RMSNorm (rms_w[l])</text>
+  <line x1="160" y1="125" x2="160" y2="141" stroke="#999" stroke-width="1.5" marker-end="url(#ah161)"/>
+
+  <rect x="80" y="144" width="160" height="26" rx="5" fill="#1e3d2d" stroke="#44aa66"/>
+  <text x="160" y="162" text-anchor="middle" fill="#aaeebb" font-size="11" font-family="sans-serif">SiLU(z W_gate[l]) &#x2299; z W_up[l]</text>
+  <line x1="160" y1="170" x2="160" y2="186" stroke="#999" stroke-width="1.5" marker-end="url(#ah161)"/>
+
+  <rect x="80" y="189" width="160" height="26" rx="5" fill="#1e3d2d" stroke="#44aa66"/>
+  <text x="160" y="207" text-anchor="middle" fill="#aaeebb" font-size="12" font-family="sans-serif">Down Proj W_down[l]</text>
+
+  <circle cx="160" cy="220" r="0" fill="none"/>
+  <line x1="160" y1="215" x2="160" y2="220" stroke="#999" stroke-width="1.5"/>
+  <circle cx="160" cy="232" r="11" fill="#222" stroke="#999" stroke-width="1.5"/>
+  <text x="160" y="237" text-anchor="middle" fill="#ccc" font-size="14" font-family="sans-serif" font-weight="bold">+</text>
+
+  <line x1="160" y1="243" x2="160" y2="270" stroke="#999" stroke-width="1.5" marker-end="url(#ah161)"/>
+
+  <rect x="70" y="273" width="180" height="36" rx="6" fill="#1e2d4d" stroke="#4477bb"/>
+  <text x="160" y="290" text-anchor="middle" fill="#aaccee" font-size="11" font-family="sans-serif">grid-wide sync</text>
+  <text x="160" y="304" text-anchor="middle" fill="#8899bb" font-size="10" font-family="sans-serif">then next layer, same kernel</text>
+
+  <line x1="160" y1="309" x2="160" y2="336" stroke="#999" stroke-width="1.5" marker-end="url(#ah161)"/>
+  <text x="160" y="354" text-anchor="middle" fill="#888" font-size="11" font-family="sans-serif">after L layers</text>
+  <line x1="160" y1="362" x2="160" y2="390" stroke="#999" stroke-width="1.5" marker-end="url(#ah161)"/>
+  <text x="160" y="410" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">output [M, d_model]</text>
+
+  <text x="160" y="450" text-anchor="middle" fill="#666" font-size="11" font-family="sans-serif">weights packed as [L, &hellip;] on the outer axis</text>
+  <text x="160" y="468" text-anchor="middle" fill="#666" font-size="11" font-family="monospace">rms_w [L, d_model]</text>
+  <text x="160" y="486" text-anchor="middle" fill="#666" font-size="11" font-family="monospace">W_gate, W_up [L, d_model, d_ffn]</text>
+  <text x="160" y="504" text-anchor="middle" fill="#666" font-size="11" font-family="monospace">W_down [L, d_ffn, d_model]</text>
+  <text x="160" y="536" text-anchor="middle" fill="#555" font-size="10" font-family="sans-serif">one persistent launch, not L separate kernels</text>
+</svg>
+
+<p>
+  Layer <code>l</code> uses its own RMSNorm scale and its own SwiGLU weights. There are no bias
+  terms. Matrices are stored row-major with shape <code>(in_dim, out_dim)</code> (plus a leading
+  layer axis) and are applied as <code>z &times; W[l]</code>.
+</p>
+
+\[
+\begin{aligned}
+h^{(0)} &= x \\[4pt]
+\tilde{h}^{(l)} &= \text{RMSNorm}\!\left(h^{(l)},\, w^{(l)}\right) \\[4pt]
+h^{(l+1)} &= h^{(l)} + \bigl(\text{SiLU}(\tilde{h}^{(l)}\, W_{\text{gate}}^{(l)}) \odot \tilde{h}^{(l)}\, W_{\text{up}}^{(l)}\bigr)\, W_{\text{down}}^{(l)} \\[8pt]
+\text{RMSNorm}(z, w) &= \frac{z}{\sqrt{\frac{1}{d}\sum_i z_i^2 + \varepsilon}} \odot w, \quad \varepsilon = 10^{-5} \\[4pt]
+\text{output} &= h^{(L)}
+\end{aligned}
+\]
+
+<p>\(\text{SiLU}(x) = x \cdot \sigma(x)\). The residual add uses the pre-norm hidden state
+<code>h^{(l)}</code>, not the normalized values.</p>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Use only native features (external libraries are not permitted)</li>
+  <li>The <code>solve</code> function signature must remain unchanged</li>
+  <li>Store the result after all <code>L</code> layers in <code>output</code></li>
+  <li>RMSNorm uses \(\varepsilon = 10^{-5}\) and has no additive bias</li>
+  <li>Apply layers in order <code>0 &hellip; L-1</code> with a residual add after each SwiGLU</li>
+  <li>All linear maps are <code>float32</code> matrix multiplies with no bias</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  With <code>M</code> = 2, <code>d_model</code> = 2, <code>d_ffn</code> = 2 and <code>L</code> = 2,
+  layer 0 is a rank-1 SwiGLU on the first coordinate and layer 1 is the same on the second:
+</p>
+<pre>
+x        = [[1, 0], [0, 1]]
+rms_w    = [[1, 1], [1, 1]]
+W_gate   = [[[1, 0], [0, 0]], [[0, 0], [0, 1]]]
+W_up     = [[[1, 0], [0, 0]], [[0, 0], [0, 1]]]
+W_down   = [[[1, 0], [0, 0]], [[0, 0], [0, 1]]]
+
+output   = [[2.608823, 0.000000], [0.000000, 2.608823]]
+</pre>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>M</code>, 1 &le; <code>d_model</code>, 1 &le; <code>d_ffn</code>,
+      1 &le; <code>L</code></li>
+  <li>All tensors are 32-bit floating point</li>
+  <li>Performance is measured with <code>M</code> = 2,048, <code>d_model</code> = 1,024,
+      <code>d_ffn</code> = 2,816, <code>L</code> = 8</li>
+</ul>
