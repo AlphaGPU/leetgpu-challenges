@@ -123,7 +123,7 @@ V &= \text{RMSNorm}_1(x)\, W_V \in \mathbb{R}^{B \times (H_{kv} D)}, \quad \text
 &\quad c = \text{cos_sin_cache}[p, {:}D/2],\; s = \text{cos_sin_cache}[p, {D/2:}],\; p = \text{positions}[b] \\[8pt]
 K_{\text{cache}}[b, h, p, :] &\leftarrow \text{RoPE}(K[b, h]), \qquad
 V_{\text{cache}}[b, h, p, :] \leftarrow V[b, h] \\[8pt]
-\text{GQA} &: \text{repeat each KV head } (H_q / H_{kv})\times \text{ along the head axis} \\[4pt]
+\text{GQA} &: \text{query head } h \text{ maps to KV head } kv = h \mathbin{//} (H_q / H_{kv}) \\[4pt]
 \text{head}_{b,i} &= \text{softmax}\!\left(\frac{Q_{b,i}\, K_{b,i,:}^{\top}}{\sqrt{D}} + M_b\right) V_{b,i} \\[4pt]
 M_b[s] &= 0 \text{ if } s \le \text{positions}[b],\ \text{else } -\infty \\[8pt]
 \text{Attn}(x) &= \text{Concat}(\text{heads})\; W_O \\[8pt]
@@ -133,7 +133,7 @@ M_b[s] &= 0 \text{ if } s \le \text{positions}[b],\ \text{else } -\infty \\[8pt]
 
 <p>
   Every cache slot other than <code>positions[b]</code> must keep the value it had on entry.
-  Position <code>i</code> of sequence <code>b</code> may attend only to cache slots
+  The new token of sequence <code>b</code> may attend only to cache slots
   <code>0, &hellip;, positions[b]</code> (inclusive of the slot just written).
   \(\text{SiLU}(x) = x \cdot \sigma(x)\). RoPE is applied to Q and K only, never to V.
 </p>
@@ -146,7 +146,7 @@ M_b[s] &= 0 \text{ if } s \le \text{positions}[b],\ \text{else } -\infty \\[8pt]
       <code>K_cache</code> and <code>V_cache</code> at <code>positions[b]</code></li>
   <li>Leave every other cache slot unchanged</li>
   <li>RMSNorm uses \(\varepsilon = 10^{-5}\) and has no additive bias</li>
-  <li>Repeat KV heads <code>H_q / H_kv</code> times before computing attention</li>
+  <li>Map query head <code>h</code> to KV head <code>h // (H_q / H_kv)</code></li>
   <li><code>cos_sin_cache</code> has shape <code>[S_max, D]</code>: the first
       <code>D/2</code> entries of row <code>p</code> are cosines, the last <code>D/2</code>
       are sines</li>
