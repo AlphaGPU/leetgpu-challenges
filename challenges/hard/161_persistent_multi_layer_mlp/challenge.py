@@ -91,7 +91,9 @@ class Challenge(ChallengeBase):
         W_gate = torch.randn(L, d_model, d_ffn, device=device, dtype=dtype) * 0.02
         W_up = torch.randn(L, d_model, d_ffn, device=device, dtype=dtype) * 0.02
         W_down = torch.randn(L, d_ffn, d_model, device=device, dtype=dtype) * 0.02
-        output = torch.empty(M, d_model, device=device, dtype=dtype)
+        # Pre-filled with 123.0 so a kernel that leaves output unwritten fails,
+        # including the all-zero-x case whose correct output is 0.
+        output = torch.full((M, d_model), 123.0, device=device, dtype=dtype)
         return {
             "x": x,
             "rms_w": rms_w,
@@ -121,7 +123,7 @@ class Challenge(ChallengeBase):
         W_gate[1, 1, 1] = 1.0
         W_up[1, 1, 1] = 1.0
         W_down[1, 1, 1] = 1.0
-        output = torch.empty(M, d_model, device=device, dtype=dtype)
+        output = torch.full((M, d_model), 123.0, device=device, dtype=dtype)
         return {
             "x": x,
             "rms_w": rms_w,
