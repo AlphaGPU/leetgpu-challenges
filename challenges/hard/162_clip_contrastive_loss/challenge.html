@@ -1,0 +1,103 @@
+<p>
+  Compute the symmetric InfoNCE loss used to train CLIP-style image&ndash;text models. Given a
+  batch of <code>N</code> paired embeddings <code>image_embeds</code> and <code>text_embeds</code>,
+  each of shape <code>N &times; D</code> (row <code>i</code> of both is a matching pair), L2-normalize
+  every row, form the scaled cosine-similarity matrix, and average the cross-entropy of
+  classifying each image's matching text (softmax over each row) and each text's matching image
+  (softmax over each column). All tensors are 32-bit floats; write the scalar loss to
+  <code>loss[0]</code>.
+</p>
+<p>
+  \[
+  \hat{x}_i = \frac{x_i}{\lVert x_i \rVert_2}, \quad
+  \hat{y}_j = \frac{y_j}{\lVert y_j \rVert_2}, \quad
+  S_{i,j} = \text{logit_scale} \cdot \hat{x}_i \cdot \hat{y}_j
+  \]
+  \[
+  \text{loss} = \frac{1}{2}\left(
+  \frac{1}{N}\sum_{i=0}^{N-1}\Big(\log\sum_{j=0}^{N-1} e^{S_{i,j}} - S_{i,i}\Big) +
+  \frac{1}{N}\sum_{j=0}^{N-1}\Big(\log\sum_{i=0}^{N-1} e^{S_{i,j}} - S_{j,j}\Big)
+  \right)
+  \]
+</p>
+<p>
+  where <code>x</code> = <code>image_embeds</code> and <code>y</code> = <code>text_embeds</code>.
+  The <code>N &times; N</code> logit matrix is much larger than the inputs, so a fast solution
+  computes each tile of <code>S</code> once and folds it into running log-sum-exp statistics for
+  both its rows and its columns instead of materializing <code>S</code>.
+</p>
+
+<svg width="560" height="250" viewBox="0 0 560 250" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#bbb"/>
+    </marker>
+  </defs>
+  <rect width="560" height="250" fill="#222" rx="8"/>
+  <text x="20" y="28" fill="#ddd" font-family="monospace" font-size="13">S = logit_scale &#183; x&#770; y&#770;&#7488;  (N &#215; N)</text>
+  <g stroke="#555" fill="#2a2a2a">
+    <rect x="120" y="50" width="40" height="40"/><rect x="160" y="50" width="40" height="40"/>
+    <rect x="200" y="50" width="40" height="40"/><rect x="240" y="50" width="40" height="40"/>
+    <rect x="120" y="90" width="40" height="40"/><rect x="160" y="90" width="40" height="40"/>
+    <rect x="200" y="90" width="40" height="40"/><rect x="240" y="90" width="40" height="40"/>
+    <rect x="120" y="130" width="40" height="40"/><rect x="160" y="130" width="40" height="40"/>
+    <rect x="200" y="130" width="40" height="40"/><rect x="240" y="130" width="40" height="40"/>
+    <rect x="120" y="170" width="40" height="40"/><rect x="160" y="170" width="40" height="40"/>
+    <rect x="200" y="170" width="40" height="40"/><rect x="240" y="170" width="40" height="40"/>
+  </g>
+  <g fill="#2d5a27" stroke="#5c9c3a">
+    <rect x="120" y="50" width="40" height="40"/><rect x="160" y="90" width="40" height="40"/>
+    <rect x="200" y="130" width="40" height="40"/><rect x="240" y="170" width="40" height="40"/>
+  </g>
+  <text x="20" y="74" fill="#8ecae6" font-family="monospace" font-size="12">image 0</text>
+  <text x="20" y="114" fill="#8ecae6" font-family="monospace" font-size="12">image 1</text>
+  <text x="20" y="154" fill="#8ecae6" font-family="monospace" font-size="12">image 2</text>
+  <text x="20" y="194" fill="#8ecae6" font-family="monospace" font-size="12">image 3</text>
+  <text x="122" y="228" fill="#e3b07e" font-family="monospace" font-size="11">txt0 txt1 txt2 txt3</text>
+  <line x1="290" y1="110" x2="350" y2="110" stroke="#bbb" marker-end="url(#arr)"/>
+  <text x="358" y="106" fill="#8ecae6" font-family="monospace" font-size="12">row logsumexp:</text>
+  <text x="358" y="122" fill="#8ecae6" font-family="monospace" font-size="12">image &#8594; text loss</text>
+  <line x1="220" y1="215" x2="300" y2="236" stroke="#bbb" marker-end="url(#arr)"/>
+  <text x="308" y="236" fill="#e3b07e" font-family="monospace" font-size="12">column logsumexp: text &#8594; image</text>
+  <text x="358" y="170" fill="#5c9c3a" font-family="monospace" font-size="12">diagonal = targets</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Do not change the function signature.</li>
+  <li>Do not use external libraries beyond what is available in the starter.</li>
+  <li>Write the scalar loss to <code>loss[0]</code>.</li>
+  <li>The computation must be numerically stable for logits up to <code>logit_scale</code>
+    (subtract the running maximum).</li>
+</ul>
+
+<h2>Example 1:</h2>
+<p>
+  Input (<code>N</code> = 2, <code>D</code> = 2, <code>logit_scale</code> = 2.0):
+  \[
+  \text{image_embeds} = \begin{bmatrix} 1 & 0 \\ 0 & 2 \end{bmatrix}, \quad
+  \text{text_embeds} = \begin{bmatrix} 3 & 4 \\ 0 & -1 \end{bmatrix}
+  \]
+  Normalized rows and logits:
+  \[
+  \hat{x} = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}, \quad
+  \hat{y} = \begin{bmatrix} 0.6 & 0.8 \\ 0 & -1 \end{bmatrix}, \quad
+  S = \begin{bmatrix} 1.2 & 0 \\ 1.6 & -2 \end{bmatrix}
+  \]
+  Row (image &rarr; text) losses: \(\log(e^{1.2} + e^{0}) - 1.2 \approx 0.2633\) and
+  \(\log(e^{1.6} + e^{-2}) + 2 \approx 3.6270\), mean 1.9451.<br>
+  Column (text &rarr; image) losses: \(\log(e^{1.2} + e^{1.6}) - 1.2 \approx 0.9130\) and
+  \(\log(e^{0} + e^{-2}) + 2 \approx 2.1269\), mean 1.5200.<br>
+  Output: <code>loss</code> = 0.5 &times; (1.9451 + 1.5200) = 1.7325
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>N</code> &le; 32,768</li>
+  <li>1 &le; <code>D</code> &le; 1,024</li>
+  <li>0 &le; <code>logit_scale</code> &le; 100</li>
+  <li>Every row of <code>image_embeds</code> and <code>text_embeds</code> has a nonzero L2 norm</li>
+  <li>Rows may have arbitrary magnitudes; only their directions affect the loss</li>
+  <li>Performance is measured with <code>N</code> = 16,384, <code>D</code> = 512, <code>logit_scale</code> = 100.0</li>
+</ul>
