@@ -55,13 +55,19 @@ class Challenge(ChallengeBase):
         return table
 
     def generate_example_test(self) -> Dict[str, Any]:
-        M = 1024
-        D = 64
+        M = 2
+        D = 4
         dtype = torch.float32
 
-        Q = torch.randn(M, D, device=self.device, dtype=dtype)
-        Cos = self._half_split(torch.randn(M, D, device=self.device, dtype=dtype))
-        Sin = self._half_split(torch.randn(M, D, device=self.device, dtype=dtype))
+        Q = torch.tensor(
+            [[1.0, 2.0, 3.0, 4.0], [1.0, 1.0, 1.0, 1.0]], device=self.device, dtype=dtype
+        )
+        Cos = torch.tensor(
+            [[1.0, 1.0, 1.0, 1.0], [0.0, 0.0, 0.0, 0.0]], device=self.device, dtype=dtype
+        )
+        Sin = torch.tensor(
+            [[0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0]], device=self.device, dtype=dtype
+        )
         Output = torch.zeros(M, D, device=self.device, dtype=dtype)
 
         return {
