@@ -40,13 +40,19 @@ class Challenge(ChallengeBase):
         }
 
     def generate_example_test(self) -> Dict[str, Any]:
-        M, N = 256, 256
-        TILE_SIZE = 128
-        X = torch.randn(M, N, device=self.device, dtype=torch.float32)
-        # S shape
-        s_rows = (M + TILE_SIZE - 1) // TILE_SIZE
-        s_cols = (N + TILE_SIZE - 1) // TILE_SIZE
-        S = torch.randn(s_rows, s_cols, device=self.device, dtype=torch.float32)
+        M, N = 4, 4
+        TILE_SIZE = 2
+        X = torch.tensor(
+            [
+                [10.0, 10.0, 5.0, 5.0],
+                [10.0, 10.0, 5.0, 5.0],
+                [2.0, 2.0, 8.0, 8.0],
+                [2.0, 2.0, 8.0, 8.0],
+            ],
+            device=self.device,
+            dtype=torch.float32,
+        )
+        S = torch.tensor([[0.5, 2.0], [4.0, 0.25]], device=self.device, dtype=torch.float32)
         Y = torch.empty_like(X)
 
         return {

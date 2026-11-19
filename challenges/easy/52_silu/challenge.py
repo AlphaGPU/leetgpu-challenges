@@ -29,8 +29,8 @@ class Challenge(ChallengeBase):
 
     def generate_example_test(self) -> Dict[str, Any]:
         dtype = torch.float32
-        N = 4
-        input = torch.tensor([1.0, 2.0, 3.0, 4.0], device=self.device, dtype=dtype)
+        N = 3
+        input = torch.tensor([0.5, 1.0, -0.5], device=self.device, dtype=dtype)
         output = torch.empty(N, device=self.device, dtype=dtype)
         return {
             "input": input,

@@ -81,7 +81,7 @@ class Challenge(ChallengeBase):
         dtype = torch.float32
         N = 2
         agents = torch.tensor(
-            [0.0, 0.0, 1.0, 0.0, 5.0, 0.0, 0.0, 1.0], device=self.device, dtype=dtype
+            [0.0, 0.0, 1.0, 0.0, 3.0, 4.0, 0.0, -1.0], device=self.device, dtype=dtype
         )
         agents_next = torch.empty(4 * N, device=self.device, dtype=dtype)
         return {
