@@ -26,12 +26,11 @@ class Challenge(ChallengeBase):
         assert input.dtype == kernel.dtype == output.dtype
         assert input.device == kernel.device == output.device
 
-        # Create strided view of input for all windows
-        windows = input.unfold(0, kernel_size, 1)
-
-        # Use einsum for explicit cross-correlation
-        # 'ij,j->i' means: for each window i, multiply with kernel j and sum over j
-        output.copy_(torch.einsum("ij,j->i", windows, kernel))
+        # Cross-correlation, valid padding, stride 1. conv1d avoids materializing the
+        # (output_size, kernel_size) windows matrix, which is 11.4 GiB at the
+        # performance size and OOMs on a 16 GB T4 next to JAX's GPU preallocation.
+        result = torch.nn.functional.conv1d(input.view(1, 1, -1), kernel.view(1, 1, -1))
+        output.copy_(result.view(-1))
 
     def reference_impl_jax(self, input, kernel, input_size, kernel_size):
         import jax
