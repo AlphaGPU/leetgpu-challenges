@@ -96,6 +96,7 @@ h^{(l+1)} &= h^{(l)} + \bigl(\text{SiLU}(\tilde{h}^{(l)}\, W_{\text{gate}}^{(l)}
   <li>RMSNorm uses \(\varepsilon = 10^{-5}\) and has no additive bias</li>
   <li>Apply layers in order <code>0 &hellip; L-1</code> with a residual add after each SwiGLU</li>
   <li>All linear maps are <code>float32</code> matrix multiplies with no bias</li>
+  <li>Accumulate the GEMMs in <code>float32</code> or better; reduced-precision (TF32/FP16) products exceed the tolerance on the larger tests. TF32 is the default for <code>float32</code> matmuls with Triton <code>tl.dot</code> and with JAX on A100/H100/B200, so use <code>input_precision="ieee"</code> in Triton or <code>precision=jax.lax.Precision.HIGHEST</code> in JAX</li>
 </ul>
 
 <h2>Example</h2>
