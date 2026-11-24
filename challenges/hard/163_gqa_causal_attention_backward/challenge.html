@@ -1,0 +1,130 @@
+<p>
+  Implement the <strong>backward pass of causal grouped-query attention (GQA)</strong>, the
+  attention used to train Llama, Mistral and Qwen models. The forward pass already ran and saved
+  its output <code>O</code> and the per-row log-sum-exp <code>lse</code> of the attention scores,
+  just as FlashAttention does. Given the upstream gradient <code>dO</code>, compute the gradients
+  <code>dQ</code>, <code>dK</code> and <code>dV</code>. Several query heads share each key/value
+  head, so the gradient of a shared key/value head is the sum of the contributions of all query
+  heads in its group. All tensors are <code>float32</code>.
+</p>
+
+<svg width="560" height="190" viewBox="0 0 560 190" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="Four query heads in two groups: query heads 0 and 1 read key/value head 0, query heads 2 and 3 read key/value head 1. In the backward pass the dK and dV contributions of heads 0 and 1 are summed into dK[0] and dV[0], and those of heads 2 and 3 into dK[1] and dV[1].">
+  <rect width="560" height="190" fill="#222" rx="8"/>
+  <text x="16" y="24" fill="#ccc" font-family="monospace" font-size="12">num_q_heads = 4, num_kv_heads = 2 (group size 2)</text>
+  <rect x="20" y="40" width="90" height="28" fill="#2196f3"/>
+  <rect x="120" y="40" width="90" height="28" fill="#2196f3"/>
+  <rect x="300" y="40" width="90" height="28" fill="#ff9800"/>
+  <rect x="400" y="40" width="90" height="28" fill="#ff9800"/>
+  <text x="34" y="59" fill="#fff" font-family="monospace" font-size="12">q head 0</text>
+  <text x="134" y="59" fill="#fff" font-family="monospace" font-size="12">q head 1</text>
+  <text x="314" y="59" fill="#fff" font-family="monospace" font-size="12">q head 2</text>
+  <text x="414" y="59" fill="#fff" font-family="monospace" font-size="12">q head 3</text>
+  <path d="M65 70 L115 130" stroke="#2196f3" stroke-width="2" fill="none"/>
+  <path d="M165 70 L115 130" stroke="#2196f3" stroke-width="2" fill="none"/>
+  <path d="M345 70 L395 130" stroke="#ff9800" stroke-width="2" fill="none"/>
+  <path d="M445 70 L395 130" stroke="#ff9800" stroke-width="2" fill="none"/>
+  <rect x="50" y="132" width="130" height="28" fill="#4caf50"/>
+  <rect x="330" y="132" width="130" height="28" fill="#4caf50"/>
+  <text x="60" y="151" fill="#fff" font-family="monospace" font-size="12">dK[0], dV[0]</text>
+  <text x="340" y="151" fill="#fff" font-family="monospace" font-size="12">dK[1], dV[1]</text>
+  <text x="196" y="105" fill="#ccc" font-family="monospace" font-size="12">sum over the group</text>
+  <text x="16" y="180" fill="#ccc" font-family="monospace" font-size="12">dQ[h] stays per query head; dK[g] and dV[g] add up their group's heads</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<p>
+  Implement <code>solve(Q, K, V, O, dO, lse, dQ, dK, dV, num_q_heads, num_kv_heads, seq_len, head_dim)</code>:
+</p>
+<ul>
+  <li><code>Q</code>, <code>O</code>, <code>dO</code>: shape <code>(num_q_heads, seq_len, head_dim)</code></li>
+  <li><code>K</code>, <code>V</code>: shape <code>(num_kv_heads, seq_len, head_dim)</code></li>
+  <li><code>lse</code>: shape <code>(num_q_heads, seq_len)</code>, the natural-log log-sum-exp of each row of scaled, masked scores saved by the forward pass</li>
+  <li><code>dQ</code>: shape <code>(num_q_heads, seq_len, head_dim)</code>; <code>dK</code>, <code>dV</code>: shape <code>(num_kv_heads, seq_len, head_dim)</code></li>
+</ul>
+<p>
+  Query head <code>h</code> uses key/value head <code>g = h / (num_q_heads / num_kv_heads)</code>
+  (integer division), so consecutive query heads share a key/value head. With
+  \(\tau = 1/\sqrt{head\_dim}\), for query position <code>i</code> and key position
+  <code>j</code> the forward pass used
+  \[
+  s_{ij} = \tau\, Q_h[i] \cdot K_g[j],
+  \qquad
+  P_{ij} = \begin{cases} \exp(s_{ij} - lse_h[i]) & j \le i \\ 0 & j &gt; i \end{cases},
+  \qquad
+  O_h[i] = \sum_{j} P_{ij}\, V_g[j]
+  \]
+  (each token attends to itself and all earlier tokens). The gradients are
+  \[
+  dP_{ij} = dO_h[i] \cdot V_g[j],
+  \qquad
+  D_i = dO_h[i] \cdot O_h[i],
+  \qquad
+  dS_{ij} = P_{ij}\,(dP_{ij} - D_i)
+  \]
+  \[
+  dQ_h[i] = \tau \sum_{j} dS_{ij}\, K_g[j],
+  \qquad
+  dK_g[j] = \tau \sum_{h \in g} \sum_{i} dS_{ij}\, Q_h[i],
+  \qquad
+  dV_g[j] = \sum_{h \in g} \sum_{i} P_{ij}\, dO_h[i]
+  \]
+  where \(h \in g\) ranges over the <code>num_q_heads / num_kv_heads</code> query heads that
+  share key/value head <code>g</code>. (\(D_i\) equals \(\sum_j P_{ij} dP_{ij}\).)
+</p>
+<ul>
+  <li>Use only native features of the framework you choose (no external libraries); keep the function signature unchanged</li>
+  <li>Write the results into <code>dQ</code>, <code>dK</code> and <code>dV</code>; their initial contents are undefined, so every entry must be written. Do not modify the inputs</li>
+  <li><code>O</code> and <code>lse</code> come from a <code>float32</code> forward pass on the same <code>Q</code>, <code>K</code>, <code>V</code>; you may use them as given or recompute them</li>
+  <li>Accumulate dot products and sums in <code>float32</code> or better; reduced-precision (TF32/FP16) products exceed the tolerance, even on the example. TF32 is the default for <code>float32</code> matmuls with Triton <code>tl.dot</code> and with JAX on A100/H100/B200, so use <code>input_precision="ieee"</code> in Triton or <code>precision=jax.lax.Precision.HIGHEST</code> in JAX</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>num_q_heads</code> = 2, <code>num_kv_heads</code> = 1, <code>seq_len</code> = 3,
+  <code>head_dim</code> = 2 (both query heads share key/value head 0;
+  <code>O</code> and <code>lse</code> shown rounded to 4 decimals):
+  \[
+  Q_0 = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1 \end{bmatrix},
+  \quad
+  Q_1 = \begin{bmatrix} 0 & 1 \\ 1 & 0 \\ -1 & 1 \end{bmatrix},
+  \quad
+  K_0 = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & -1 \end{bmatrix},
+  \quad
+  V_0 = \begin{bmatrix} 1 & 2 \\ 3 & -1 \\ 0 & 1 \end{bmatrix}
+  \]
+  \[
+  dO_0 = \begin{bmatrix} 1 & 0 \\ 0 & 1 \\ 1 & -1 \end{bmatrix},
+  \quad
+  dO_1 = \begin{bmatrix} 0 & 1 \\ 1 & 1 \\ -1 & 0 \end{bmatrix}
+  \]
+  \[
+  O_0 = \begin{bmatrix} 1.0000 & 2.0000 \\ 2.3395 & -0.0093 \\ 1.6044 & 0.5989 \end{bmatrix},
+  \quad
+  O_1 = \begin{bmatrix} 1.0000 & 2.0000 \\ 1.6605 & 1.0093 \\ 2.3794 & -0.2890 \end{bmatrix},
+  \quad
+  lse = \begin{bmatrix} 0.7071 & 1.1079 & 1.6206 \\ 0.0000 & 1.1079 & 1.0168 \end{bmatrix}
+  \]
+  Output (rounded to 4 decimals):
+  \[
+  dQ_0 = \begin{bmatrix} 0.0000 & 0.0000 \\ 0.4692 & -0.4692 \\ -0.8493 & 1.1298 \end{bmatrix},
+  \quad
+  dQ_1 = \begin{bmatrix} 0.0000 & 0.0000 \\ 0.1564 & -0.1564 \\ 0.3220 & -0.4699 \end{bmatrix}
+  \]
+  \[
+  dK_0 = \begin{bmatrix} -0.5864 & 0.0743 \\ 1.0149 & 0.0582 \\ -0.4284 & -0.1325 \end{bmatrix},
+  \quad
+  dV_0 = \begin{bmatrix} 1.8925 & 1.5989 \\ -0.0023 & 0.5989 \\ 0.1098 & -0.1978 \end{bmatrix}
+  \]
+  Row 0 of each <code>dQ</code> is zero because token 0 attends only to itself
+  (\(P_{00} = 1\), so \(dS_{00} = dP_{00} - D_0 = 0\)).
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>All tensors are <code>float32</code></li>
+  <li>1 &le; <code>num_kv_heads</code> &le; <code>num_q_heads</code> &le; 32, and <code>num_q_heads</code> is divisible by <code>num_kv_heads</code></li>
+  <li>1 &le; <code>seq_len</code> &le; 4,096; 1 &le; <code>head_dim</code> &le; 128</li>
+  <li>Scores \(s_{ij}\) can exceed 88, so \(\exp(s_{ij})\) on its own can overflow <code>float32</code>; \(\exp(s_{ij} - lse_h[i])\) is always &le; 1</li>
+  <li>Performance is measured with <code>num_q_heads</code> = 32, <code>num_kv_heads</code> = 8, <code>seq_len</code> = 2,048, <code>head_dim</code> = 64</li>
+</ul>
