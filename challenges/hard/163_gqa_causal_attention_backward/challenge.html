@@ -76,7 +76,7 @@
   <li>Use only native features of the framework you choose (no external libraries); keep the function signature unchanged</li>
   <li>Write the results into <code>dQ</code>, <code>dK</code> and <code>dV</code>; their initial contents are undefined, so every entry must be written. Do not modify the inputs</li>
   <li><code>O</code> and <code>lse</code> come from a <code>float32</code> forward pass on the same <code>Q</code>, <code>K</code>, <code>V</code>; you may use them as given or recompute them</li>
-  <li>Accumulate dot products and sums in <code>float32</code> or better</li>
+  <li>Accumulate dot products and sums in <code>float32</code> or better; reduced-precision (TF32/FP16) products exceed the tolerance, even on the example. TF32 is the default for <code>float32</code> matmuls with Triton <code>tl.dot</code> and with JAX on A100/H100/B200, so use <code>input_precision="ieee"</code> in Triton or <code>precision=jax.lax.Precision.HIGHEST</code> in JAX</li>
 </ul>
 
 <h2>Example</h2>
