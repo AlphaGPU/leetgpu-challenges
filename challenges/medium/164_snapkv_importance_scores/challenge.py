@@ -126,7 +126,7 @@ class Challenge(ChallengeBase):
     def generate_functional_test(self) -> List[Dict[str, Any]]:
         tests = []
 
-        # Hand-computed example: scores = [1.5495, 1.4515, 0.9989] (see challenge.html). Window
+        # Hand-computed example: scores = [1.5495, 1.4516, 0.9989] (see challenge.html). Window
         # query 0 sits at position 1 and must not see key 2.
         tests.append(self.generate_example_test())
 
