@@ -1,0 +1,112 @@
+<p>
+  Compute the per-key importance scores that SnapKV-style KV-cache compression uses to decide which
+  prompt tokens to keep after prefill. The last <code>window</code> queries of the prompt (the
+  <em>observation window</em>) attend causally over all <code>seq_len</code> keys, and each key's
+  score is the total attention probability it receives, summed over the window queries and over
+  every query head that shares its KV head (grouped-query attention). Given <code>Q</code> of shape
+  <code>num_q_heads &times; window &times; head_dim</code> and <code>K</code> of shape
+  <code>num_kv_heads &times; seq_len &times; head_dim</code>, write <code>scores</code> of shape
+  <code>num_kv_heads &times; seq_len</code>. All tensors are 32-bit floats.
+</p>
+
+<p>
+  With <code>G = num_q_heads / num_kv_heads</code>, query head <code>h</code> uses KV head
+  <code>g = &lfloor;h / G&rfloor;</code>. Window query <code>i</code> sits at absolute position
+  \(p_i = \text{seq_len} - \text{window} + i\) and may only see keys \(t \le p_i\):
+  \[
+  a_{h,i,t} = \begin{cases}
+    \dfrac{\exp\!\left(Q_{h,i} \cdot K_{g,t} / \sqrt{\text{head_dim}}\right)}
+          {\sum_{u=0}^{p_i} \exp\!\left(Q_{h,i} \cdot K_{g,u} / \sqrt{\text{head_dim}}\right)}
+      & t \le p_i \\[4pt]
+    0 & t &gt; p_i
+  \end{cases}
+  \qquad
+  \text{scores}_{g,t} = \sum_{h = gG}^{gG + G - 1} \; \sum_{i=0}^{\text{window}-1} a_{h,i,t}
+  \]
+  The softmax normalizes over keys (each window query's row of probabilities sums to 1); the score
+  then sums those probabilities down the query axis, so every KV head's scores add up to
+  <code>G &times; window</code>.
+</p>
+
+<svg width="700" height="270" viewBox="0 0 700 270" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:20px auto;">
+  <rect width="700" height="270" fill="#222"/>
+  <defs>
+    <marker id="arr164" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#888"/>
+    </marker>
+  </defs>
+  <text x="350" y="22" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">attention probabilities of one query head (seq_len = 12, window = 4)</text>
+  <text x="60" y="64" text-anchor="end" fill="#aaa" font-size="11" font-family="monospace">i=0</text>
+  <text x="60" y="94" text-anchor="end" fill="#aaa" font-size="11" font-family="monospace">i=1</text>
+  <text x="60" y="124" text-anchor="end" fill="#aaa" font-size="11" font-family="monospace">i=2</text>
+  <text x="60" y="154" text-anchor="end" fill="#aaa" font-size="11" font-family="monospace">i=3</text>
+  <!-- visible region: row i sees keys 0..8+i -->
+  <rect x="70" y="50" width="360" height="120" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <rect x="430" y="50" width="30" height="30" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1"/>
+  <rect x="430" y="80" width="30" height="90" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1"/>
+  <rect x="460" y="80" width="30" height="90" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1"/>
+  <rect x="490" y="110" width="30" height="60" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1"/>
+  <rect x="520" y="140" width="30" height="30" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1"/>
+  <!-- masked region -->
+  <rect x="460" y="50" width="90" height="30" fill="#3a1a1a" stroke="#aa4444" stroke-width="1"/>
+  <rect x="490" y="80" width="60" height="30" fill="#3a1a1a" stroke="#aa4444" stroke-width="1"/>
+  <rect x="520" y="110" width="30" height="30" fill="#3a1a1a" stroke="#aa4444" stroke-width="1"/>
+  <text x="505" y="69" text-anchor="middle" fill="#e99" font-size="10" font-family="monospace">masked</text>
+  <text x="250" y="114" text-anchor="middle" fill="#cce" font-size="11" font-family="monospace">every row: softmax over visible keys, sums to 1</text>
+  <text x="560" y="69" fill="#aaa" font-size="10" font-family="monospace">p=8</text>
+  <text x="560" y="159" fill="#aaa" font-size="10" font-family="monospace">p=11</text>
+  <text x="70" y="45" fill="#888" font-size="10" font-family="monospace">key 0</text>
+  <text x="550" y="45" text-anchor="end" fill="#888" font-size="10" font-family="monospace">key 11</text>
+  <line x1="310" y1="175" x2="310" y2="210" stroke="#888" stroke-width="1.5" marker-end="url(#arr164)"/>
+  <text x="320" y="197" fill="#aaa" font-size="11" font-family="monospace">sum down each column (and over the G heads sharing the KV head)</text>
+  <rect x="70" y="220" width="480" height="24" fill="#1a4a2a" stroke="#44cc66" stroke-width="1.5"/>
+  <text x="310" y="237" text-anchor="middle" fill="#cec" font-size="11" font-family="monospace">scores[g, 0 .. seq_len-1]</text>
+</svg>
+
+<h2>Implementation Requirements</h2>
+<ul>
+  <li>Implement the <code>solve</code> function; do not change its signature.</li>
+  <li>External libraries are not permitted.</li>
+  <li>Write the result into <code>scores</code> (row-major, <code>num_kv_heads &times; seq_len</code>).
+      <code>scores</code> is not zero-initialized; every element must be written.</li>
+  <li>All tensors are row-major and contiguous: <code>Q[h, i, d]</code> and <code>K[g, t, d]</code>
+      with <code>d</code> fastest.</li>
+  <li>Compute the dot products from the float32 inputs; rounding <code>Q</code> or <code>K</code>
+      to TF32, FP16 or BF16 is outside the tolerance.</li>
+</ul>
+
+<h2>Example</h2>
+<p>
+  Input: <code>num_q_heads</code> = 2, <code>num_kv_heads</code> = 1, <code>window</code> = 2,
+  <code>seq_len</code> = 3, <code>head_dim</code> = 4 (so the scale is 1/2 and the window queries
+  sit at positions 1 and 2)
+  \[
+  Q_0 = \begin{bmatrix} 2 & 0 & 0 & 0 \\ 0 & 2 & 0 & 0 \end{bmatrix}, \quad
+  Q_1 = \begin{bmatrix} 0 & 0 & 0 & 0 \\ 0 & 0 & 2 & 2 \end{bmatrix}, \quad
+  K_0 = \begin{bmatrix} 1 & 0 & 0 & 0 \\ 0 & 1 & 0 & 0 \\ 0 & 0 & 1 & 1 \end{bmatrix}
+  \]
+  Output:
+  \[
+  \text{scores} = \begin{bmatrix} 1.5495 & 1.4516 & 0.9989 \end{bmatrix}
+  \]
+</p>
+<p>
+  The scaled logits of the four window rows are \([1, 0, -]\), \([0, 1, 0]\), \([0, 0, -]\) and
+  \([0, 0, 2]\) (\(-\) marks the masked key 2 for queries at position 1). Their softmax rows are
+  \([0.7311, 0.2689, 0]\), \([0.2119, 0.5761, 0.2119]\), \([0.5, 0.5, 0]\) and
+  \([0.1065, 0.1065, 0.7870]\); summing them column-wise gives the scores, which add up to
+  <code>G &times; window</code> = 4.
+</p>
+
+<h2>Constraints</h2>
+<ul>
+  <li>1 &le; <code>num_kv_heads</code> &le; <code>num_q_heads</code> &le; 64, and
+      <code>num_q_heads</code> is a multiple of <code>num_kv_heads</code></li>
+  <li>1 &le; <code>window</code> &le; min(<code>seq_len</code>, 128)</li>
+  <li>1 &le; <code>seq_len</code> &le; 65,536</li>
+  <li>1 &le; <code>head_dim</code> &le; 128</li>
+  <li><code>Q</code> and <code>K</code> hold finite 32-bit floats; scaled logits can exceed 100 in
+      magnitude, so the softmax must be computed in a numerically stable way</li>
+  <li>Performance is measured with <code>num_q_heads</code> = 32, <code>num_kv_heads</code> = 8,
+      <code>window</code> = 64, <code>seq_len</code> = 32,768, <code>head_dim</code> = 128</li>
+</ul>
